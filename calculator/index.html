@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Calculator</title>
+<link rel="stylesheet" href="styles.css">
+<script src="script.js" defer></script>
+</head>
+<body>
+<main class="calculator" aria-label="Calculator">
+<header><span class="indicator" aria-hidden="true"></span><h1>Calculator</h1><span class="badge">BASIC</span></header>
+<section class="screen" aria-label="Calculation display">
+<div id="expression" class="expression">Ready to calculate</div>
+<output id="result" aria-live="polite" aria-atomic="true">0</output>
+</section>
+<div class="keys">
+<button class="utility wide" data-action="clear">Clear</button>
+<button class="utility" data-action="backspace" aria-label="Delete last digit">⌫</button>
+<button class="operator" data-operator="/" aria-label="Divide">÷</button>
+<button data-digit="7">7</button><button data-digit="8">8</button><button data-digit="9">9</button>
+<button class="operator" data-operator="*" aria-label="Multiply">×</button>
+<button data-digit="4">4</button><button data-digit="5">5</button><button data-digit="6">6</button>
+<button class="operator" data-operator="-" aria-label="Subtract">−</button>
+<button data-digit="1">1</button><button data-digit="2">2</button><button data-digit="3">3</button>
+<button class="operator" data-operator="+" aria-label="Add">+</button>
+<button class="wide" data-digit="0">0</button><button data-digit=".">.</button>
+<button class="equals" data-action="equals" aria-label="Equals">=</button>
+</div>
+<p class="hint">Your keyboard works here, too.</p>
+</main>
+</body>
+</html>
