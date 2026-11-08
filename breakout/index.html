@@ -1,0 +1,21 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#101216"><title>Breakout — App Lab</title>
+<link rel="icon" href="../assets/favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="styles.css"><script src="engine.js" defer></script><script src="game.js" defer></script>
+</head>
+<body>
+<header><a href="../">a_ &nbsp; App Lab</a><a href="../#apps">← The collection</a></header>
+<main>
+<div class="heading"><div><p class="eyebrow">02 / GAMES</p><h1>Breakout<span>.</span></h1></div><p>A paddle. A ball.<br>A wall of possibilities.</p></div>
+<section class="arcade" aria-label="Breakout game">
+<div class="hud"><div>Score <strong id="score">0</strong></div><div>Level <strong id="level">1</strong></div><div>Lives <strong id="lives">3</strong></div></div>
+<div class="field"><canvas width="800" height="560" tabindex="0" aria-label="Breakout playfield. Move with arrows, A and D, mouse, or drag. Space launches or pauses.">Your browser needs Canvas support to play.</canvas><div id="overlay"><p id="message" role="status">Ready to break out?</p><p id="detail">Press Start to play</p></div></div>
+<div class="controls"><button id="start" class="primary">Start</button><button id="pause" disabled>Pause</button><button id="restart">Restart</button><button id="mute" aria-pressed="false">Mute sound</button></div>
+</section>
+<p class="help">Move: ← → / A D / mouse / touch drag <span>·</span> Space: launch / pause / resume</p>
+<noscript><p>Enable JavaScript to play Breakout.</p></noscript>
+</main><footer>APP LAB <span>Small ideas. Working experiments.</span></footer>
+</body></html>

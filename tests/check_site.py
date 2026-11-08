@@ -50,7 +50,7 @@ with sync_playwright() as p:
         url = "http://app-lab.test" + prefix
         page.goto(url)
         expect(page.locator(".app-card")).to_have_count(6)
-        expect(page.locator(".launch-link")).to_have_count(1)
+        expect(page.locator(".launch-link")).to_have_count(2)
         expect(page.locator(".app-card:has(.coming-soon) a, .app-card:has(.coming-soon) button")).to_have_count(0)
         expect(page.locator("#year")).to_have_text(page.evaluate("String(new Date().getFullYear())"))
         for width, columns in ((320, 1), (375, 1), (640, 1), (768, 2), (1000, 2), (1024, 3), (1440, 3)):
@@ -64,7 +64,7 @@ with sync_playwright() as p:
         page.screenshot(path="/tmp/app-lab-desktop.png", full_page=True)
         page.set_viewport_size({"width": 375, "height": 812})
         page.screenshot(path="/tmp/app-lab-mobile.png", full_page=True)
-        page.locator(".launch-link").click()
+        page.locator(".launch-link").first.click()
         expect(page).to_have_url(url + "calculator/")
         expect(page.locator("#result")).to_have_text("0")
         print(f"PASS: gallery, assets, launch link, and seven viewport widths at {prefix}")
@@ -128,7 +128,7 @@ with sync_playwright() as p:
     fallback = no_js.new_page()
     fallback.goto("http://app-lab.test/small-apps/")
     expect(fallback.locator(".app-card")).to_have_count(6)
-    fallback.locator(".launch-link").click()
+    fallback.locator(".launch-link").first.click()
     expect(fallback).to_have_url("http://app-lab.test/small-apps/calculator/")
     print("PASS: gallery and navigation work without JavaScript")
     assert not missing, f"Missing local assets: {missing}"
