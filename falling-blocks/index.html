@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#101216"><meta name="description" content="Falling Blocks: a small, original browser puzzle from App Lab.">
+<title>Falling Blocks — App Lab</title>
+<link rel="icon" href="../assets/favicon.svg" type="image/svg+xml"><link rel="stylesheet" href="styles.css">
+<script src="engine.js" defer></script><script src="game.js" defer></script>
+</head>
+<body>
+<header><a href="../">a_ &nbsp; App Lab</a><a href="../#apps">← The collection</a></header>
+<main>
+<div class="heading"><div><p class="eyebrow">07 / GAMES</p><h1>Falling Blocks<span>.</span></h1></div><p>Find a little order.<br>One piece at a time.</p></div>
+<section class="arcade" aria-label="Falling Blocks game">
+<div class="play-layout">
+<div class="field"><canvas id="board" width="300" height="600" tabindex="0" aria-label="Falling Blocks board, 10 columns and 20 rows. Controls listed below.">Canvas support is needed to play.</canvas><div id="overlay"><h2 id="message">Make room.</h2><p id="detail">Complete rows. Keep the stack low.</p><button id="start" class="primary">Start game</button></div></div>
+<aside><p class="eyebrow">UP NEXT</p><canvas id="next" width="120" height="120" aria-label="Next piece preview"></canvas><dl><div><dt>Score</dt><dd id="score">0</dd></div><div><dt>Level</dt><dd id="level">1</dd></div><div><dt>Lines</dt><dd id="lines">0</dd></div></dl><p class="tip">The outline shows<br>where you'll land.</p></aside>
+</div>
+<div class="toolbar"><button id="pause" disabled>Pause</button><button id="restart">Restart</button><button id="mute" aria-pressed="true">Sound off</button></div>
+<div class="touch-controls" aria-label="Movement controls"><button data-action="left" aria-label="Move left">←</button><button data-action="rotate" aria-label="Rotate clockwise">↻</button><button data-action="right" aria-label="Move right">→</button><button data-action="down" aria-label="Soft drop">↓</button><button data-action="hard" class="drop">Drop ⤓</button></div>
+<p id="status" class="sr-only" role="status" aria-live="polite">Ready to play</p>
+</section>
+<p class="help">← → / A D move · ↑ / X rotate · Z reverse rotate<br>↓ / S soft drop · Space hard drop · P / Esc pause</p>
+<p class="help">100 / 300 / 500 / 800 points for 1–4 rows × level.<br>Every 10 rows increases gravity. Soft drop +1; hard drop +2 per cell.</p>
+<noscript>Enable JavaScript to play Falling Blocks.</noscript>
+</main><footer>APP LAB <span>Small ideas. Working experiments.</span></footer>
+</body></html>

@@ -2,7 +2,7 @@
 
 Small ideas. Working experiments.
 
-A static gallery for browser games, audio tools, MIDI applications, and creative projects. Calculator is available; Breakout, Space Shooter, Synth Lab, MIDI Lab, and Paint Studio are planned.
+A static gallery for browser games, audio tools, MIDI applications, and creative projects. Calculator, Breakout, and Falling Blocks are available; Space Shooter, Synth Lab, MIDI Lab, and Paint Studio are planned.
 
 ## Running locally
 
