@@ -65,6 +65,12 @@ with sync_playwright() as p:
     touch=mobile.new_page();touch.goto('http://app-lab.test/small-apps/breakout/')
     touch.locator('#start').tap();touch.locator('#start').tap()
     expect(touch.locator('#overlay')).to_be_hidden()
+    # Keep the ball stationary while testing gestures, independent of test-runner speed.
+    touch.evaluate('game.ball.vx=0;game.ball.vy=0')
+    touch.locator('#pause').tap();expect(touch.locator('#message')).to_have_text('Paused')
+    touch.locator('#pause').tap();expect(touch.locator('#overlay')).to_be_hidden()
+    touch.locator('#restart').tap();touch.locator('#start').tap()
+    touch.evaluate('game.ball.vx=0;game.ball.vy=0')
     client=mobile.new_cdp_session(touch);box=touch.locator('canvas').bounding_box()
     x,y=box['x']+box['width']*.2,box['y']+box['height']*.8
     client.send('Input.dispatchTouchEvent',{'type':'touchStart','touchPoints':[{'x':x,'y':y}]})
@@ -72,8 +78,6 @@ with sync_playwright() as p:
     client.send('Input.dispatchTouchEvent',{'type':'touchEnd','touchPoints':[]})
     assert touch.evaluate('game.paddle.x')>400
     assert touch.evaluate('scrollY')==0
-    touch.locator('#pause').tap();expect(touch.locator('#message')).to_have_text('Paused')
-    touch.locator('#pause').tap();touch.locator('#restart').tap()
     touch.screenshot(path='/tmp/breakout-mobile.png',full_page=True)
     assert not errors,errors
     assert not missing,missing
