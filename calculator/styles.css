@@ -1,0 +1,25 @@
+:root { color-scheme: dark; font-family: Inter, ui-sans-serif, system-ui, sans-serif; background: #101214; color: #f1f3f5; }
+* { box-sizing: border-box; }
+body { margin: 0; min-height: 100svh; display: grid; place-items: center; padding: 24px; background: radial-gradient(ellipse at 50% 20%, #222a2b 0, #101214 65%); }
+.calculator { width: 100%; max-width: 370px; padding: 24px; border: 1px solid #343a3d; border-radius: 24px; background: #1b1e21; box-shadow: 0 24px 70px #0005; }
+header { display: flex; align-items: center; gap: 9px; margin-bottom: 28px; }
+h1 { font-size: 15px; font-weight: 500; margin: 0; }
+.indicator { width: 7px; height: 7px; border-radius: 50%; background: #b5efc2; }
+.badge { margin-left: auto; color: #949b9e; font-size: 9px; letter-spacing: 2px; }
+.screen { min-height: 132px; padding: 18px 4px 24px; text-align: right; }
+.expression { min-height: 24px; color: #929b9f; font-size: 14px; overflow-wrap: anywhere; }
+output { display: block; margin-top: 8px; font-size: clamp(28px, 8vw, 43px); font-weight: 400; letter-spacing: -1px; overflow-wrap: anywhere; }
+.keys { display: grid; grid-template-columns: repeat(4, 1fr); gap: 9px; }
+button { min-width: 0; height: 60px; border: 1px solid #353b3f; border-radius: 13px; background: #292e32; color: #f1f3f5; font: inherit; font-size: 21px; cursor: pointer; transition: background .12s, transform .12s; touch-action: manipulation; }
+button:hover { background: #3a4247; }
+button:active { transform: scale(.95); }
+button:focus-visible { outline: 2px solid #b5efc2; outline-offset: 3px; }
+.wide { grid-column: span 2; }
+.utility { background: #23282b; color: #aab3b8; font-size: 16px; }
+.operator { background: #303e39; border-color: #40564b; color: #b5efc2; font-size: 25px; }
+.operator:hover { background: #40564b; }
+.equals { background: #b5efc2; border-color: #b5efc2; color: #193522; font-size: 25px; }
+.equals:hover { background: #d0f9d9; }
+.hint { text-align: center; color: #7d878c; font-size: 11px; margin: 22px 0 0; }
+@media (max-width: 360px) { body { padding: 12px; } .calculator { padding: 18px; } button { height: 54px; } }
+@media (prefers-reduced-motion: reduce) { button { transition: none; } }
