@@ -95,7 +95,7 @@ class Renderer {
         x.fillStyle = "#edfff1";
         x.beginPath();
         x.moveTo(-20, -7);
-        x.lineTo(-43, 0);
+        x.lineTo(-34, 0);
         x.lineTo(-20, 7);
         x.fill();
       }

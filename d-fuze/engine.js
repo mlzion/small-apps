@@ -86,6 +86,7 @@
         this.ringProfiles,
       );
       this.config = experimental.config;
+      this.motionShuffle = experimental.shuffle;
       this.remaining = this.config.time;
       this.health = this.config.hits;
       this.ammo = this.config.ammo;
@@ -120,10 +121,14 @@
       this.updateRings();
     }
     updateRings() {
-      this.animationTime = this.elapsed * this.config.animationPlaybackSpeed;
+      this.animationTime = this.elapsed;
+      const profiles = this.motionShuffle.atCycle(Math.floor(this.animationTime / 10));
       this.assembly.update(this.elapsed);
       this.assemblyAngle = this.assembly.angle;
-      for (const ring of this.rings) ring.update(this.animationTime);
+      for (const [i, ring] of this.rings.entries()) {
+        ring.profile = profiles[i];
+        ring.update(this.animationTime);
+      }
     }
     newGame() {
       this.level = this.testLevel?.number ?? 1;

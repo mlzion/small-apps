@@ -135,8 +135,8 @@ const fresh = (emit, resolver) => {
   g.fire();
   assert.equal(g.health, 3);
   assert.equal(g.ammo, 23);
-  assert(Math.abs(shot.origin.x / 216 + shot.direction.x) < 1e-10);
-  assert(Math.abs(shot.origin.y / 216 + shot.direction.y) < 1e-10);
+  assert(Math.abs(shot.origin.x / require("./rings.js").GEOMETRY.muzzleRadius + shot.direction.x) < 1e-10);
+  assert(Math.abs(shot.origin.y / require("./rings.js").GEOMETRY.muzzleRadius + shot.direction.y) < 1e-10);
   for (let level = 1; level <= 6; level++) {
     const c = levelConfig(level);
     assert(c.time >= 10);

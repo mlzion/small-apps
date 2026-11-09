@@ -76,6 +76,8 @@ window.DFuzeMotionEditor = {
       $("assembly-rate").value = api.level().assembly.playbackSpeed;
       $("motion-family").value = p.difficulty || "easy";
       $("motion-family-label").hidden = mode !== "ring";
+      for (const id of ["motion-new", "motion-duplicate", "motion-delete"])
+        $(id).hidden = mode === "ring";
       $("motion-name").value = p.name;
       $("motion-duration").value = p.duration;
       $("motion-duration").readOnly = mode === "ring";
@@ -319,15 +321,14 @@ window.DFuzeMotionEditor = {
       if (at >= 0) insertKey(at);
     });
     function add(copy) {
+      if (mode === "ring") return;
       if (library().length >= 256) {
         api.status("Maximum 256 profiles per library.", true);
         return;
       }
       const p = copy
         ? JSON.parse(JSON.stringify(current()))
-        : mode === "ring"
-          ? M.defaults().find((p) => p.difficulty === $("motion-family").value)
-          : {
+        : {
               name: "New assembly motion",
               duration: 25,
               keyframes: [
@@ -346,15 +347,8 @@ window.DFuzeMotionEditor = {
     $("motion-new").addEventListener("click", () => add(false));
     $("motion-delete").addEventListener("click", () => {
       const p = current();
+      if (mode === "ring") return;
       if (
-        mode === "ring" &&
-        library().filter((q) => q.difficulty === p.difficulty).length === 1
-      ) {
-        api.status("Keep at least one profile in each ring family.", true);
-        return;
-      }
-      if (
-        mode === "assembly" &&
         api.document().levels.some((l) => l.assembly.profileId === p.id)
       ) {
         api.status(
@@ -363,7 +357,7 @@ window.DFuzeMotionEditor = {
         );
         return;
       }
-      const key = mode === "ring" ? "ringProfiles" : "assemblyProfiles";
+      const key = "assemblyProfiles";
       api.document()[key] = library().filter((q) => q.id !== p.id);
       ids[mode] = api.document()[key][0].id;
       changed();

@@ -13,7 +13,8 @@ let doc = null,
   unlocked = false;
 let previewTime = 0,
   previewPlaying = false,
-  previewProfiles = [];
+  previewProfiles = [],
+  previewShuffle = null;
 function status(text, error = false) {
   $("status").textContent = text;
   $("status").classList.toggle("error", error);
@@ -116,6 +117,7 @@ function renderRings() {
   $("selected-label").textContent = `/ Level ${level.number}`;
   $("level-name").value = level.name || "";
   $("level-seed").value = level.seed ?? "";
+  $("level-family").value = level.motionFamily;
 
   $("ring-editor").replaceChildren();
   level.rings.forEach((ring, i) => {
@@ -152,21 +154,6 @@ function renderRings() {
         ),
       ),
     );
-    const family = document.createElement("select");
-    family.setAttribute("aria-label", `Ring ${i + 1} family`);
-    for (const [id, f] of Object.entries(M.FAMILIES)) {
-      const option = document.createElement("option");
-      option.value = id;
-      option.textContent = f.label;
-      family.append(option);
-    }
-    family.value = ring.family;
-    family.addEventListener("change", () => {
-      ring.family = family.value;
-      renderRings();
-      change();
-    });
-    row.append(label("Motion family", family));
     $("ring-editor").append(row);
   });
 }
@@ -204,18 +191,20 @@ function resetPreview() {
   $("preview-play").textContent = "PLAY";
   previewTime = 0;
   previewPlaying = false;
-  previewProfiles = S.validateLevel(current(), "Level", doc.assemblyProfiles)
-    .length
-    ? []
-    : M.assignProfiles(current(), current().seed, doc.ringProfiles);
-  $("assignments").textContent =
-    previewProfiles
+  previewShuffle = S.validateDocument(doc).length
+    ? null
+    : M.createShuffle(current(), current().seed, doc.ringProfiles);
+  previewProfiles = previewShuffle ? previewShuffle.atCycle(0) : [];
+  drawLevel();
+}
+function showAssignments() {
+  const text = previewProfiles
       .map(
         (p, i) =>
           `Ring ${i + 1}: ${p.name} (${M.FAMILIES[p.difficulty].label})`,
       )
       .join("\n") || "Fix level errors to preview.";
-  drawLevel();
+  if ($("assignments").textContent !== text) $("assignments").textContent = text;
 }
 function renderAll() {
   renderTable();
@@ -278,6 +267,10 @@ $("level-name").addEventListener("input", () => {
   current().name = $("level-name").value;
   check();
 });
+$("level-family").addEventListener("change", () => {
+  current().motionFamily = $("level-family").value;
+  change();
+});
 $("level-seed").addEventListener("change", () => {
   current().seed = Number.isFinite($("level-seed").valueAsNumber)
     ? $("level-seed").valueAsNumber
@@ -306,7 +299,7 @@ function drawLevel() {
   const canvas = $("level-preview"),
     ctx = canvas.getContext("2d"),
     level = current(),
-    time = previewTime * level.playbackSpeed,
+    time = previewTime,
     assemblyProfile = doc.assemblyProfiles.find(
       (p) => p.id === level.assembly.profileId,
     ),
@@ -314,6 +307,8 @@ function drawLevel() {
     assemblyAngle = previewProfiles.length
       ? DFuzeAssembly.sampleProfile(assemblyProfile, assemblyTime)
       : 0;
+  if (previewShuffle) previewProfiles = previewShuffle.atCycle(Math.floor(time / 10));
+  showAssignments();
   ctx.clearRect(0, 0, 600, 600);
   ctx.save();
   ctx.translate(300, 300);

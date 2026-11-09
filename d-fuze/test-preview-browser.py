@@ -100,11 +100,11 @@ with sync_playwright() as p:
         verify_geometry(page,[10,60,120,20])
         expect(page.locator('#test-level')).to_be_enabled()
         verify_game_angles(page)
-        page.get_by_role('combobox',name='Ring 1 family',exact=True).select_option('hard')
-        page.get_by_role('combobox',name='Ring 2 family',exact=True).select_option('easy')
+        page.get_by_role('combobox',name='Level motion family',exact=True).select_option('hard')
+        page.get_by_role('combobox',name='Level motion family',exact=True).select_option('easy')
         # Independently scaled clocks plus unwrapped assembly turns.
         page.evaluate('''() => {
-          current().playbackSpeed=1.3;current().assembly.playbackSpeed=.7;
+          current().assembly.playbackSpeed=.7;
           const profile=doc.assemblyProfiles.find(p=>p.id===current().assembly.profileId);
           profile.keyframes=[[0,0],[5,45],[12,180],[20,315],[25,360]];
           renderAll();

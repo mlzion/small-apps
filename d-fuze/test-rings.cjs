@@ -140,7 +140,7 @@ const choices = seededRandom(77);
 assert.equal(
   new Set(Array.from({ length: 50 }, () => selectProfile("easy", choices).name))
     .size,
-  5,
+  6,
 );
 const a = seededRandom(42),
   b = seededRandom(42);
@@ -187,7 +187,7 @@ for (let i = 0; i < 100; i++)
   g.level = 3;
   g.startLevel();
   g.update(2);
-  near(g.animationTime, 2 * g.config.animationPlaybackSpeed);
+  near(g.animationTime, 2);
   near(
     g.rings[0].relativeAngle,
     sampleProfile(g.rings[0].profile, g.animationTime),

@@ -33,11 +33,12 @@ with sync_playwright() as p:
     expect(page.locator('#motion-keys tr')).to_have_count(7)
     page.screenshot(path='/tmp/assembly-editor-phone.png',full_page=True)
     # v1 browser draft upgrade preserves values and constant-speed behavior.
-    legacy=page.evaluate("const old=JSON.parse(JSON.stringify(doc));old.version=1;delete old.assemblyProfiles;delete old.ringProfiles;old.levels.forEach(l=>{l.assembly={enabled:false};l.rings.forEach(r=>r.profiles=DFuzeExperimentalMotion.eligible(r.family).map(p=>p.id));});old.levels[0].timer=91;old.levels[0].assembly={enabled:true,speed:15};old")
+    legacy=page.evaluate("const old=JSON.parse(JSON.stringify(doc));old.version=1;delete old.assemblyProfiles;delete old.ringProfiles;old.levels.forEach(l=>{l.assembly={enabled:false};l.playbackSpeed=1;l.rings.forEach(r=>{r.family=l.motionFamily;r.profiles=DFuzeExperimentalMotion.eligible(r.family).slice(0,5).map(p=>p.id)});delete l.motionFamily;});old.levels[0].timer=91;old.levels[0].assembly={enabled:true,speed:15};old")
     import json
     page.locator('#import-json').set_input_files({'name':'legacy.json','mimeType':'application/json','buffer':json.dumps(legacy).encode()})
+    expect(page.locator('#status')).to_contain_text('JSON imported')
     assert page.evaluate('current().timer')==91
-    assert page.evaluate('doc.version')==3
+    assert page.evaluate('doc.version')==4
     assert page.evaluate('current().assembly.profileId').startswith('migrated-constant')
     editor=page
     with page.expect_popup() as popup:

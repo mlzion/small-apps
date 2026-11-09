@@ -304,7 +304,8 @@ function frame(now) {
         rings: game.rings.length,
         profile: game.rings.map((r) => r.profile.name),
         animationTime: +game.animationTime.toFixed(2),
-        playback: game.config.animationPlaybackSpeed,
+        motionFamily: game.config.motionFamily,
+        cycle: game.motionShuffle.cycle,
         gates: game.rings.map((r) => ({
           angle: +r.gate.angle.toFixed(3),
           health: r.gate.health,

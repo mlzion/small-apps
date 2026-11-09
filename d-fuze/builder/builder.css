@@ -185,7 +185,7 @@ label {
 }
 .ring-row {
   display: grid;
-  grid-template-columns: 60px repeat(3, minmax(110px, 1fr));
+  grid-template-columns: 60px repeat(2, minmax(110px, 1fr));
   gap: 12px;
   border-top: 1px solid #3b454f;
   padding: 16px 0;

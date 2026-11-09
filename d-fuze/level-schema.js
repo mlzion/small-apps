@@ -10,7 +10,7 @@
   else root.DFuzeSchema = api;
 })(globalThis, (motion, ringSystem, assemblyMotion) => {
   "use strict";
-  const VERSION = 3,
+  const VERSION = 4,
     FORMAT = "d-fuze-levels",
     TEST_KEY = "d-fuze-test-v1";
   const FIELDS = {
@@ -20,15 +20,13 @@
     turretSpeed: { label: "Turret °/s", min: 15, max: 360, step: 1 },
     fireRate: { label: "Shots/s", min: 1, max: 12, step: 0.25 },
     ringCount: { label: "Rings", min: 1, max: 4, step: 1 },
-    playbackSpeed: { label: "Playback ×", min: 0.25, max: 3, step: 0.05 },
   };
   const clone = (value) => JSON.parse(JSON.stringify(value));
-  function defaultRing(number, family = "easy") {
+  function defaultRing(number) {
     return {
       number,
       gateWidth: 100,
       gateHealth: 2,
-      family,
     };
   }
   function defaults() {
@@ -43,11 +41,8 @@
           stage = i % 3,
           count = group + 1;
         const rings = Array.from({ length: count }, (_, r) => {
-          const family = ["easy", "medium", "hard"][
-            Math.max(0, stage - Math.floor(r / 2))
-          ];
           return {
-            ...defaultRing(r + 1, family),
+            ...defaultRing(r + 1),
             gateWidth: Math.round((110 - stage * 15 - r * 4) / 10) * 10,
             gateHealth: 2 + stage,
           };
@@ -61,7 +56,7 @@
           turretSpeed: 120,
           fireRate: 4,
           ringCount: count,
-          playbackSpeed: 1 + stage * 0.05,
+          motionFamily: ["easy", "medium", "hard"][stage],
           seed: 4200 + i,
           assembly: {
             profileId: "gentle-drift",
@@ -87,6 +82,7 @@
       "name",
       ...Object.keys(FIELDS),
       "seed",
+      "motionFamily",
       "assembly",
       "rings",
     ];
@@ -110,6 +106,8 @@
         fail(
           `${field.label} must be ${field.min}–${field.max}${field.step === 1 ? " (whole numbers)" : ""}.`,
         );
+    if (!Object.hasOwn(motion.FAMILIES, level.motionFamily))
+      fail("unknown level motion family.");
     if (!number(level.seed, 0, 4294967295, true))
       fail("seed must be a whole number from 0 to 4294967295.");
     if (
@@ -132,7 +130,7 @@
           return;
         }
         for (const k of Object.keys(ring))
-          if (!["number", "gateWidth", "gateHealth", "family"].includes(k))
+          if (!["number", "gateWidth", "gateHealth"].includes(k))
             fail(`Ring ${i + 1}: unknown field “${k}”.`);
         if (ring.number !== i + 1)
           fail("rings must be numbered consecutively from the inside outward.");
@@ -142,8 +140,6 @@
           );
         if (!number(ring.gateHealth, 1, 50, true))
           fail(`Ring ${i + 1}: gate health must be 1–50.`);
-        if (!Object.hasOwn(motion.FAMILIES, ring.family))
-          fail(`Ring ${i + 1}: unknown motion family.`);
       });
     if (errors.length === 0) {
       const minimumHits =
@@ -245,7 +241,9 @@
     if (errors.length) throw new Error(errors.join("\n"));
     const r = level.rings[0],
       g = ringSystem.GEOMETRY;
+    const shuffle = motion.createShuffle(level, seed, ringProfiles);
     return {
+      shuffle,
       config: {
         time: level.timer,
         hits: level.bombHealth,
@@ -255,11 +253,11 @@
           level.rings.reduce((sum, r) => sum + r.gateHealth, 0),
         turretSpeed: level.turretSpeed,
         fireRate: level.fireRate,
-        animationPlaybackSpeed: level.playbackSpeed,
+        motionFamily: level.motionFamily,
         assembly: clone(level.assembly),
         rings: {
           count: level.ringCount,
-          difficulty: r.family,
+          difficulty: level.motionFamily,
           radius: g.ringRadius,
           thickness: g.ringThickness,
           spacing: g.ringSpacing,
@@ -275,7 +273,7 @@
         gateArc: (r.gateWidth * Math.PI) / 180,
         gateHealth: r.gateHealth,
       })),
-      profiles: motion.assignProfiles(level, seed, ringProfiles),
+      profiles: shuffle.atCycle(0),
     };
   }
   function testPayload(
@@ -305,7 +303,7 @@
     if (
       !value ||
       value.format !== "d-fuze-test" ||
-      ![1, 2, 3].includes(value.version) ||
+      ![1, 2, 3, 4].includes(value.version) ||
       Object.keys(value).some(
         (k) =>
           ![
@@ -327,7 +325,7 @@
         version: value.version,
         motionLibrary: value.motionLibrary,
         levels: [value.level],
-        ...(value.version === 3 ? { ringProfiles: value.ringProfiles } : {}),
+        ...(value.version >= 3 ? { ringProfiles: value.ringProfiles } : {}),
         ...(value.version >= 2
           ? { assemblyProfiles: value.assemblyProfiles }
           : {}),
@@ -395,7 +393,7 @@
     }
     return next;
   }
-  function migrate(doc) {
+  function migrateOld(doc) {
     if (!doc || ![1, 2].includes(doc.version)) return doc;
     if (
       doc.version === 2 &&
@@ -420,7 +418,7 @@
     if (next.version !== 2) throw Error("Unsupported configuration version.");
     const libraryErrors = assemblyMotion.validateLibrary(next.assemblyProfiles);
     if (libraryErrors.length) throw Error(libraryErrors.join("\n"));
-    next.version = VERSION;
+    next.version = 3;
     next.ringProfiles = motion.defaults();
     for (const l of next.levels) {
       if (
@@ -473,6 +471,40 @@
       "Migrated to schema v3: all family profiles are eligible; assembly motion is active on every level.",
     );
     Object.defineProperty(next, "migrationNotes", { value: notes });
+    return next;
+  }
+  function migrate(doc) {
+    const legacy = migrateOld(doc);
+    if (!legacy || legacy.version !== 3) return legacy;
+    const next = clone(legacy), notes = [...(legacy.migrationNotes || [])];
+    // Validate the old fields before removing them: malformed data is never
+    // repaired into an unintended level. Strongest family is deterministic.
+    if (!Array.isArray(next.levels)) throw Error("Missing legacy levels.");
+    for (const level of next.levels) {
+      if (!level || !Array.isArray(level.rings) || !level.rings.length ||
+          !Number.isFinite(level.playbackSpeed) || level.playbackSpeed < .25 || level.playbackSpeed > 3 ||
+          level.motionFamily !== undefined || level.rings.some(r => !r || !Object.hasOwn(motion.FAMILIES, r.family)))
+        throw Error("Invalid legacy ring family or playback multiplier.");
+      const families = ["easy","medium","hard"];
+      level.motionFamily = families[Math.max(...level.rings.map(r => families.indexOf(r.family)))];
+      notes.push(`Level ${level.number}: selected ${level.motionFamily} (strongest legacy ring family); removed ring playback ${level.playbackSpeed}×; shared cycle is now exactly 10s.`);
+      delete level.playbackSpeed;
+      level.rings.forEach(r => delete r.family);
+    }
+    if (!Array.isArray(next.ringProfiles)) throw Error("Missing legacy ring profiles.");
+    for (const family of ["easy","medium","hard"]) {
+      const pool = next.ringProfiles.filter(p => p?.difficulty === family);
+      if (pool.length === 5) {
+        const extra = motion.defaults().find(p => p.id === `${family}-06`);
+        while (next.ringProfiles.some(p => p?.id === extra.id)) extra.id += "-migrated";
+        next.ringProfiles.push(extra);
+        notes.push(`Added sixth ${family} profile: ${extra.name}. Existing profiles retained.`);
+      } else if (pool.length !== 6) {
+        throw Error(`Legacy ${family} family has ${pool.length} profiles; exactly six are required. No profiles were discarded.`);
+      }
+    }
+    next.version = VERSION;
+    Object.defineProperty(next, "migrationNotes", {value:notes});
     return next;
   }
   return {

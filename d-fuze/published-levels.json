@@ -1,6 +1,6 @@
 {
   "format": "d-fuze-levels",
-  "version": 3,
+  "version": 4,
   "motionLibrary": "builder-10-v1",
   "levels": [
     {
@@ -12,7 +12,6 @@
       "turretSpeed": 120,
       "fireRate": 4,
       "ringCount": 1,
-      "playbackSpeed": 1,
       "seed": 4200,
       "assembly": {
         "profileId": "gentle-drift",
@@ -22,10 +21,10 @@
         {
           "number": 1,
           "gateWidth": 100,
-          "gateHealth": 2,
-          "family": "easy"
+          "gateHealth": 2
         }
-      ]
+      ],
+      "motionFamily": "easy"
     },
     {
       "number": 2,
@@ -36,7 +35,6 @@
       "turretSpeed": 120,
       "fireRate": 4,
       "ringCount": 1,
-      "playbackSpeed": 1.05,
       "seed": 4201,
       "assembly": {
         "profileId": "gentle-drift",
@@ -46,10 +44,10 @@
         {
           "number": 1,
           "gateWidth": 80,
-          "gateHealth": 3,
-          "family": "medium"
+          "gateHealth": 3
         }
-      ]
+      ],
+      "motionFamily": "medium"
     },
     {
       "number": 3,
@@ -60,7 +58,6 @@
       "turretSpeed": 120,
       "fireRate": 4,
       "ringCount": 1,
-      "playbackSpeed": 1.12,
       "seed": 4202,
       "assembly": {
         "profileId": "gentle-drift",
@@ -70,10 +67,10 @@
         {
           "number": 1,
           "gateWidth": 60,
-          "gateHealth": 4,
-          "family": "hard"
+          "gateHealth": 4
         }
-      ]
+      ],
+      "motionFamily": "hard"
     },
     {
       "number": 4,
@@ -84,7 +81,6 @@
       "turretSpeed": 120,
       "fireRate": 4,
       "ringCount": 2,
-      "playbackSpeed": 1,
       "seed": 4203,
       "assembly": {
         "profileId": "gentle-drift",
@@ -94,16 +90,15 @@
         {
           "number": 1,
           "gateWidth": 110,
-          "gateHealth": 2,
-          "family": "easy"
+          "gateHealth": 2
         },
         {
           "number": 2,
           "gateWidth": 110,
-          "gateHealth": 2,
-          "family": "easy"
+          "gateHealth": 2
         }
-      ]
+      ],
+      "motionFamily": "easy"
     },
     {
       "number": 5,
@@ -114,7 +109,6 @@
       "turretSpeed": 120,
       "fireRate": 4,
       "ringCount": 2,
-      "playbackSpeed": 1.05,
       "seed": 4204,
       "assembly": {
         "profileId": "gentle-drift",
@@ -124,16 +118,15 @@
         {
           "number": 1,
           "gateWidth": 100,
-          "gateHealth": 3,
-          "family": "medium"
+          "gateHealth": 3
         },
         {
           "number": 2,
           "gateWidth": 90,
-          "gateHealth": 3,
-          "family": "medium"
+          "gateHealth": 3
         }
-      ]
+      ],
+      "motionFamily": "medium"
     },
     {
       "number": 6,
@@ -144,7 +137,6 @@
       "turretSpeed": 120,
       "fireRate": 4,
       "ringCount": 2,
-      "playbackSpeed": 1.1,
       "seed": 4205,
       "assembly": {
         "profileId": "gentle-drift",
@@ -154,16 +146,15 @@
         {
           "number": 1,
           "gateWidth": 80,
-          "gateHealth": 4,
-          "family": "hard"
+          "gateHealth": 4
         },
         {
           "number": 2,
           "gateWidth": 80,
-          "gateHealth": 4,
-          "family": "hard"
+          "gateHealth": 4
         }
-      ]
+      ],
+      "motionFamily": "hard"
     },
     {
       "number": 7,
@@ -174,7 +165,6 @@
       "turretSpeed": 120,
       "fireRate": 4,
       "ringCount": 3,
-      "playbackSpeed": 1,
       "seed": 4206,
       "assembly": {
         "profileId": "gentle-drift",
@@ -184,22 +174,20 @@
         {
           "number": 1,
           "gateWidth": 110,
-          "gateHealth": 2,
-          "family": "easy"
+          "gateHealth": 2
         },
         {
           "number": 2,
           "gateWidth": 110,
-          "gateHealth": 2,
-          "family": "easy"
+          "gateHealth": 2
         },
         {
           "number": 3,
           "gateWidth": 100,
-          "gateHealth": 2,
-          "family": "easy"
+          "gateHealth": 2
         }
-      ]
+      ],
+      "motionFamily": "easy"
     },
     {
       "number": 8,
@@ -210,7 +198,6 @@
       "turretSpeed": 120,
       "fireRate": 4,
       "ringCount": 3,
-      "playbackSpeed": 1.05,
       "seed": 4207,
       "assembly": {
         "profileId": "gentle-drift",
@@ -220,22 +207,20 @@
         {
           "number": 1,
           "gateWidth": 100,
-          "gateHealth": 3,
-          "family": "medium"
+          "gateHealth": 3
         },
         {
           "number": 2,
           "gateWidth": 90,
-          "gateHealth": 3,
-          "family": "medium"
+          "gateHealth": 3
         },
         {
           "number": 3,
           "gateWidth": 90,
-          "gateHealth": 3,
-          "family": "easy"
+          "gateHealth": 3
         }
-      ]
+      ],
+      "motionFamily": "medium"
     },
     {
       "number": 9,
@@ -246,7 +231,6 @@
       "turretSpeed": 120,
       "fireRate": 4,
       "ringCount": 3,
-      "playbackSpeed": 1.1,
       "seed": 4208,
       "assembly": {
         "profileId": "gentle-drift",
@@ -256,22 +240,20 @@
         {
           "number": 1,
           "gateWidth": 80,
-          "gateHealth": 4,
-          "family": "hard"
+          "gateHealth": 4
         },
         {
           "number": 2,
           "gateWidth": 80,
-          "gateHealth": 4,
-          "family": "hard"
+          "gateHealth": 4
         },
         {
           "number": 3,
           "gateWidth": 70,
-          "gateHealth": 4,
-          "family": "medium"
+          "gateHealth": 4
         }
-      ]
+      ],
+      "motionFamily": "hard"
     },
     {
       "number": 10,
@@ -282,7 +264,6 @@
       "turretSpeed": 120,
       "fireRate": 4,
       "ringCount": 4,
-      "playbackSpeed": 1,
       "seed": 4209,
       "assembly": {
         "profileId": "gentle-drift",
@@ -292,28 +273,25 @@
         {
           "number": 1,
           "gateWidth": 110,
-          "gateHealth": 2,
-          "family": "easy"
+          "gateHealth": 2
         },
         {
           "number": 2,
           "gateWidth": 110,
-          "gateHealth": 2,
-          "family": "easy"
+          "gateHealth": 2
         },
         {
           "number": 3,
           "gateWidth": 100,
-          "gateHealth": 2,
-          "family": "easy"
+          "gateHealth": 2
         },
         {
           "number": 4,
           "gateWidth": 100,
-          "gateHealth": 2,
-          "family": "easy"
+          "gateHealth": 2
         }
-      ]
+      ],
+      "motionFamily": "easy"
     },
     {
       "number": 11,
@@ -324,7 +302,6 @@
       "turretSpeed": 120,
       "fireRate": 4,
       "ringCount": 4,
-      "playbackSpeed": 1.05,
       "seed": 4210,
       "assembly": {
         "profileId": "gentle-drift",
@@ -334,28 +311,25 @@
         {
           "number": 1,
           "gateWidth": 100,
-          "gateHealth": 3,
-          "family": "medium"
+          "gateHealth": 3
         },
         {
           "number": 2,
           "gateWidth": 90,
-          "gateHealth": 3,
-          "family": "medium"
+          "gateHealth": 3
         },
         {
           "number": 3,
           "gateWidth": 90,
-          "gateHealth": 3,
-          "family": "easy"
+          "gateHealth": 3
         },
         {
           "number": 4,
           "gateWidth": 80,
-          "gateHealth": 3,
-          "family": "easy"
+          "gateHealth": 3
         }
-      ]
+      ],
+      "motionFamily": "medium"
     },
     {
       "number": 12,
@@ -366,7 +340,6 @@
       "turretSpeed": 120,
       "fireRate": 4,
       "ringCount": 4,
-      "playbackSpeed": 1.1,
       "seed": 4211,
       "assembly": {
         "profileId": "gentle-drift",
@@ -376,28 +349,25 @@
         {
           "number": 1,
           "gateWidth": 80,
-          "gateHealth": 4,
-          "family": "hard"
+          "gateHealth": 4
         },
         {
           "number": 2,
           "gateWidth": 80,
-          "gateHealth": 4,
-          "family": "hard"
+          "gateHealth": 4
         },
         {
           "number": 3,
           "gateWidth": 70,
-          "gateHealth": 4,
-          "family": "medium"
+          "gateHealth": 4
         },
         {
           "number": 4,
           "gateWidth": 70,
-          "gateHealth": 4,
-          "family": "medium"
+          "gateHealth": 4
         }
-      ]
+      ],
+      "motionFamily": "hard"
     }
   ],
   "assemblyProfiles": [
@@ -1390,6 +1360,225 @@
         [
           8.8,
           290,
+          "smooth"
+        ],
+        [
+          9.5,
+          0,
+          "linear"
+        ],
+        [
+          10,
+          0,
+          "linear"
+        ]
+      ]
+    },
+    {
+      "id": "easy-06",
+      "name": "Soft counterstep",
+      "difficulty": "easy",
+      "duration": 10,
+      "keyframes": [
+        [
+          0,
+          0,
+          "smooth"
+        ],
+        [
+          0.7,
+          -35,
+          "smooth"
+        ],
+        [
+          1.5,
+          -35,
+          "smooth"
+        ],
+        [
+          2.7,
+          85,
+          "smooth"
+        ],
+        [
+          3.5,
+          0,
+          "linear"
+        ],
+        [
+          5,
+          0,
+          "smooth"
+        ],
+        [
+          5.8,
+          45,
+          "smooth"
+        ],
+        [
+          6.6,
+          45,
+          "smooth"
+        ],
+        [
+          7.6,
+          -65,
+          "smooth"
+        ],
+        [
+          8.5,
+          0,
+          "linear"
+        ],
+        [
+          10,
+          0,
+          "linear"
+        ]
+      ]
+    },
+    {
+      "id": "medium-06",
+      "name": "Asymmetric switchback",
+      "difficulty": "medium",
+      "duration": 10,
+      "keyframes": [
+        [
+          0,
+          0,
+          "smooth"
+        ],
+        [
+          0.8,
+          140,
+          "linear"
+        ],
+        [
+          1.7,
+          -210,
+          "smooth"
+        ],
+        [
+          2.3,
+          -210,
+          "smooth"
+        ],
+        [
+          3.2,
+          95,
+          "smooth"
+        ],
+        [
+          4,
+          0,
+          "linear"
+        ],
+        [
+          5,
+          0,
+          "smooth"
+        ],
+        [
+          5.7,
+          -125,
+          "smooth"
+        ],
+        [
+          6.5,
+          260,
+          "linear"
+        ],
+        [
+          7.3,
+          260,
+          "smooth"
+        ],
+        [
+          8.2,
+          -75,
+          "smooth"
+        ],
+        [
+          9,
+          0,
+          "linear"
+        ],
+        [
+          10,
+          0,
+          "linear"
+        ]
+      ]
+    },
+    {
+      "id": "hard-06",
+      "name": "Counterspin recoil",
+      "difficulty": "hard",
+      "duration": 10,
+      "keyframes": [
+        [
+          0,
+          0,
+          "smooth"
+        ],
+        [
+          0.6,
+          -240,
+          "linear"
+        ],
+        [
+          1.5,
+          -540,
+          "smooth"
+        ],
+        [
+          2.2,
+          -540,
+          "linear"
+        ],
+        [
+          3.2,
+          270,
+          "linear"
+        ],
+        [
+          3.9,
+          -95,
+          "smooth"
+        ],
+        [
+          4.5,
+          0,
+          "linear"
+        ],
+        [
+          5,
+          0,
+          "smooth"
+        ],
+        [
+          5.6,
+          260,
+          "linear"
+        ],
+        [
+          6.5,
+          610,
+          "smooth"
+        ],
+        [
+          7.1,
+          610,
+          "linear"
+        ],
+        [
+          8.1,
+          -300,
+          "linear"
+        ],
+        [
+          8.9,
+          130,
           "smooth"
         ],
         [
