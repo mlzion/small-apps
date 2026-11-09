@@ -189,14 +189,10 @@ function check() {
     p.textContent = `${doc.levels.length} levels structurally valid. No human difficulty guarantee.`;
     container.append(p);
   }
-  const levelErrors = S.validateLevel(current(), "Level", doc.assemblyProfiles);
-  $("test-level").disabled = errors.length > 0 || current().ringCount > 2;
-  $("test-explanation").textContent =
-    current().ringCount > 2
-      ? "Animation preview only: three- and four-ring gameplay arrives in Phase 5."
-      : errors.length
-        ? "Fix configuration errors before testing."
-        : "Launches the real game with this experimental level. Published data is unchanged.";
+  $("test-level").disabled = errors.length > 0;
+  $("test-explanation").textContent = errors.length
+    ? "Fix configuration errors before testing."
+    : "Launches the real game with this experimental level. Published data is unchanged.";
   $("delete-level").disabled = doc.levels.length === 1;
   $("add-level").disabled = $("duplicate-level").disabled =
     doc.levels.length >= 200;

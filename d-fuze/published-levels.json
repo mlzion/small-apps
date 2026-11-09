@@ -164,6 +164,240 @@
           "family": "hard"
         }
       ]
+    },
+    {
+      "number": 7,
+      "name": "Draft 7",
+      "timer": 89,
+      "bombHealth": 3,
+      "ammo": 60,
+      "turretSpeed": 120,
+      "fireRate": 4,
+      "ringCount": 3,
+      "playbackSpeed": 1,
+      "seed": 4206,
+      "assembly": {
+        "profileId": "gentle-drift",
+        "playbackSpeed": 1
+      },
+      "rings": [
+        {
+          "number": 1,
+          "gateWidth": 110,
+          "gateHealth": 2,
+          "family": "easy"
+        },
+        {
+          "number": 2,
+          "gateWidth": 110,
+          "gateHealth": 2,
+          "family": "easy"
+        },
+        {
+          "number": 3,
+          "gateWidth": 100,
+          "gateHealth": 2,
+          "family": "easy"
+        }
+      ]
+    },
+    {
+      "number": 8,
+      "name": "Draft 8",
+      "timer": 83,
+      "bombHealth": 5,
+      "ammo": 68,
+      "turretSpeed": 120,
+      "fireRate": 4,
+      "ringCount": 3,
+      "playbackSpeed": 1.05,
+      "seed": 4207,
+      "assembly": {
+        "profileId": "gentle-drift",
+        "playbackSpeed": 1
+      },
+      "rings": [
+        {
+          "number": 1,
+          "gateWidth": 100,
+          "gateHealth": 3,
+          "family": "medium"
+        },
+        {
+          "number": 2,
+          "gateWidth": 90,
+          "gateHealth": 3,
+          "family": "medium"
+        },
+        {
+          "number": 3,
+          "gateWidth": 90,
+          "gateHealth": 3,
+          "family": "easy"
+        }
+      ]
+    },
+    {
+      "number": 9,
+      "name": "Draft 9",
+      "timer": 77,
+      "bombHealth": 7,
+      "ammo": 76,
+      "turretSpeed": 120,
+      "fireRate": 4,
+      "ringCount": 3,
+      "playbackSpeed": 1.1,
+      "seed": 4208,
+      "assembly": {
+        "profileId": "gentle-drift",
+        "playbackSpeed": 1
+      },
+      "rings": [
+        {
+          "number": 1,
+          "gateWidth": 80,
+          "gateHealth": 4,
+          "family": "hard"
+        },
+        {
+          "number": 2,
+          "gateWidth": 80,
+          "gateHealth": 4,
+          "family": "hard"
+        },
+        {
+          "number": 3,
+          "gateWidth": 70,
+          "gateHealth": 4,
+          "family": "medium"
+        }
+      ]
+    },
+    {
+      "number": 10,
+      "name": "Draft 10",
+      "timer": 101,
+      "bombHealth": 3,
+      "ammo": 70,
+      "turretSpeed": 120,
+      "fireRate": 4,
+      "ringCount": 4,
+      "playbackSpeed": 1,
+      "seed": 4209,
+      "assembly": {
+        "profileId": "gentle-drift",
+        "playbackSpeed": 1
+      },
+      "rings": [
+        {
+          "number": 1,
+          "gateWidth": 110,
+          "gateHealth": 2,
+          "family": "easy"
+        },
+        {
+          "number": 2,
+          "gateWidth": 110,
+          "gateHealth": 2,
+          "family": "easy"
+        },
+        {
+          "number": 3,
+          "gateWidth": 100,
+          "gateHealth": 2,
+          "family": "easy"
+        },
+        {
+          "number": 4,
+          "gateWidth": 100,
+          "gateHealth": 2,
+          "family": "easy"
+        }
+      ]
+    },
+    {
+      "number": 11,
+      "name": "Draft 11",
+      "timer": 95,
+      "bombHealth": 5,
+      "ammo": 78,
+      "turretSpeed": 120,
+      "fireRate": 4,
+      "ringCount": 4,
+      "playbackSpeed": 1.05,
+      "seed": 4210,
+      "assembly": {
+        "profileId": "gentle-drift",
+        "playbackSpeed": 1
+      },
+      "rings": [
+        {
+          "number": 1,
+          "gateWidth": 100,
+          "gateHealth": 3,
+          "family": "medium"
+        },
+        {
+          "number": 2,
+          "gateWidth": 90,
+          "gateHealth": 3,
+          "family": "medium"
+        },
+        {
+          "number": 3,
+          "gateWidth": 90,
+          "gateHealth": 3,
+          "family": "easy"
+        },
+        {
+          "number": 4,
+          "gateWidth": 80,
+          "gateHealth": 3,
+          "family": "easy"
+        }
+      ]
+    },
+    {
+      "number": 12,
+      "name": "Draft 12",
+      "timer": 89,
+      "bombHealth": 7,
+      "ammo": 86,
+      "turretSpeed": 120,
+      "fireRate": 4,
+      "ringCount": 4,
+      "playbackSpeed": 1.1,
+      "seed": 4211,
+      "assembly": {
+        "profileId": "gentle-drift",
+        "playbackSpeed": 1
+      },
+      "rings": [
+        {
+          "number": 1,
+          "gateWidth": 80,
+          "gateHealth": 4,
+          "family": "hard"
+        },
+        {
+          "number": 2,
+          "gateWidth": 80,
+          "gateHealth": 4,
+          "family": "hard"
+        },
+        {
+          "number": 3,
+          "gateWidth": 70,
+          "gateHealth": 4,
+          "family": "medium"
+        },
+        {
+          "number": 4,
+          "gateWidth": 70,
+          "gateHealth": 4,
+          "family": "medium"
+        }
+      ]
     }
   ],
   "assemblyProfiles": [

@@ -92,15 +92,14 @@ with sync_playwright() as p:
         for width in [10,60,120]:
             page.get_by_role('combobox',name='Ring 1 gate width',exact=True).select_option(str(width))
             verify_geometry(page,[width])
-        # Four independent configured widths, with no gameplay enabled for 3/4 rings.
+        # Four independent configured widths, also supported by Test Mode.
         count=page.get_by_role('spinbutton',name='Level 1 Rings',exact=True)
         count.fill('4');count.press('Tab')
         for i,width in enumerate([10,60,120,20],1):
             page.get_by_role('combobox',name=f'Ring {i} gate width',exact=True).select_option(str(width))
         verify_geometry(page,[10,60,120,20])
-        expect(page.locator('#test-level')).to_be_disabled()
-        count=page.get_by_role('spinbutton',name='Level 1 Rings',exact=True)
-        count.fill('2');count.press('Tab')
+        expect(page.locator('#test-level')).to_be_enabled()
+        verify_game_angles(page)
         page.get_by_role('combobox',name='Ring 1 family',exact=True).select_option('hard')
         page.get_by_role('combobox',name='Ring 2 family',exact=True).select_option('easy')
         # Independently scaled clocks plus unwrapped assembly turns.
@@ -125,7 +124,7 @@ with sync_playwright() as p:
             page.get_by_role('combobox',name='Ring 1 gate width',exact=True).select_option(str(width))
             assert page.evaluate('[previewTime,previewProfiles.map(p=>p.id)]') == before
             assert page.evaluate('previewPlaying')
-            verify_geometry(page,[width,60]);verify_game_angles(page)
+            verify_geometry(page,[width,60,120,20]);verify_game_angles(page)
         expect(page.locator('#preview-readout')).to_contain_text('Elapsed: 100.')
         expect(page.locator('#preview-readout')).to_contain_text('Ring cycle:')
         expect(page.locator('#preview-readout')).to_contain_text('Assembly cycle:')

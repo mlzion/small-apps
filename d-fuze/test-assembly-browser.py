@@ -14,7 +14,7 @@ with sync_playwright() as p:
     ctx.route('http://app-lab.test/**',serve);ctx.on('weberror',lambda e:errors.append(str(e)))
     page=ctx.new_page();page.goto('http://app-lab.test/small-apps/d-fuze/builder/')
     page.locator('#access-code').fill('FUSE-LAB-3');page.get_by_role('button',name='OPEN LEVEL BUILDER').tap()
-    page.locator('#reload-published').tap();expect(page.locator('#level-table tbody tr')).to_have_count(6)
+    page.locator('#reload-published').tap();expect(page.locator('#level-table tbody tr')).to_have_count(12)
     assert page.evaluate('current().timer')==48
     page.locator('#motion-mode').select_option('assembly')
     # An invalid key disables testing/export without crashing the animation preview.

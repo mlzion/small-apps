@@ -114,7 +114,7 @@ assert.equal(S.loadDraft, undefined);
 assert.equal(S.exportCSV, undefined);
 const level = defaults.levels[0];
 assert.deepEqual(S.readTest(S.testPayload(level)), level);
-assert.throws(() => S.testPayload(defaults.levels[6]));
+assert.deepEqual(S.readTest(S.testPayload(defaults.levels[6])), defaults.levels[6]);
 assert.throws(() => S.readTest('{"version":99}'));
 const g = new Game(undefined, undefined, {
   seed: level.seed,
@@ -145,9 +145,7 @@ g.transition("LEVEL_FAILED");
 g.retry();
 assert.equal(g.rings[0].profile.id, M.assignProfiles(level, 90000)[0].id);
 assert.equal(g.lives, 3);
-assert.throws(
-  () => new Game(undefined, undefined, { testLevel: defaults.levels[6] }),
-);
+assert.equal(new Game(undefined, undefined, { testLevel: defaults.levels[11] }).rings.length, 4);
 for (let number = 1; number <= 6; number++) {
   const g = new Game(undefined, undefined, { seed: 42 });
   g.level = number;
@@ -165,5 +163,5 @@ assert(!normal.testMode);
 assert.equal(normal.rings[0].profile.family.duration, 10);
 assert.equal(normal.config.time, 48);
 console.log(
-  "PASS: 15 starter profiles, exact holds, 125 mixed-family combinations, interpolation/loops/playback ratios, deterministic assignment, schema/rejections, JSON, removed draft helpers, Test Mode retry/no advance, multi-ring test rejection, published 10-second profiles",
+  "PASS: 15 starter profiles, exact holds, 125 mixed-family combinations, interpolation/loops/playback ratios, deterministic assignment, schema/rejections, JSON, removed draft helpers, Test Mode retry/no advance, four-ring Test Mode, published 10-second profiles",
 );

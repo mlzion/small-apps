@@ -144,8 +144,8 @@ for (const a of ["easy", "medium", "hard"])
     g.transition("LEVEL_COMPLETE");
     g.nextLevel();
   }
-  assert.equal(g.level, 6);
-  assert.equal(g.state, "LEVEL_COMPLETE");
+  assert.equal(g.level, 7);
+  assert.equal(g.state, "PLAYING");
   const fail = make();
   fail.ammo = 1;
   fail.angle = 0;
@@ -157,7 +157,7 @@ for (const a of ["easy", "medium", "hard"])
   assert.equal(timeout.state, "EXPLODING");
 }
 console.log(
-  "PASS: outer/inner walls and gates, independent health, outside-in immunity, one target/shot, beam endpoints, destroyed-wall blocking, retry, nine mixed-family wins, shared holds/assembly/collision/pause, seeded profiles, normal levels 1–6/end, ammo/timeout",
+  "PASS: outer/inner walls and gates, independent health, outside-in immunity, one target/shot, beam endpoints, destroyed-wall blocking, retry, nine mixed-family wins, shared holds/assembly/collision/pause, seeded profiles, normal levels 1–6/advance, ammo/timeout",
 );
 
 for (let level = 4; level <= 6; level++)

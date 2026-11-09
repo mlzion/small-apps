@@ -42,17 +42,21 @@
         schema.toRuntime(testLevel, seed, assemblyProfiles, ringProfiles);
       this.testLevel = testLevel ? schema.clone(testLevel) : null;
       this.testMode = !!testLevel;
+      // Capture the complete published document once per session. Starting,
+      // retrying or advancing never consults a later loader revision.
+      const published = this.testMode ? null : levels.publishedDocument();
+      this.levels = this.testMode ? [this.testLevel] : published.levels;
       this.assemblyProfiles = this.testMode
         ? schema.clone(assemblyProfiles)
-        : levels.publishedDocument().assemblyProfiles;
+        : published.assemblyProfiles;
       this.ringProfiles = this.testMode
         ? ringProfiles
           ? schema.clone(ringProfiles)
           : undefined
-        : levels.publishedDocument().ringProfiles;
+        : published.ringProfiles;
       this.seedOverride = seed !== undefined;
       this.seed =
-        (seed ?? this.testLevel?.seed ?? levels.publishedLevel(1).seed) >>> 0;
+        (seed ?? this.testLevel?.seed ?? this.levels[0].seed) >>> 0;
       this.emit = emit;
       this.resolver = resolver;
       this.state = STATES.MAIN_MENU;
@@ -65,11 +69,18 @@
       this.state = next;
       this.emit("state", next);
     }
+    get levelCount() {
+      return this.levels.length;
+    }
+    get hasNextLevel() {
+      return !this.testMode && this.level < this.levelCount;
+    }
     resetLevel() {
-      if (!this.testMode && !this.seedOverride)
-        this.seed = levels.publishedLevel(this.level).seed;
+      const level = this.testMode ? this.testLevel : this.levels[this.level - 1];
+      if (!level) throw new Error(`Published Level ${this.level} is missing.`);
+      if (!this.testMode && !this.seedOverride) this.seed = level.seed;
       const experimental = schema.toRuntime(
-        this.testMode ? this.testLevel : levels.publishedLevel(this.level),
+        level,
         this.seed,
         this.assemblyProfiles,
         this.ringProfiles,
@@ -120,19 +131,12 @@
       this.startLevel();
     }
     startLevel() {
-      if (!this.testMode && this.level > 6)
-        throw new Error("Only six published levels are available.");
       this.resetLevel();
       this.transition(STATES.PLAYING);
       this.emit("begin");
     }
     nextLevel() {
-      if (
-        this.testMode ||
-        this.level >= 6 ||
-        this.state !== STATES.LEVEL_COMPLETE
-      )
-        return;
+      if (!this.hasNextLevel || this.state !== STATES.LEVEL_COMPLETE) return;
       this.level++;
       this.startLevel();
     }
