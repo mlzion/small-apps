@@ -5,7 +5,7 @@ A static Canvas 2D arcade game with no runtime dependencies or external assets. 
 - Rotate with Left/A and Right/D; shoot with Space. Hold to repeat. Escape or PAUSE pauses. Touch controls support independent held pointers.
 - Defuse each bomb before time or ammunition runs out. Success preserves lives; failure costs one of three lives. Advance and retry through explicit buttons.
 - Sound is synthesized after a user gesture. SOUND OFF persists when localStorage is available. Gameplay works without audio or storage.
-- Blur/hidden events clear input and pause active gameplay; resume is explicit. Orientation changes preserve game state.
+- Blur/hidden events clear input and pause active gameplay; resume is explicit. Phone landscape with limited space displays a rotation message; active gameplay pauses and requires explicit resume after returning to portrait. Menus/results retain their state.
 
 ## Modules and tuning
 
@@ -29,6 +29,14 @@ python breakout/test-browser.py
 python falling-blocks/test-browser.py
 ```
 
-Browser checks require development-only Python Playwright and `/usr/bin/chromium`, matching the existing game suites. They route local files at a reserved test origin, including `/small-apps/`. Screenshots are saved as `/tmp/d-fuze-WIDTHxHEIGHT.png`. Engine tests cover timing at 15/30/60/144 fps, firing and final-shot ordering, outcomes, pulses, pause, lives, retries, future shot interception, and 10,000 achievable level configurations. Browser tests cover controls, real CDP multitouch, responsive layouts, navigation, focus/visibility events, mute persistence, and unavailable Web Audio.
+Browser checks require development-only Python Playwright and `/usr/bin/chromium`, matching the existing game suites. They route local files at a reserved test origin, including `/small-apps/`. Screenshots are saved as `/tmp/d-fuze-WIDTHxHEIGHT.png`. Engine tests cover timing at 15/30/60/144 fps, firing and final-shot ordering, outcomes, pulses, pause, lives, retries, future shot interception, and 10,000 achievable level configurations. Browser tests cover controls, real CDP multitouch, rotation with held controls, manual resume and menu/result preservation, small-phone and tablet layouts, navigation, focus/visibility events, mute persistence, and unavailable Web Audio.
 
 Physical phones, audible quality, non-Chromium browsers, and live GitHub Pages require manual verification. Mobile browser sound interruptions and real OS app-switch behavior should be checked on iOS Safari and Android Chrome. Browser tests use emulated touch/viewports and synthetic focus/visibility events; they do not substitute for physical-device checks.
+
+## Mobile layout
+
+Portrait phones keep the vertical HUD/playfield/controls layout. The square playfield uses `dvh` (with `svh` fallback) and reserves room for controls and safe areas, including when browser bars reduce available height. Menus can use the screen area below the header on short phones.
+
+A landscape viewport at most 1000 CSS pixels wide and 500 pixels high, with coarse-pointer support, displays “ROTATE YOUR PHONE”. Dimensions determine available space; pointer capability keeps short mouse-only desktop windows playable. No user-agent detection is used. Larger tablets remain playable in either orientation. The covered game is inert, held input and audio stop, and the gameplay clock does not advance. Rotating back never resumes automatically. Defusal/explosion effects also freeze behind the message and continue afterward without changing their state.
+
+The breakpoint is a space/capability heuristic: compact tablets or touch laptops with very short landscape windows also receive the message. Physical browser toolbar behavior and safe-area insets still require device verification.
