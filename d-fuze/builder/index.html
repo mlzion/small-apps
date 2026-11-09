@@ -15,8 +15,8 @@
     <script src="../rings.js" defer></script>
     <script src="../level-schema.js?v=publish-json" defer></script>
     <script src="../levels.js?v=publish-json" defer></script>
-    <script src="assembly-editor.js?v=publish-json" defer></script>
-    <script src="builder.js?v=publish-json" defer></script>
+    <script src="assembly-editor.js?v=preview-clock" defer></script>
+    <script src="builder.js?v=preview-clock" defer></script>
   </head>
   <body>
     <dialog id="access-dialog" aria-labelledby="access-title">
@@ -171,6 +171,9 @@
       <section id="profiles-section">
         <h2>Ring Motion</h2>
         <strong id="profile-title"></strong>
+        <p class="hint">
+          Motion reference: fixed 60° gate, independent of level settings.
+        </p>
         <div class="profile-visuals">
           <canvas
             id="profile-graph"
@@ -190,6 +193,9 @@
       <section id="assembly-section">
         <h2>Assembly Motion</h2>
         <strong id="assembly-title"></strong>
+        <p class="hint">
+          Motion reference: fixed 60° gates, independent of level settings.
+        </p>
         <div class="profile-visuals">
           <canvas
             id="assembly-graph"
@@ -223,7 +229,9 @@
             </div>
             <p id="preview-readout"></p>
             <p class="hint">
-              Play starts at zero using the level’s configured motion rates.
+              Play starts at zero and loops continuously using the level’s
+              motion rates.
+              Each gate uses its configured width; width edits update live.
               Stop resets to zero. Preview has no collisions or damage.
             </p>
             <button id="test-level" class="primary">TEST LEVEL</button>

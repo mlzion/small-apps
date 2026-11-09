@@ -45,9 +45,11 @@ function button(text, action) {
   b.addEventListener("click", action);
   return b;
 }
-function change() {
+function change({ preservePlayback = false } = {}) {
   check();
-  resetPreview();
+  // Gate-width edits affect geometry only, not profile assignment or clocks.
+  if (preservePlayback) drawLevel();
+  else resetPreview();
 }
 function renumber() {
   doc.levels.forEach((l, i) => (l.number = i + 1));
@@ -133,7 +135,7 @@ function renderRings() {
     width.value = ring.gateWidth;
     width.addEventListener("change", () => {
       ring.gateWidth = Number(width.value);
-      change();
+      change({ preservePlayback: true });
     });
     row.append(label("Gate width", width));
     row.append(
@@ -308,7 +310,14 @@ function drawLevel() {
   const canvas = $("level-preview"),
     ctx = canvas.getContext("2d"),
     level = current(),
-    time = previewTime * level.playbackSpeed;
+    time = previewTime * level.playbackSpeed,
+    assemblyProfile = doc.assemblyProfiles.find(
+      (p) => p.id === level.assembly.profileId,
+    ),
+    assemblyTime = previewTime * level.assembly.playbackSpeed,
+    assemblyAngle = previewProfiles.length
+      ? DFuzeAssembly.sampleProfile(assemblyProfile, assemblyTime)
+      : 0;
   ctx.clearRect(0, 0, 600, 600);
   ctx.save();
   ctx.translate(300, 300);
@@ -324,25 +333,19 @@ function drawLevel() {
         (r.gateWidth * Math.PI) / 180,
         M.sampleProfile(previewProfiles[i], time) +
           geometry.referenceOffset +
-          (previewProfiles.length
-            ? DFuzeAssembly.sampleProfile(
-                doc.assemblyProfiles.find(
-                  (p) => p.id === level.assembly.profileId,
-                ),
-                previewTime * level.assembly.playbackSpeed,
-              )
-            : 0),
+          assemblyAngle,
         geometry.ringThickness,
       );
   });
   ctx.restore();
   $("preview-readout").textContent =
-    `Shared animation time: ${Number.isFinite(time) ? (time % 10).toFixed(2) : "—"} / 10s · level ${level.playbackSpeed}×`;
+    `Elapsed: ${previewTime.toFixed(2)}s · Ring cycle: ${Number.isFinite(time) ? (time % 10).toFixed(2) : "—"} / 10s · Assembly cycle: ${Number.isFinite(assemblyTime) && assemblyProfile ? (assemblyTime % assemblyProfile.duration).toFixed(2) : "—"} / ${assemblyProfile?.duration ?? "—"}s`;
 }
 $("preview-play").addEventListener("click", () => {
   if (!previewProfiles.length) return;
   previewPlaying = !previewPlaying;
   previewTime = 0;
+  last = performance.now();
   $("preview-play").textContent = previewPlaying ? "STOP" : "PLAY";
   drawLevel();
 });
@@ -459,11 +462,13 @@ $("lock").addEventListener("click", () => {
 });
 let last = performance.now();
 function frame(now) {
-  const dt = Math.min(0.1, Math.max(0, (now - last) / 1000));
+  const dt = Math.max(0, (now - last) / 1000);
   last = now;
   if (unlocked && !document.hidden) {
-    assemblyEditor?.tick(dt);
+    assemblyEditor?.tick(Math.min(0.1, dt));
     if (previewPlaying) {
+      // Keep absolute elapsed time: only each profile sampler wraps its own
+      // cycle. Wrapping here would restart the independent assembly timeline.
       previewTime += dt;
       drawLevel();
     }
