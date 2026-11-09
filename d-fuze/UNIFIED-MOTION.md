@@ -4,7 +4,7 @@ Open App Lab → Developer Tools (`FUSE-LAB-3`, public disposable deterrent), th
 
 ## Editing
 
-Select, rename, duplicate, add or delete profiles. Time/angle rows support Add Keyframe, Insert After and Delete Key. Ring keys additionally expose linear/smooth interpolation outside protected holds. Editable angle fields use a text keyboard so a minus can be entered; the adjacent **+/−** button reliably reverses the numeric sign even on phone keyboards without a minus key. Negative values are numeric data in drafts, JSON and gameplay, not strings or expressions.
+Select, rename, duplicate, add or delete profiles. Time/angle rows support Add Keyframe, Insert After and Delete Key. Ring keys additionally expose linear/smooth interpolation outside protected holds. Editable angle fields use a text keyboard so a minus can be entered; the adjacent **+/−** button reliably reverses the numeric sign even on phone keyboards without a minus key. Negative values are numeric data in memory, JSON and gameplay, not strings or expressions.
 
 Ring duration is locked to **10 seconds**. The first/last zero keys and all alignment-window keys are read-only, cannot be deleted or sign-flipped, and insertion inside holds is disabled. Imports and saved data are also validated, so bypassing the UI cannot break holds. Editing an outside key into a protected interval causes a validation error. Segments touching holds (and loop endpoints) use smoothstep easing automatically, giving zero angular velocity into/out of holds. Other segments can use deliberate linear/sharp transitions. No assembly angles are baked into ring keys.
 
@@ -16,7 +16,7 @@ Ring duration is locked to **10 seconds**. The first/last zero keys and all alig
 
 All families therefore still share 4.5–5 and 9.5–10 exactly at relative zero. Incidental alignment elsewhere remains possible. Deleting the last profile in a family is blocked. New/duplicated profiles join the family's complete selection pool immediately; no per-profile eligibility setting remains.
 
-Assembly profiles retain their independently editable duration and shape-preserving smooth-loop interpolation. A profile referenced by any level cannot be deleted until those levels select another profile. Ring profile deletion does not require per-level reassignment because levels select families, not individual profile IDs. Changes are shared throughout the draft library, so editing a profile affects every draft level whose family/selection uses it.
+Assembly profiles retain their independently editable duration and shape-preserving smooth-loop interpolation. A profile referenced by any level cannot be deleted until those levels select another profile. Ring profile deletion does not require per-level reassignment because levels select families, not individual profile IDs. Changes are shared throughout the experimental library, so editing a profile affects every experimental level whose family/selection uses it.
 
 ## Play / Stop
 
@@ -26,7 +26,7 @@ The combined Level Preview also uses a single Play/Stop button, restarting/reset
 
 ## Gate widths
 
-Every gate-width editor is a dropdown: 10°, 20°, …, 120°. Schema v3 accepts only these values. New invalid imports are rejected, never rounded silently. Migrating v1/v2 files rounds legacy valid 10–180° values to the nearest 10° (ties upward), then clamps at 120°. Every adjustment appears in the import/load/session migration report; already-valid values are preserved.
+Every gate-width editor is a dropdown: 10°, 20°, …, 120°. Schema v3 accepts only these values. New invalid imports are rejected, never rounded silently. Migrating v1/v2 files rounds legacy valid 10–180° values to the nearest 10° (ties upward), then clamps at 120°. Every adjustment appears in the explicit import migration report; already-valid values are preserved.
 
 Published adjustments required by the new rule:
 
@@ -49,12 +49,12 @@ Schema **v3** adds editable `ringProfiles` alongside `assemblyProfiles`. Ring pr
 
 The seeded random algorithm is preserved. It selects from **all** profiles in the assigned family, in library order. The same seed and configuration reproduce assignments. A legacy subset restriction is deliberately removed, so a migrated subset may choose a different profile for the same seed; the migration report explains the new pool. Creating/deleting profiles also intentionally changes that pool.
 
-JSON export/import, local saved drafts, session restoration and Test Mode transfers include both editable libraries. Versions 1 and 2 migrate on read, including the prior constant-speed-to-keyframe conversion. Migration preserves level fields and selected assembly/rate values except for the explicitly requested removal of flags/lists and gate-width adjustments. Saved local drafts are not overwritten until SAVE DRAFT. Invalid legacy data or unsupported versions are rejected. Published v3 configuration remains the only source for normal play; browser drafts do not write to the repository. Use LOAD PUBLISHED LEVELS to edit the six-level source before an intentional reviewed publication.
+JSON import/export and Test Mode transfers include both editable libraries. Versions 1 and 2 migrate during explicit file import, including prior constant-speed-to-keyframe conversion. Migration preserves level fields and selected assembly/rate values except for the requested removal of flags/lists and gate-width adjustments. Invalid legacy data or unsupported versions are rejected. The published v3 JSON is the sole normal-game source. New editor pages load that file; edits stay in memory. There are no drafts, autosave, or workspace restoration. Publish downloads a complete validated JSON file; it does not make it live. See [saving and publishing instructions](PUBLISHING.md).
 
 ## Validation performed
 
-New `node d-fuze/test-unified-motion.cjs` covers negative custom keys, JSON/draft/Test Mode persistence, all-family seeded selection including new profiles, protected holds and zero-velocity entry/exit, v1/v2 migration reports, width rejection, obsolete-field rejection, and active parent/world angles at all six normal levels.
+New `node d-fuze/test-unified-motion.cjs` covers negative custom keys, JSON/Test Mode transfer, all-family seeded selection including new profiles, protected holds and zero-velocity entry/exit, v1/v2 migration reports, width rejection, obsolete-field rejection, and active parent/world angles at all six normal levels.
 
-New `python d-fuze/test-unified-browser.py` covers real touch sign flips, negative preview angles and exported values, reload/draft persistence, Play/Stop reset and 10/25-second looping through the actual preview clock, protected row controls, ring creation/deletion, removed controls/checkboxes, width dropdowns, visible migration adjustments, rejected v3 widths, and Android-sized/desktop layouts. Existing game, ring, builder, assembly, two-ring and App Lab regression suites are also run. Paths work at `/` and `/small-apps/`. No other App Lab source files are modified.
+New `python d-fuze/test-unified-browser.py` covers real touch sign flips, negative preview angles and exported values, in-memory editing and JSON export, Play/Stop reset and 10/25-second looping through the actual preview clock, protected row controls, ring creation/deletion, removed controls/checkboxes, width dropdowns, visible migration adjustments, rejected v3 widths, and Android-sized/desktop layouts. Existing game, ring, builder, assembly, two-ring and App Lab regression suites are also run. Paths work at `/` and `/small-apps/`. No other App Lab source files are modified.
 
 Physical Android/iOS keyboards, audible sound quality, non-Chromium browsers, real mobile file pickers/downloads and live Pages deployment remain manual checks. Automated touch/layout checks use Chromium emulation. Human balancing may change because assembly now runs and some gate widths were normalized. Profile editing does not guarantee a humanly beatable configuration.

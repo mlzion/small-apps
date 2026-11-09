@@ -7,7 +7,8 @@ const S = DFuzeSchema,
   geometry = DFuzeRings.GEOMETRY;
 const $ = (id) => document.getElementById(id);
 let assemblyEditor = null;
-let doc = S.defaults(),
+let doc = null,
+  baseline = null,
   selected = 0,
   unlocked = false;
 let previewTime = 0,
@@ -16,40 +17,6 @@ let previewTime = 0,
 function status(text, error = false) {
   $("status").textContent = text;
   $("status").classList.toggle("error", error);
-}
-function rememberSession() {
-  // Keep the last valid workspace, rather than overwriting it with unfinished numeric edits.
-  if (S.validateDocument(doc).length) return;
-  try {
-    sessionStorage.setItem(
-      S.SESSION_KEY,
-      JSON.stringify({ document: doc, selected }),
-    );
-  } catch {
-    status(
-      "This browser blocked session storage. Test launch/return cannot preserve edits.",
-      true,
-    );
-  }
-}
-function restoreSession() {
-  try {
-    const saved = sessionStorage.getItem(S.SESSION_KEY);
-    if (saved) {
-      const value = JSON.parse(saved);
-      doc = S.requireValid(value.document);
-      if (doc.migrationNotes?.length) status(doc.migrationNotes.join("\n"));
-      selected = Math.min(
-        Math.max(0, Number(value.selected) || 0),
-        doc.levels.length - 1,
-      );
-    }
-  } catch {
-    status(
-      "Previous session could not be restored. Defaults loaded; local saved drafts are still available.",
-      true,
-    );
-  }
 }
 function current() {
   return doc.levels[selected];
@@ -79,7 +46,6 @@ function button(text, action) {
   return b;
 }
 function change() {
-  rememberSession();
   check();
   resetPreview();
 }
@@ -108,7 +74,6 @@ function renderTable() {
     const select = button(`EDIT ${level.number}`, () => {
       selected = index;
       renderAll();
-      rememberSession();
     });
     select.setAttribute("aria-pressed", String(index === selected));
     cell.append(select);
@@ -230,10 +195,6 @@ function check() {
       : errors.length
         ? "Fix configuration errors before testing."
         : "Launches the real game with this experimental level. Published data is unchanged.";
-  $("export-json").disabled =
-    $("export-csv").disabled =
-    $("save-draft").disabled =
-      errors.length > 0;
   $("delete-level").disabled = doc.levels.length === 1;
   $("add-level").disabled = $("duplicate-level").disabled =
     doc.levels.length >= 200;
@@ -269,7 +230,6 @@ function loadDocument(next, message) {
   doc = next;
   selected = 0;
   renderAll();
-  rememberSession();
   status(
     message +
       (next.migrationNotes?.length
@@ -318,7 +278,6 @@ $("move-up").addEventListener("click", () => move(-1));
 $("move-down").addEventListener("click", () => move(1));
 $("level-name").addEventListener("input", () => {
   current().name = $("level-name").value;
-  rememberSession();
   check();
 });
 $("level-seed").addEventListener("change", () => {
@@ -394,12 +353,19 @@ $("test-level").addEventListener("click", () => {
       doc.assemblyProfiles,
       doc.ringProfiles,
     );
-    sessionStorage.setItem(
-      S.SESSION_KEY,
-      JSON.stringify({ document: S.requireValid(doc), selected }),
+    if (check().length) throw Error("Fix configuration errors before testing.");
+    const tab = window.open("about:blank", "_blank");
+    if (!tab) throw Error("Allow the Test Mode tab to open.");
+    try {
+      tab.sessionStorage.setItem(S.TEST_KEY, transfer);
+      tab.location.href = new URL("../?test=1", location.href).href;
+    } catch (error) {
+      tab.close();
+      throw error;
+    }
+    status(
+      "Test Mode opened in a separate tab. Your editor changes remain here in memory.",
     );
-    sessionStorage.setItem(S.TEST_KEY, transfer);
-    location.href = "../?test=1";
   } catch (e) {
     status(`Cannot launch test: ${e.message}`, true);
   }
@@ -412,20 +378,21 @@ function download(name, text, type) {
   a.click();
   setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
-$("export-json").addEventListener("click", () => {
+$("publish").addEventListener("click", () => {
   try {
-    download("d-fuze-levels-v1.json", S.exportJSON(doc), "application/json");
-    status("JSON exported. Keep this file to share or back up your settings.");
+    if (check().length)
+      throw Error("Fix the configuration errors before publishing.");
+    const validated = DFuzeLevels.validatePublished(doc);
+    download(
+      "published-levels.json",
+      S.exportJSON(validated),
+      "application/json",
+    );
+    status(
+      "Published configuration exported to your device. It is NOT LIVE. Codex must install this file and GitHub Pages must deploy it.",
+    );
   } catch (e) {
-    status(e.message, true);
-  }
-});
-$("export-csv").addEventListener("click", () => {
-  try {
-    download("d-fuze-level-table.csv", S.exportCSV(doc), "text/csv");
-    status("Main level table exported as CSV. Ring details remain in JSON.");
-  } catch (e) {
-    status(e.message, true);
+    status(`Publish blocked: ${e.message}`, true);
   }
 });
 $("import-json").addEventListener("change", async () => {
@@ -442,39 +409,23 @@ $("import-json").addEventListener("change", async () => {
     $("import-json").value = "";
   }
 });
-$("save-draft").addEventListener("click", () => {
+async function unlock() {
   try {
-    S.saveDraft(localStorage, doc);
-    status("Draft saved only in this browser; it does not sync with GitHub.");
+    if (!doc) {
+      doc = await DFuzeLevels.loadPublished();
+      baseline = JSON.stringify(doc);
+      selected = 0;
+    }
   } catch (e) {
-    status(`Could not save draft: ${e.message}`, true);
+    $("access-error").textContent = `Cannot load published data: ${e.message}`;
+    if (!$("access-dialog").open) $("access-dialog").showModal();
+    return;
   }
-});
-$("load-draft").addEventListener("click", () => {
-  try {
-    loadDocument(S.loadDraft(localStorage), "Saved browser draft loaded.");
-  } catch (e) {
-    status(e.message, true);
-  }
-});
-$("reset-defaults").addEventListener("click", () => {
-  if (
-    confirm(
-      "Replace current edits with the 12 experimental defaults? Export or save a draft first if needed.",
-    )
-  )
-    loadDocument(
-      S.defaults(),
-      "Experimental defaults restored. Saved local draft was not deleted.",
-    );
-});
-function unlock() {
   unlocked = true;
   $("access-error").textContent = "";
   $("access-code").value = "";
   $("access-dialog").close();
   $("builder").hidden = false;
-  restoreSession();
   assemblyEditor ??= DFuzeMotionEditor.mount({
     document: () => doc,
     level: current,
@@ -482,7 +433,6 @@ function unlock() {
     status,
   });
   renderAll();
-  rememberSession();
 }
 $("access-dialog").addEventListener("cancel", (e) => e.preventDefault());
 $("access-form").addEventListener("submit", (e) => {
@@ -497,7 +447,6 @@ $("access-form").addEventListener("submit", (e) => {
   unlock();
 });
 $("lock").addEventListener("click", () => {
-  rememberSession();
   try {
     sessionStorage.removeItem(ACCESS_KEY);
   } catch {}
@@ -522,7 +471,7 @@ function frame(now) {
   requestAnimationFrame(frame);
 }
 document.addEventListener("visibilitychange", () => {
-  resetPreview();
+  if (doc) resetPreview();
   assemblyEditor?.pause();
   last = performance.now();
 });
@@ -534,13 +483,20 @@ try {
 }
 requestAnimationFrame(frame);
 
-$("load-published").addEventListener("click", () => {
+$("reload-published").addEventListener("click", async () => {
+  if (
+    JSON.stringify(doc) !== baseline &&
+    !confirm("Discard unsaved edits and reload published data?")
+  )
+    return;
   try {
+    const next = await DFuzeLevels.loadPublished();
+    baseline = JSON.stringify(next);
     loadDocument(
-      S.requireValid(DFuzePublished),
-      "Published configuration loaded for editing. Draft edits do not publish automatically.",
+      next,
+      "Published data reloaded. Experimental edits were discarded.",
     );
   } catch (e) {
-    status(e.message, true);
+    status(`Reload failed; current edits retained: ${e.message}`, true);
   }
 });

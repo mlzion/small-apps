@@ -109,39 +109,9 @@ for (const text of [
 ])
   assert.throws(() => S.importJSON(text));
 assert.throws(() => S.importJSON(" ".repeat(1000001)));
-const storage = {
-  data: new Map(),
-  setItem(k, v) {
-    this.data.set(k, v);
-  },
-  getItem(k) {
-    return this.data.get(k) ?? null;
-  },
-};
-S.saveDraft(storage, defaults);
-assert.deepEqual(S.loadDraft(storage), defaults);
-assert.throws(() =>
-  S.saveDraft(
-    {
-      setItem() {
-        throw Error("Quota full");
-      },
-    },
-    defaults,
-  ),
-);
-assert.throws(() =>
-  S.loadDraft({
-    getItem() {
-      return null;
-    },
-  }),
-);
-const csv = S.exportCSV(defaults);
-assert(csv.includes("turretSpeed"));
-const formula = S.clone(defaults);
-formula.levels[0].name = "=1+1";
-assert(S.exportCSV(formula).includes("'=1+1"));
+assert.equal(S.saveDraft, undefined);
+assert.equal(S.loadDraft, undefined);
+assert.equal(S.exportCSV, undefined);
 const level = defaults.levels[0];
 assert.deepEqual(S.readTest(S.testPayload(level)), level);
 assert.throws(() => S.testPayload(defaults.levels[6]));
@@ -195,5 +165,5 @@ assert(!normal.testMode);
 assert.equal(normal.rings[0].profile.family.duration, 10);
 assert.equal(normal.config.time, 48);
 console.log(
-  "PASS: 15 starter profiles, exact holds, 125 mixed-family combinations, interpolation/loops/playback ratios, deterministic assignment, schema/rejections, JSON/CSV, drafts, Test Mode retry/no advance, multi-ring test rejection, published 10-second profiles",
+  "PASS: 15 starter profiles, exact holds, 125 mixed-family combinations, interpolation/loops/playback ratios, deterministic assignment, schema/rejections, JSON, removed draft helpers, Test Mode retry/no advance, multi-ring test rejection, published 10-second profiles",
 );

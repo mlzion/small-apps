@@ -125,6 +125,20 @@ function button(label, action) {
   actions.append(b);
 }
 function returnToEditor() {
+  try {
+    if (
+      window.opener &&
+      !window.opener.closed &&
+      window.opener.location.origin === location.origin &&
+      /\/d-fuze\/builder\/(?:index\.html)?$/.test(
+        window.opener.location.pathname,
+      )
+    ) {
+      window.opener.focus();
+      window.close();
+      return;
+    }
+  } catch {}
   location.href = "builder/";
 }
 function renderTestUI() {

@@ -110,7 +110,7 @@ const bad = S.clone(doc);
 bad.levels[0].rings[0].profiles = ["easy-01"];
 assert(S.validateDocument(bad).some((e) => e.includes("unknown")));
 const storage = { getItem: () => JSON.stringify(old) };
-assert.deepEqual(S.loadDraft(storage), migrated);
+assert.deepEqual(S.importJSON(storage.getItem()), migrated);
 const transfer = S.readTestData(
   S.testPayload(level, doc.assemblyProfiles, doc.ringProfiles),
 );

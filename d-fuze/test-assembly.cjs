@@ -118,7 +118,7 @@ const cp = migrated.assemblyProfiles.find(
 );
 near(A.sampleProfile(cp, 51), (-1530 * Math.PI) / 180);
 const storage = { getItem: () => JSON.stringify(old) };
-assert.deepEqual(S.loadDraft(storage), migrated);
+assert.deepEqual(S.importJSON(storage.getItem()), migrated);
 assert.throws(() => S.importJSON(JSON.stringify({ ...doc, version: 99 })));
 const bad = S.clone(doc);
 bad.levels[0].assembly.profileId = "missing";
@@ -143,7 +143,7 @@ for (let n = 1; n <= 6; n++) {
     published.rings.map((r) => r.gateHealth),
   );
 }
-const published = require("./published-levels.js"),
+const published = require("./published-levels.json"),
   saved = published.levels[0].timer;
 published.levels[0].timer = 0;
 assert.throws(() => new Game(), /Timer/);
@@ -154,7 +154,7 @@ console.log(
   "PASS: published source/no overrides/invalid rejection, parent/world collisions, independent clocks, no overshoot/C1 loops/unwrapped turns, keys/library validation, JSON/draft v1 migration, pause/retry, unchanged 10-second library",
 );
 
-const source = require("./published-levels.js"),
+const source = require("./published-levels.json"),
   original = S.clone(source.levels[0]);
 try {
   Object.assign(source.levels[0], {

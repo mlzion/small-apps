@@ -51,10 +51,7 @@ with sync_playwright() as p:
     page.locator('#motion-play').tap();assert page.evaluate('assemblyEditor.time')==0
     page.locator('#preview-play').tap();page.wait_for_timeout(100);assert page.evaluate('previewTime')>0
     page.locator('#preview-play').tap();assert page.evaluate('previewTime')==0
-    page.locator('#save-draft').tap();page.reload();expect(page.locator('#builder')).to_be_visible()
-    page.locator('#motion-mode').select_option('assembly')
-    expect(page.get_by_role('textbox',name='Motion key 2 angle',exact=True)).to_have_value('-24')
-    with page.expect_download() as event:page.locator('#export-json').tap()
+    with page.expect_download() as event:page.locator('#publish').tap()
     exported=json.loads(Path(event.value.path()).read_text());assert exported['version']==3
     assert exported['ringProfiles'][0]['keyframes'][1][1]==-40
     assert exported['assemblyProfiles'][0]['keyframes'][1][1]==-24
@@ -72,5 +69,5 @@ with sync_playwright() as p:
         assert page.evaluate('document.documentElement.scrollWidth<=innerWidth')
         page.screenshot(path=f'/tmp/unified-motion-{w}.png',full_page=True)
     assert not errors,errors
-    print('PASS: mobile sign flip/negative animation/save/reload/export, protected controls, 10s/25s looping, Stop resets, removed scrubbing/speed/eligibility/enable UI, gate dropdown and visible migration/rejection, responsive layouts')
+    print('PASS: mobile sign flip/negative animation/memory/export, protected controls, 10s/25s looping, Stop resets, removed scrubbing/speed/eligibility/enable UI, gate dropdown and visible migration/rejection, responsive layouts')
     browser.close()

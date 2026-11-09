@@ -14,7 +14,7 @@ with sync_playwright() as p:
     ctx.route('http://app-lab.test/**',serve);ctx.on('weberror',lambda e:errors.append(str(e)))
     page=ctx.new_page();page.goto('http://app-lab.test/small-apps/d-fuze/builder/')
     page.locator('#access-code').fill('FUSE-LAB-3');page.get_by_role('button',name='OPEN LEVEL BUILDER').tap()
-    page.locator('#load-published').tap();expect(page.locator('#level-table tbody tr')).to_have_count(6)
+    page.locator('#reload-published').tap();expect(page.locator('#level-table tbody tr')).to_have_count(6)
     assert page.evaluate('current().timer')==48
     page.locator('#motion-mode').select_option('assembly')
     # An invalid key disables testing/export without crashing the animation preview.
@@ -33,22 +33,26 @@ with sync_playwright() as p:
     expect(page.locator('#motion-keys tr')).to_have_count(7)
     page.screenshot(path='/tmp/assembly-editor-phone.png',full_page=True)
     # v1 browser draft upgrade preserves values and constant-speed behavior.
-    page.evaluate('''const old=DFuzeSchema.defaults();old.version=1;delete old.assemblyProfiles;delete old.ringProfiles;
-      old.levels.forEach(l=>{l.assembly={enabled:false};l.rings.forEach(r=>r.profiles=DFuzeExperimentalMotion.eligible(r.family).map(p=>p.id));});old.levels[0].timer=91;old.levels[0].assembly={enabled:true,speed:15};
-      localStorage.setItem(DFuzeSchema.DRAFT_KEY,JSON.stringify(old));''')
-    page.locator('#load-draft').tap();assert page.evaluate('current().timer')==91
+    legacy=page.evaluate("const old=JSON.parse(JSON.stringify(doc));old.version=1;delete old.assemblyProfiles;delete old.ringProfiles;old.levels.forEach(l=>{l.assembly={enabled:false};l.rings.forEach(r=>r.profiles=DFuzeExperimentalMotion.eligible(r.family).map(p=>p.id));});old.levels[0].timer=91;old.levels[0].assembly={enabled:true,speed:15};old")
+    import json
+    page.locator('#import-json').set_input_files({'name':'legacy.json','mimeType':'application/json','buffer':json.dumps(legacy).encode()})
+    assert page.evaluate('current().timer')==91
     assert page.evaluate('doc.version')==3
     assert page.evaluate('current().assembly.profileId').startswith('migrated-constant')
-    page.locator('#test-level').tap();page.get_by_role('button',name='START TEST').tap()
+    editor=page
+    with page.expect_popup() as popup:
+        page.locator('#test-level').tap()
+    page=popup.value
+    page.get_by_role('button',name='START TEST').tap()
     page.wait_for_timeout(100);assert page.evaluate('game.assembly.angle')>0
     page.keyboard.press('Escape');frozen=page.evaluate('[game.elapsed,game.assembly.time,game.assembly.angle]')
     page.wait_for_timeout(100);assert page.evaluate('[game.elapsed,game.assembly.time,game.assembly.angle]')==frozen
-    page.get_by_role('button',name='RETURN TO EDITOR',exact=True).tap();expect(page.locator('#builder')).to_be_visible();assert page.evaluate('current().timer')==91
+    page.get_by_role('button',name='RETURN TO EDITOR',exact=True).tap();page=editor;expect(page.locator('#builder')).to_be_visible();assert page.evaluate('current().timer')==91
     # Published corruption must surface an error, never a substituted level.
     broken=browser.new_context();broken.on('weberror',lambda e:errors.append(str(e)))
     def bad(route):
-        if urlsplit(route.request.url).path.endswith('/published-levels.js'):
-            route.fulfill(body=(ROOT/'d-fuze/published-levels.js').read_text()+'\nglobalThis.DFuzePublished.levels[0].timer=0;',content_type='text/javascript')
+        if urlsplit(route.request.url).path.endswith('/published-levels.json'):
+            data=json.loads((ROOT/'d-fuze/published-levels.json').read_text());data['levels'][0]['timer']=0;route.fulfill(body=json.dumps(data),content_type='application/json')
         else:serve(route)
     broken.route('http://app-lab.test/**',bad)
     invalid=broken.new_page();invalid.goto('http://app-lab.test/small-apps/d-fuze/')
@@ -56,5 +60,5 @@ with sync_playwright() as p:
     expect(invalid.locator('#detail')).to_contain_text('Timer')
     assert invalid.evaluate('game') is None
     assert not errors,errors
-    print('PASS: mobile assembly key validation/insert/new/delete, published document load, v1 browser draft migration, real Test Mode parent/pause/return, invalid published data visible error/no fallback')
+    print('PASS: mobile assembly key validation/insert/new/delete, published document load, v1 JSON file migration, real Test Mode parent/pause/return, invalid published data visible error/no fallback')
     browser.close()

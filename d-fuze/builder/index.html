@@ -8,15 +8,15 @@
     />
     <title>D::FUZE Level Builder — App Lab</title>
     <link rel="icon" href="../../assets/favicon.svg" type="image/svg+xml" />
-    <link rel="stylesheet" href="builder.css?v=unified3" />
-    <script src="../assembly.js?v=unified3" defer></script>
-    <script src="../motion.js?v=unified3" defer></script>
-    <script src="../experimental-motion.js?v=unified3" defer></script>
+    <link rel="stylesheet" href="builder.css?v=publish-json" />
+    <script src="../assembly.js?v=publish-json" defer></script>
+    <script src="../motion.js?v=publish-json" defer></script>
+    <script src="../experimental-motion.js?v=publish-json" defer></script>
     <script src="../rings.js" defer></script>
-    <script src="../level-schema.js?v=unified3" defer></script>
-    <script src="../published-levels.js?v=unified3" defer></script>
-    <script src="assembly-editor.js?v=unified3" defer></script>
-    <script src="builder.js?v=unified3" defer></script>
+    <script src="../level-schema.js?v=publish-json" defer></script>
+    <script src="../levels.js?v=publish-json" defer></script>
+    <script src="assembly-editor.js?v=publish-json" defer></script>
+    <script src="builder.js?v=publish-json" defer></script>
   </head>
   <body>
     <dialog id="access-dialog" aria-labelledby="access-title">
@@ -48,7 +48,7 @@
         <a href="#levels-section">Levels</a><a href="#rings-section">Rings</a
         ><a href="#motion-section">Motion Editor</a
         ><a href="#preview-section">Preview / Test</a
-        ><a href="#files-section">Import / Export</a>
+        ><a href="#files-section">Publish / Import</a>
       </nav>
       <p id="status" role="status" aria-live="polite">Ready.</p>
       <section id="validation" aria-labelledby="validation-title">
@@ -232,25 +232,21 @@
         </div>
       </section>
       <section id="files-section">
-        <h2>05 / Import / Export</h2>
+        <h2>05 / Publish / Import</h2>
         <div class="toolbar">
-          <button id="export-json">EXPORT JSON</button
-          ><button id="export-csv">EXPORT CSV</button
+          <button id="publish">PUBLISH (DOWNLOAD JSON)</button
           ><label class="file-label"
             >IMPORT JSON<input
               id="import-json"
               type="file"
               accept=".json,application/json" /></label
-          ><button id="save-draft">SAVE DRAFT</button
-          ><button id="load-draft">LOAD DRAFT</button
-          ><button id="load-published">LOAD PUBLISHED LEVELS</button
-          ><button id="reset-defaults">RESET TO DEFAULTS</button>
+          ><button id="reload-published">RELOAD PUBLISHED DATA</button>
         </div>
         <p>
-          Drafts are stored only in this browser. They do not sync with GitHub
-          or other devices. JSON contains the full versioned configuration; CSV
-          contains the main level table only. The editor never writes to the
-          repository.
+          Edits stay in memory in this tab. Test Mode opens a separate tab.
+          Publish downloads a complete JSON file; it is not live until Codex
+          installs it and GitHub Pages deploys it. Reloading or closing this
+          editor discards edits. The editor never writes to the repository.
         </p>
       </section>
     </main>

@@ -12,9 +12,7 @@
   "use strict";
   const VERSION = 3,
     FORMAT = "d-fuze-levels",
-    TEST_KEY = "d-fuze-test-v1",
-    SESSION_KEY = "d-fuze-editor-session-v1",
-    DRAFT_KEY = "d-fuze-builder-draft-v1";
+    TEST_KEY = "d-fuze-test-v1";
   const FIELDS = {
     timer: { label: "Timer (s)", min: 5, max: 300, step: 1 },
     bombHealth: { label: "Bomb HP", min: 1, max: 100, step: 1 },
@@ -227,19 +225,6 @@
   }
   function exportJSON(doc) {
     return JSON.stringify(requireValid(doc), null, 2);
-  }
-  function exportCSV(doc) {
-    requireValid(doc);
-    const columns = ["number", "name", ...Object.keys(FIELDS), "seed"];
-    const cell = (v) => {
-      let text = String(v ?? "");
-      if (/^[=+@\-\t\r]/.test(text)) text = "'" + text;
-      return `"${text.replace(/"/g, '""')}"`;
-    };
-    return [
-      columns.join(","),
-      ...doc.levels.map((l) => columns.map((k) => cell(l[k])).join(",")),
-    ].join("\r\n");
   }
   function toRuntime(
     level,
@@ -484,20 +469,10 @@
     Object.defineProperty(next, "migrationNotes", { value: notes });
     return next;
   }
-  function saveDraft(storage, doc) {
-    storage.setItem(DRAFT_KEY, exportJSON(doc));
-  }
-  function loadDraft(storage) {
-    const text = storage.getItem(DRAFT_KEY);
-    if (!text) throw new Error("No draft saved in this browser.");
-    return importJSON(text);
-  }
   return {
     VERSION,
     FORMAT,
     TEST_KEY,
-    SESSION_KEY,
-    DRAFT_KEY,
     FIELDS,
     clone,
     defaultRing,
@@ -507,13 +482,10 @@
     requireValid,
     importJSON,
     exportJSON,
-    exportCSV,
     toRuntime,
     testPayload,
     readTest,
     readTestData,
     migrate,
-    saveDraft,
-    loadDraft,
   };
 });

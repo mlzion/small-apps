@@ -1,36 +1,60 @@
 (function (root, factory) {
+  const node = typeof module === "object";
+  const url = node
+    ? null
+    : new URL("published-levels.json", document.currentScript.src).href;
   const api = factory(
-    typeof module === "object"
-      ? require("./level-schema.js")
-      : root.DFuzeSchema,
-    typeof module === "object"
-      ? require("./published-levels.js")
-      : root.DFuzePublished,
+    node ? require("./level-schema.js") : root.DFuzeSchema,
+    node ? require("./published-levels.json") : null,
+    url,
   );
-  if (typeof module === "object") module.exports = api;
+  if (node) module.exports = api;
   else root.DFuzeLevels = api;
-})(globalThis, (schema, published) => {
+})(globalThis, (schema, initial, url) => {
   "use strict";
-  function publishedDocument() {
-    const doc = schema.requireValid(published);
+  let published = initial,
+    loadError = null;
+  function validatePublished(data) {
+    const doc = schema.requireValid(data);
     if (
-      doc.levels.length !== 6 ||
-      doc.levels.some((l, i) => l.number !== i + 1 || l.ringCount > 2)
+      doc.levels.length < 6 ||
+      doc.levels.some(
+        (l, i) => l.number !== i + 1 || (i < 6 && l.ringCount > 2),
+      )
     )
-      throw new Error(
-        "Published configuration must contain playable Levels 1–6.",
+      throw Error(
+        "Published configuration must contain ordered playable Levels 1–6; later levels remain preview-only.",
       );
     return doc;
   }
+  async function loadPublished(fetcher = fetch) {
+    try {
+      const response = await fetcher(url, { cache: "no-store" });
+      if (!response.ok)
+        throw Error(`Published data request failed (${response.status}).`);
+      const doc = validatePublished(await response.json());
+      published = doc;
+      loadError = null;
+      return schema.clone(doc);
+    } catch (e) {
+      loadError = e;
+      throw e;
+    }
+  }
+  function publishedDocument() {
+    if (loadError) throw loadError;
+    if (!published) throw Error("Published configuration has not loaded.");
+    return validatePublished(published);
+  }
   function publishedLevel(number) {
     const level = publishedDocument().levels.find((l) => l.number === number);
-    if (!level) throw new Error(`Published Level ${number} is missing.`);
+    if (!level) throw Error(`Published Level ${number} is missing.`);
     return level;
   }
   function levelConfig(number) {
     const doc = publishedDocument(),
       level = doc.levels.find((l) => l.number === number);
-    if (!level) throw new Error(`Published Level ${number} is missing.`);
+    if (!level) throw Error(`Published Level ${number} is missing.`);
     return schema.toRuntime(
       level,
       level.seed,
@@ -38,5 +62,11 @@
       doc.ringProfiles,
     ).config;
   }
-  return { publishedDocument, publishedLevel, levelConfig };
+  return {
+    loadPublished,
+    validatePublished,
+    publishedDocument,
+    publishedLevel,
+    levelConfig,
+  };
 });
