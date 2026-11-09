@@ -257,6 +257,7 @@
         assemblySpeed: level.assembly.enabled ? level.assembly.speed : 0,
         rings: {
           count: level.ringCount,
+          difficulty: r.family,
           radius: g.ringRadius,
           thickness: g.ringThickness,
           spacing: g.ringSpacing,

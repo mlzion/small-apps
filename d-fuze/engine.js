@@ -52,15 +52,11 @@
       this.emit("state", next);
     }
     resetLevel() {
-      const experimental = this.testMode
-        ? schema.toRuntime(this.testLevel, this.seed)
-        : this.level >= 4 && this.level <= 6
-          ? schema.toRuntime(
-              schema.defaults().levels[this.level - 1],
-              this.seed,
-            )
-          : null;
-      this.config = experimental?.config ?? levelConfig(this.level);
+      const experimental = schema.toRuntime(
+        this.testMode ? this.testLevel : levels.publishedLevel(this.level),
+        this.seed,
+      );
+      this.config = experimental.config;
       this.remaining = this.config.time;
       this.health = this.config.hits;
       this.ammo = this.config.ammo;
@@ -84,12 +80,7 @@
               ...experimental?.ringSettings[i],
               radius: this.config.rings.radius + i * this.config.rings.spacing,
             },
-            experimental?.profiles[i] ??
-              motion.selectProfile(
-                this.config.rings.difficulty,
-                this.random,
-                this.config.rings.profileFamily,
-              ),
+            experimental.profiles[i],
           ),
       );
       this.updateRings();

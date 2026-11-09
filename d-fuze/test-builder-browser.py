@@ -165,7 +165,7 @@ with sync_playwright() as p:
     expect(page.locator('#message')).to_have_text('TEST UNAVAILABLE')
     page.goto('http://app-lab.test/small-apps/d-fuze/')
     assert not page.evaluate('game.testMode')
-    assert page.evaluate('game.rings[0].profile.family.duration')==16
+    assert page.evaluate('game.rings[0].profile.family.duration')==10
     expect(page.locator('#test-mode')).to_be_hidden()
     page.evaluate("game.level=6;game.startLevel();game.transition('LEVEL_COMPLETE')")
     expect(page.locator('#detail')).to_contain_text('All 6 available levels complete')

@@ -137,15 +137,15 @@ const fresh = (emit, resolver) => {
   assert.equal(g.ammo, 23);
   assert(Math.abs(shot.origin.x / 216 + shot.direction.x) < 1e-10);
   assert(Math.abs(shot.origin.y / 216 + shot.direction.y) < 1e-10);
-  for (let level = 1; level <= 10000; level++) {
+  for (let level = 1; level <= 6; level++) {
     const c = levelConfig(level);
     assert(c.time >= 10);
     assert(c.ammo >= c.hits);
     assert((c.hits - 1) / c.fireRate < c.time);
-    assert.equal(c.rings.count, 1);
+    assert.equal(c.rings.count, level<=3?1:2);
     assert(c.ammo > c.minimumHits);
   }
 }
 console.log(
-  "PASS: movement/frame-rate invariance, inward shots, cooldown/hold, health/ammo, final-shot precedence, pause/timer/pulses, lives/retry/progression/game over, resolver interception, 10,000 bounded one-ring configurations",
+  "PASS: movement/frame-rate invariance, inward shots, cooldown/hold, health/ammo, final-shot precedence, pause/timer/pulses, lives/retry/progression/game over, resolver interception, six published configurations",
 );

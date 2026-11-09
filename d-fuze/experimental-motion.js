@@ -4,7 +4,7 @@
   );
   if (typeof module === "object") module.exports = api;
   else root.DFuzeExperimentalMotion = api;
-})(globalThis, (legacy) => {
+})(globalThis, (math) => {
   "use strict";
   const LIBRARY_ID = "builder-10-v1";
   const FAMILIES = {
@@ -56,7 +56,7 @@
       ],
     };
   }
-  // These are authored tracks, not generated level-dependent or stretched legacy keys.
+  // These are authored tracks, not generated level-dependent or stretched keys.
   const PROFILES = [
     profile(
       "easy-01",
@@ -299,7 +299,7 @@
     [9.5, 10],
   ];
   function validateExperimentalProfile(p) {
-    legacy.validateProfile(p);
+    math.validateProfile(p);
     const expected = FAMILIES[p.difficulty];
     if (
       !expected ||
@@ -310,7 +310,7 @@
       throw new Error("Invalid experimental profile identity");
     for (const [a, b] of COMMON_WINDOWS)
       for (let t = a; t <= b; t += 0.05)
-        if (legacy.sampleProfile(p, t) !== 0)
+        if (math.sampleProfile(p, t) !== 0)
           throw new Error("Mixed-family alignment drift");
     return true;
   }
@@ -329,7 +329,7 @@
     return PROFILES.filter((p) => p.difficulty === family);
   }
   function assignProfiles(level, seed = level.seed) {
-    const random = legacy.seededRandom(seed);
+    const random = math.seededRandom(seed);
     return level.rings.map((r) =>
       BY_ID.get(r.profiles[Math.floor(random() * r.profiles.length)]),
     );
@@ -343,6 +343,6 @@
     eligible,
     assignProfiles,
     validateExperimentalProfile,
-    sampleProfile: legacy.sampleProfile,
+    sampleProfile: math.sampleProfile,
   };
 });
