@@ -3,15 +3,15 @@ const assert = require("node:assert/strict");
 const M = require("./experimental-motion.js"),
   S = require("./level-schema.js"),
   { Game } = require("./engine.js");
-assert.equal(M.PROFILES.length, 15);
-assert.equal(new Set(M.PROFILES.map((p) => p.id)).size, 15);
+assert.equal(M.PROFILES.length, 18);
+assert.equal(new Set(M.PROFILES.map((p) => p.id)).size, 18);
 for (const [family, total] of [
   ["easy", 3],
   ["medium", 2],
   ["hard", 1],
 ]) {
   const profiles = M.eligible(family);
-  assert.equal(profiles.length, 5);
+  assert.equal(profiles.length, 6);
   const signatures = new Set();
   for (const p of profiles) {
     assert(M.validateExperimentalProfile(p));
@@ -40,7 +40,7 @@ for (const [family, total] of [
     for (const [t, angle] of p.keyframes)
       assert(Math.abs(M.sampleProfile(p, t) - (angle * Math.PI) / 180) < 1e-8);
   }
-  assert.equal(signatures.size, 5);
+  assert.equal(signatures.size, 6);
 }
 for (const a of M.eligible("easy"))
   for (const b of M.eligible("medium"))
@@ -68,7 +68,7 @@ assert.deepEqual(S.validateLevel(mixed), []);
 const selected = M.assignProfiles(mixed);
 assert.deepEqual(
   selected.map((p) => p.difficulty),
-  ["hard", "medium", "easy"],
+  ["hard", "hard", "hard"],
 );
 function invalid(mutator, match) {
   const d = S.clone(defaults);
@@ -85,7 +85,7 @@ invalid((d) => (d.levels[0].timer = NaN), "Timer");
 invalid((d) => (d.levels[0].ringCount = 5), "Rings");
 invalid((d) => (d.levels[0].rings[0].gateWidth = 0), "gate width");
 invalid((d) => (d.levels[0].rings[0].gateHealth = -1), "gate health");
-invalid((d) => (d.levels[0].rings[0].family = "legacy"), "family");
+invalid((d) => (d.levels[0].motionFamily = "legacy"), "family");
 invalid((d) => (d.levels[0].rings[0].profiles = []), "unknown");
 invalid((d) => (d.levels[0].ammo = 1), "ammo must");
 invalid((d) => {
@@ -163,5 +163,5 @@ assert(!normal.testMode);
 assert.equal(normal.rings[0].profile.family.duration, 10);
 assert.equal(normal.config.time, 48);
 console.log(
-  "PASS: 15 starter profiles, exact holds, 125 mixed-family combinations, interpolation/loops/playback ratios, deterministic assignment, schema/rejections, JSON, removed draft helpers, Test Mode retry/no advance, four-ring Test Mode, published 10-second profiles",
+  "PASS: 18 starter profiles, exact holds, 216 cross-family library combinations, interpolation/loops/playback ratios, deterministic assignment, schema/rejections, JSON, removed draft helpers, Test Mode retry/no advance, four-ring Test Mode, published 10-second profiles",
 );

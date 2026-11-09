@@ -13,7 +13,7 @@ WIN="""() => {
   let index=0, sequence=[], beams=[];
   while(game.state==='PLAYING') {
     const local=4.6+Math.floor(index/2)*5+(index%2)*.3;
-    game.update(local/game.config.animationPlaybackSpeed-game.elapsed);
+    game.update(local-game.elapsed);
     game.angle=game.rings.at(-1).displayAngle;
     const before=game.rings.map(r=>r.gate.health), health=game.health;
     const ammo=game.ammo;

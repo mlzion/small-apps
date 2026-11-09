@@ -293,6 +293,17 @@
       ],
     ),
   ];
+  PROFILES.push(
+    profile("easy-06", "Soft counterstep", "easy",
+      [[.7,-35,"smooth"],[1.5,-35,"smooth"],[2.7,85,"smooth"]],
+      [[5.8,45,"smooth"],[6.6,45,"smooth"],[7.6,-65,"smooth"]]),
+    profile("medium-06", "Asymmetric switchback", "medium",
+      [[.8,140,"linear"],[1.7,-210,"smooth"],[2.3,-210,"smooth"],[3.2,95,"smooth"]],
+      [[5.7,-125,"smooth"],[6.5,260,"linear"],[7.3,260,"smooth"],[8.2,-75,"smooth"]]),
+    profile("hard-06", "Counterspin recoil", "hard",
+      [[.6,-240,"linear"],[1.5,-540,"smooth"],[2.2,-540,"linear"],[3.2,270,"linear"],[3.9,-95,"smooth"]],
+      [[5.6,260,"linear"],[6.5,610,"smooth"],[7.1,610,"linear"],[8.1,-300,"linear"],[8.9,130,"smooth"]])
+  );
   const BY_ID = new Map(PROFILES.map((p) => [p.id, p]));
   const COMMON_WINDOWS = [
     [4.5, 5],
@@ -305,7 +316,8 @@
       !expected ||
       p.family !== expected ||
       p.family.duration !== 10 ||
-      !/^((easy|medium|hard)-0[1-5])$/.test(p.id)
+      !/^((easy|medium|hard)-0[1-6])$/.test(p.id) ||
+      p.keyframes[0][1] !== 0 || p.keyframes.at(-1)[1] !== 0
     )
       throw new Error("Invalid experimental profile identity");
     for (const [a, b] of COMMON_WINDOWS)
@@ -394,27 +406,76 @@
   function validateLibrary(profiles) {
     if (
       !Array.isArray(profiles) ||
-      profiles.length < 3 ||
-      profiles.length > 256
+      profiles.length !== 18
     )
-      return ["Provide 3–256 ring profiles."];
+      return ["Provide exactly six profiles per family (18 total)."];
     const errors = profiles.flatMap((p, i) =>
       validateEditable(p).map((e) => `Ring profile ${i + 1}: ${e}`),
     );
     if (new Set(profiles.map((p) => p?.id)).size !== profiles.length)
       errors.push("Ring profile IDs must be unique.");
     for (const family of Object.keys(FAMILIES))
-      if (!profiles.some((p) => p?.difficulty === family))
-        errors.push(`Keep at least one ${family} ring profile.`);
+      if (profiles.filter((p) => p?.difficulty === family).length !== 6)
+        errors.push(`Keep exactly six ${family} ring profiles for coordinated shuffling.`);
     return errors;
   }
-  function assignProfiles(level, seed = level.seed, profiles = defaults()) {
-    const random = math.seededRandom(seed);
-    return level.rings.map((r) => {
-      const pool = profiles.filter((p) => p.difficulty === r.family);
-      if (!pool.length) throw Error("No profiles in assigned ring family.");
-      return compile(pool[Math.floor(random() * pool.length)]);
-    });
+  // Each block visits every profile once per ring. Randomized cyclic rotations
+  // guarantee distinct assignments, coverage, and a different profile per ring.
+  // Only bounded state is retained; backwards/random seeks replay from the seed.
+  class ProfileShuffle {
+    constructor(level, seed, profiles) {
+      this.pool = profiles.filter(p => p.difficulty === level.motionFamily).map(compile);
+      this.count = level.ringCount;
+      if (this.pool.length !== 6 || !Number.isInteger(this.count) || this.count < 1 || this.count > 4)
+        throw Error("Shuffle requires 1–4 rings and exactly six family profiles.");
+      this.seed = seed >>> 0;
+      this.reset();
+    }
+    reset() {
+      this.random = math.seededRandom(this.seed);
+      this.cycle = -1;
+      this.assignment = [];
+      this.block = [];
+      this.recent = [];
+    }
+    shuffled(values) {
+      const result = [...values];
+      for (let i = result.length - 1; i > 0; i--) {
+        const j = Math.floor(this.random() * (i + 1));
+        [result[i], result[j]] = [result[j], result[i]];
+      }
+      return result;
+    }
+    nextBlock() {
+      const order = this.shuffled(this.pool);
+      const candidates = this.shuffled(order.map((_, offset) =>
+        Array.from({length:this.count}, (_, i) => order[(i + offset) % order.length])));
+      const key = a => a.map(p => p.id).join("|");
+      const age = a => this.recent.lastIndexOf(key(a));
+      const valid = candidates.filter(a => a.every((p,i) => p.id !== this.assignment[i]?.id));
+      // Prefer the least recently used full assignment; seeded order breaks ties.
+      valid.sort((a,b) => age(a)-age(b));
+      const first = valid[0]; // 6 profiles and <=4 rings always leave a choice.
+      this.block = [first, ...candidates.filter(a => a !== first).sort((a,b) => age(a)-age(b))];
+    }
+    atCycle(cycle) {
+      if (!Number.isSafeInteger(cycle) || cycle < 0) throw Error("Invalid shuffle cycle.");
+      if (cycle < this.cycle) this.reset();
+      while (this.cycle < cycle) {
+        if (!this.block.length) this.nextBlock();
+        this.assignment = this.block.shift();
+        this.cycle++;
+        this.recent.push(this.assignment.map(p => p.id).join("|"));
+        if (this.recent.length > this.pool.length * 4) this.recent.shift();
+      }
+      return this.assignment;
+    }
+  }
+  function createShuffle(level, seed = level.seed, profiles = defaults()) {
+    return new ProfileShuffle(level, seed, profiles);
+  }
+  function assignProfiles(level, seed = level.seed, profiles = defaults(), cycle = 0) {
+    return createShuffle(level, seed, profiles).atCycle(cycle);
   }
   return {
     LIBRARY_ID,
@@ -424,6 +485,7 @@
     BY_ID,
     eligible,
     assignProfiles,
+    createShuffle,
     defaults,
     compile,
     validateEditable,

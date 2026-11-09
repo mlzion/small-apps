@@ -65,7 +65,7 @@ for (const q of [
   assert(A.validateProfile(q).length);
 const doc = S.defaults();
 doc.levels[3].assembly = { profileId: p.id, playbackSpeed: 1.7 };
-doc.levels[3].playbackSpeed = 1.2;
+
 assert.deepEqual(S.importJSON(S.exportJSON(doc)), doc);
 const g = new Game(undefined, undefined, {
   seed: 42,
@@ -73,7 +73,7 @@ const g = new Game(undefined, undefined, {
   assemblyProfiles: doc.assemblyProfiles,
 });
 g.newGame();
-g.update(4.5 / 1.2);
+g.update(4.5);
 near(g.animationTime, 4.5);
 near(g.assembly.time, g.elapsed * 1.7);
 assert(g.rings.every((r) => r.parent === g.assembly));
@@ -101,11 +101,11 @@ delete old.assemblyProfiles;
 delete old.ringProfiles;
 old.levels.forEach((l) => {
   l.assembly = { enabled: false };
-  l.rings.forEach((r) => (r.profiles = M.eligible(r.family).map((p) => p.id)));
+  l.playbackSpeed=1;l.rings.forEach(r=>{r.family=l.motionFamily;r.profiles=M.eligible(r.family).slice(0,5).map(p=>p.id)});delete l.motionFamily;
 });
 old.levels[3].assembly = { enabled: true, speed: -30 };
 const migrated = S.importJSON(JSON.stringify(old));
-assert.equal(migrated.version, 3);
+assert.equal(migrated.version, 4);
 assert.deepEqual(
   migrated.levels[3].rings,
   doc.levels[3].rings.map((r) => ({
@@ -134,7 +134,7 @@ for (let n = 1; n <= 6; n++) {
     ammo: published.ammo,
     turretSpeed: published.turretSpeed,
     fireRate: published.fireRate,
-    animationPlaybackSpeed: published.playbackSpeed,
+    motionFamily: published.motionFamily,
   }))
     assert.equal(game.config[key], value);
   assert.equal(game.rings.length, published.ringCount);

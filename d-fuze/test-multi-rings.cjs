@@ -1,7 +1,6 @@
 "use strict";
 const assert = require("node:assert/strict"),
   fs = require("node:fs"),
-  crypto = require("node:crypto"),
   S = require("./level-schema.js"),
   L = require("./levels.js"),
   M = require("./experimental-motion.js"),
@@ -10,9 +9,7 @@ const assert = require("node:assert/strict"),
   { Game } = require("./engine.js");
 const near = (a,b) => assert(Math.abs(a-b)<1e-7, `${a} != ${b}`);
 const original = L.publishedDocument();
-// Content regression: activating 7–12 must not edit any published 1–6 field/library.
-assert.equal(crypto.createHash("sha256").update(JSON.stringify(original.levels.slice(0,6))).digest("hex"),
-  "90f1b7a9b971da73f75d033a896225a46b1125c5a1b42c64c243c8a85a792741");
+// Published library/template regressions; v3→v4 balance checks live in test-shuffle.
 assert.deepEqual(original.ringProfiles, M.defaults());
 assert.deepEqual(original.assemblyProfiles, A.defaults());
 assert.deepEqual(original.levels.slice(6), S.defaults().levels.slice(6));
@@ -23,7 +20,7 @@ const make = (level) => {
 for (let count=1;count<=4;count++) {
   const level = S.clone(original.levels[(count-1)*3]);
   level.timer=300;
-  level.rings.forEach((r,i)=>Object.assign(r,{gateWidth:[10,60,120,20][i],gateHealth:i+1,family:["hard","easy","medium","hard"][i]}));
+  level.rings.forEach((r,i)=>Object.assign(r,{gateWidth:[10,60,120,20][i],gateHealth:i+1}));
   const g=make(level), sequence=[];
   assert.equal(g.rings.length,count);
   assert(g.rings.at(-1).radius+R.GEOMETRY.ringThickness/2<R.GEOMETRY.muzzleRadius);
@@ -86,15 +83,15 @@ for(const number of [7,10]) {
   g.health=1;g.ammo=1;g.angle=g.rings.at(-1).displayAngle;g.fire();
   assert.equal(g.state,"DEFUSING");assert.equal(g.lives,3);assert.equal(g.ammo,0);
 }
-// Every mixed family combination retains exact nested holds at later cycles,
+// Every level family retains its protected holds at later cycles,
 // including independently scaled assembly time and deterministic assignments.
-for (let combination=0;combination<81;combination++) {
-  const level=S.clone(original.levels[11]);level.timer=300;level.playbackSpeed=1.3;level.assembly.playbackSpeed=.7;
-  level.rings.forEach((r,i)=>r.family=["easy","medium","hard"][Math.floor(combination/3**i)%3]);
+for (let combination=0;combination<3;combination++) {
+  const level=S.clone(original.levels[11]);level.timer=300;level.assembly.playbackSpeed=.7;
+  level.motionFamily=["easy","medium","hard"][combination%3];
   const g=make(level), repeat=make(level);
   assert.deepEqual(g.rings.map(r=>r.profile.id),repeat.rings.map(r=>r.profile.id));
   for(const localTime of [4.5,4.75,9.5,9.75,54.75,109.75]) {
-    g.update(localTime/1.3-g.elapsed);
+    g.update(localTime-g.elapsed);
     near(g.assemblyAngle,A.sampleProfile(original.assemblyProfiles[0],g.elapsed*.7));
     for(const ring of g.rings) {
       near(ring.relativeAngle,0);near(ring.displayAngle,g.assemblyAngle+R.GEOMETRY.referenceOffset);
@@ -150,5 +147,5 @@ for(let number=7;number<=12;number++) for(const seed of [1,42,4200,90000]) {
   level.rings[3].gateHealth=49;assert.equal(test.rings[3].gate.health,original.levels[11].rings[3].gateHealth);
   test.fail();test.update(2);test.retry();assert.equal(test.level,20);assert.equal(test.elapsed,0);
   assert.deepEqual(JSON.parse(fs.readFileSync(`${__dirname}/published-levels.json`)),original);
-  console.log("PASS: 1–4 rings/outside-in health, widths, walls, beam endpoints, retry, 81 mixed-family holds and independent world clocks, 24 bounded-turret published wins, 1/12/13/20/200-level progression, config session snapshots, numbering rejection, standalone Level 20 Test Mode and export-loader isolation; Levels 1–6/libraries unchanged");
+  console.log("PASS: 1–4 rings/outside-in health, widths, walls, beam endpoints, retry, three level-family holds and independent world clocks, 24 bounded-turret published wins, 1/12/13/20/200-level progression, config session snapshots, numbering rejection, standalone Level 20 Test Mode and export-loader isolation; published source unmodified by runtime tests");
 })().catch(e=>{console.error(e);process.exitCode=1;});

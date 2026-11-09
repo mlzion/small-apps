@@ -8,15 +8,15 @@
     />
     <title>D::FUZE Level Builder — App Lab</title>
     <link rel="icon" href="../../assets/favicon.svg" type="image/svg+xml" />
-    <link rel="stylesheet" href="builder.css?v=phase5" />
-    <script src="../assembly.js?v=phase5" defer></script>
-    <script src="../motion.js?v=phase5" defer></script>
-    <script src="../experimental-motion.js?v=phase5" defer></script>
+    <link rel="stylesheet" href="builder.css?v=shuffle4" />
+    <script src="../assembly.js?v=shuffle4" defer></script>
+    <script src="../motion.js?v=shuffle4" defer></script>
+    <script src="../experimental-motion.js?v=shuffle4" defer></script>
     <script src="../rings.js" defer></script>
-    <script src="../level-schema.js?v=phase5" defer></script>
-    <script src="../levels.js?v=phase5" defer></script>
-    <script src="assembly-editor.js?v=phase5" defer></script>
-    <script src="builder.js?v=phase5" defer></script>
+    <script src="../level-schema.js?v=shuffle4" defer></script>
+    <script src="../levels.js?v=shuffle4" defer></script>
+    <script src="assembly-editor.js?v=shuffle4" defer></script>
+    <script src="builder.js?v=shuffle4" defer></script>
   </head>
   <body>
     <dialog id="access-dialog" aria-labelledby="access-title">
@@ -94,11 +94,17 @@
               min="0"
               max="4294967295"
               step="1" /></label
+          ><label>Motion Family<select id="level-family" aria-label="Level motion family">
+              <option value="easy">Easy</option>
+              <option value="medium">Medium</option>
+              <option value="hard">Hard</option>
+            </select></label
           ><button id="new-seed">NEW SEED</button>
         </div>
         <p class="hint">
-          Inside → outside. Every profile in the assigned family is used for
-          seeded selection. Alignment holds are protected in the motion editor.
+          Inside → outside. All rings use the level family, with distinct seeded
+          assignments shuffled together every 10 seconds. Alignment holds are
+          protected in the motion editor.
         </p>
         <div class="details">
           <label>Assembly profile<select id="assembly-profile"></select></label
@@ -119,6 +125,11 @@
       </section>
       <section id="motion-section">
         <h2>03 / Motion Editor</h2>
+        <p class="hint">
+          Each ring family has six editable profiles. Start at 0° and alignment
+          holds are locked; ring profiles cannot be added or deleted. Assembly
+          profiles remain independent.
+        </p>
         <p class="hint">
           Ring profiles keep a 10-second cycle and protected zero-angle holds.
           Boundary transitions are smoothed automatically. Library edits affect

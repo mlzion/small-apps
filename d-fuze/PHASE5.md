@@ -1,3 +1,5 @@
+> Phase 5.1 updates ring families, shuffling, schema and turret clearance. See [current motion/geometry rules](PHASE51.md); the original Phase 5 values below are historical.
+
 # Phase 5: four rings and content-driven progression
 
 ## Gameplay and architecture

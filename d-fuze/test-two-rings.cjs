@@ -79,10 +79,11 @@ const close = (a, b) => assert(Math.abs(a - b) < 1e-7);
   close(Math.hypot(g.lastShot.point.x, g.lastShot.point.y), 112);
 }
 for (const family1 of ["easy", "medium", "hard"])
-  for (const family2 of ["easy", "medium", "hard"]) {
+  {
     const level = S.clone(S.defaults().levels[3]);
-    level.rings[0] = S.defaultRing(1, family1);
-    level.rings[1] = S.defaultRing(2, family2);
+    level.motionFamily = family1;
+    level.rings[0] = S.defaultRing(1);
+    level.rings[1] = S.defaultRing(2);
     level.assembly = {
       profileId: "gentle-drift",
       playbackSpeed: 1,
@@ -116,11 +117,12 @@ for (const family1 of ["easy", "medium", "hard"])
     g.update(0.25);
     close(g.rings[0].assemblyAngle, g.rings[1].assemblyAngle);
   }
-// Validate a conservative shared-hold strategy for every mixed-family pair.
+// Validate a conservative shared-hold strategy for each level family.
 for (const a of ["easy", "medium", "hard"])
-  for (const b of ["easy", "medium", "hard"]) {
+  {
     const level = S.clone(S.defaults().levels[3]);
-    level.rings = [S.defaultRing(1, a), S.defaultRing(2, b)];
+    level.rings = [S.defaultRing(1), S.defaultRing(2)];
+    level.motionFamily = a;
     const g = make(level);
     while (g.state === "PLAYING") {
       if (g.rings.every((r) => Math.abs(r.relativeAngle) < 1e-8)) g.fire();
@@ -157,7 +159,7 @@ for (const a of ["easy", "medium", "hard"])
   assert.equal(timeout.state, "EXPLODING");
 }
 console.log(
-  "PASS: outer/inner walls and gates, independent health, outside-in immunity, one target/shot, beam endpoints, destroyed-wall blocking, retry, nine mixed-family wins, shared holds/assembly/collision/pause, seeded profiles, normal levels 1–6/advance, ammo/timeout",
+  "PASS: outer/inner walls and gates, independent health, outside-in immunity, one target/shot, beam endpoints, destroyed-wall blocking, retry, three level-family wins, shared holds/assembly/collision/pause, seeded profiles, normal levels 1–6/advance, ammo/timeout",
 );
 
 for (let level = 4; level <= 6; level++)

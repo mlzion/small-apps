@@ -49,13 +49,13 @@ with sync_playwright() as p:
         timer=page.get_by_role('spinbutton',name='Level 1 Timer (s)',exact=True)
         timer.fill('72');timer.press('Tab')
         expect(page.locator('#test-level')).to_be_enabled()
-        page.get_by_role('combobox',name='Ring 1 family').select_option('medium')
+        page.get_by_role('combobox',name='Level motion family').select_option('medium')
         expect(page.locator('#ring-editor input[type=checkbox]')).to_have_count(0)
         page.get_by_role('combobox',name='Ring 1 gate width').select_option('80')
-        page.get_by_role('combobox',name='Ring 1 family').select_option('easy')
+        page.get_by_role('combobox',name='Level motion family').select_option('easy')
         # Shared controls edit ring then assembly data; both survive export and Test Mode.
-        page.locator('#motion-duplicate').click()
-        page.locator('#motion-name').fill('Custom ring');page.locator('#motion-name').press('Tab')
+        expect(page.locator('#motion-duplicate')).to_be_hidden()
+        page.locator('#motion-name').fill('Edited ring');page.locator('#motion-name').press('Tab')
         expect(page.locator('#motion-duration')).to_have_attribute('readonly','')
         page.get_by_role('textbox',name='Motion key 2 angle',exact=True).fill('32')
         page.get_by_role('textbox',name='Motion key 2 angle',exact=True).press('Tab')
@@ -77,7 +77,7 @@ with sync_playwright() as p:
         # Downloads contain actual settings and schema metadata.
         with page.expect_download() as event: page.locator('#publish').click()
         exported=json.loads(Path(event.value.path()).read_text())
-        assert exported['version']==3 and len(exported['levels'])==12
+        assert exported['version']==4 and len(exported['levels'])==12
         assert exported['levels'][0]['timer']==72
         old=page.evaluate('JSON.stringify(doc)')
         bad=json.dumps({'version':99}).encode()
@@ -99,8 +99,7 @@ with sync_playwright() as p:
         expect(page.locator('#test-level')).to_be_enabled()
         expect(page.locator('#test-explanation')).to_contain_text('experimental level')
         # Independent mixed families share the same preview clock.
-        for number,family in [(1,'hard'),(2,'medium'),(3,'easy')]:
-            page.get_by_role('combobox',name=f'Ring {number} family').select_option(family)
+        page.get_by_role('combobox',name='Level motion family').select_option('hard')
         page.locator('#preview-play').click();page.wait_for_timeout(150)
         assert page.evaluate('previewTime')>0
         page.locator('#preview-play').click();t=page.evaluate('previewTime')
@@ -149,7 +148,7 @@ with sync_playwright() as p:
         page.evaluate("while(game.state==='PLAYING'){if(game.rings.every(r=>Math.abs(r.relativeAngle)<1e-8)){game.angle=game.rings[1].displayAngle;game.fire();}game.update(.05);}")
         expect(page.get_by_role('button',name='RETRY LEVEL',exact=True)).to_be_visible()
         assert page.evaluate('game.health')==0
-        original=page.evaluate('game.rings.map(r=>r.profile.id)')
+        original=page.evaluate('DFuzeExperimentalMotion.assignProfiles(game.testLevel,game.seed,game.ringProfiles).map(p=>p.id)')
         page.get_by_role('button',name='RETRY LEVEL',exact=True).click()
         assert page.evaluate('game.rings.map(r=>r.profile.id)')==original
         assert page.evaluate('game.rings.map(r=>r.gate.health)')==[2,2]

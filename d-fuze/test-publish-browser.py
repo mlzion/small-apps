@@ -38,8 +38,8 @@ with sync_playwright() as p:
         with page.expect_download() as event:page.locator('#publish').tap()
         exported=json.loads(Path(event.value.path()).read_text())
         assert event.value.suggested_filename=='published-levels.json'
-        assert exported['version']==3 and len(exported['levels'])==12
-        assert len(exported['ringProfiles'])>=15 and exported['assemblyProfiles']
+        assert exported['version']==4 and len(exported['levels'])==12
+        assert len(exported['ringProfiles'])==18 and exported['assemblyProfiles']
         assert exported['levels'][0]['timer']==82
         expect(page.locator('#status')).to_contain_text('NOT LIVE')
         assert test.evaluate('game.config.time')==81

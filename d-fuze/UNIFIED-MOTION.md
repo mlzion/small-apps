@@ -1,3 +1,5 @@
+> **Current motion rules:** Schema v4 uses one family per level and six editable ring profiles per family, shuffled together every ten seconds. Ring creation/deletion and ring playback multipliers are removed; assembly management remains independent. See [Phase 5.1](PHASE51.md). Earlier schema/eligibility notes below describe the prior system.
+
 # Unified motion editor and schema v3
 
 Open App Lab → Developer Tools (`FUSE-LAB-3`, public disposable deterrent), then **Motion Editor**. Choose **Ring Profiles** or **Assembly Profiles**. One set of profile/keyframe controls drives the selected type. Each type retains its own graph, animated preview and time/angle readout; the mode shows the appropriate view to keep phones compact.

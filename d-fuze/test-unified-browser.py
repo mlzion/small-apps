@@ -35,8 +35,10 @@ with sync_playwright() as p:
     assert angle.get_attribute('inputmode')=='text'
     a=angle.bounding_box();b=page.get_by_role('button',name='Reverse sign key 2',exact=True).bounding_box()
     assert b['x']>=a['x']+a['width'] and abs((a['y']+a['height']/2)-(b['y']+b['height']/2))<3
-    page.locator('#motion-new').tap();assert page.evaluate('doc.ringProfiles.length')==16
-    page.locator('#motion-delete').tap();assert page.evaluate('doc.ringProfiles.length')==15
+    expect(page.locator('#motion-new')).to_be_hidden()
+    expect(page.locator('#motion-duplicate')).to_be_hidden()
+    expect(page.locator('#motion-delete')).to_be_hidden()
+    assert page.evaluate('doc.ringProfiles.length')==18
     text=page.evaluate("document.querySelector('#motion-play').click();assemblyEditor.tick(1.2);document.querySelector('#profile-readout').textContent")
     assert '-40.0°' in text
     page.locator('#motion-play').tap();assert page.evaluate('assemblyEditor.time')==0
@@ -52,11 +54,11 @@ with sync_playwright() as p:
     page.locator('#preview-play').tap();page.wait_for_timeout(100);assert page.evaluate('previewTime')>0
     page.locator('#preview-play').tap();assert page.evaluate('previewTime')==0
     with page.expect_download() as event:page.locator('#publish').tap()
-    exported=json.loads(Path(event.value.path()).read_text());assert exported['version']==3
+    exported=json.loads(Path(event.value.path()).read_text());assert exported['version']==4
     assert exported['ringProfiles'][0]['keyframes'][1][1]==-40
     assert exported['assemblyProfiles'][0]['keyframes'][1][1]==-24
     # Older widths are adjusted visibly; v3 invalid widths are rejected, never rounded.
-    legacy=page.evaluate("const old=JSON.parse(JSON.stringify(doc));old.version=2;delete old.ringProfiles;old.levels.forEach(l=>{l.assembly.enabled=false;l.rings.forEach(r=>r.profiles=DFuzeExperimentalMotion.eligible(r.family).map(p=>p.id));});old.levels[0].rings[0].gateWidth=91;old")
+    legacy=page.evaluate("const old=JSON.parse(JSON.stringify(doc));old.version=2;delete old.ringProfiles;old.levels.forEach(l=>{l.assembly.enabled=false;l.playbackSpeed=1;l.rings.forEach(r=>{r.family=l.motionFamily;r.profiles=DFuzeExperimentalMotion.eligible(r.family).slice(0,5).map(p=>p.id)});delete l.motionFamily;});old.levels[0].rings[0].gateWidth=91;old")
     page.locator('#import-json').set_input_files({'name':'legacy.json','mimeType':'application/json','buffer':json.dumps(legacy).encode()})
     expect(page.locator('#status')).to_contain_text('91° adjusted to 90°')
     expect(page.get_by_role('combobox',name='Ring 1 gate width')).to_have_value('90')

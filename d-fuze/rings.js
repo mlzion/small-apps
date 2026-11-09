@@ -10,8 +10,8 @@
     EPS = 1e-8;
   const GEOMETRY = Object.freeze({
     bombRadius: 75,
-    turretRadius: 235,
-    muzzleRadius: 216,
+    turretRadius: 249,
+    muzzleRadius: 230,
     ringRadius: 108,
     ringSpacing: 30,
     ringThickness: 8,

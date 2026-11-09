@@ -7,7 +7,7 @@ const assert = require("node:assert/strict"),
   { Game } = require("./engine.js");
 const near = (a, b, e = 1e-6) => assert(Math.abs(a - b) < e, `${a} != ${b}`);
 const doc = S.defaults();
-assert.equal(doc.version, 3);
+assert.equal(doc.version, 4);
 assert.deepEqual(S.validateDocument(doc), []);
 assert(
   doc.levels.every(
@@ -26,9 +26,9 @@ const edited = doc.ringProfiles.find((p) => p.id === "easy-01");
 edited.keyframes[1][1] = -66;
 assert.deepEqual(M.validateEditable(edited), []);
 assert.deepEqual(S.importJSON(S.exportJSON(doc)), doc);
-const library = doc.ringProfiles.filter(
-  (p) => p.difficulty !== "easy" || p.id === "easy-01",
-);
+const library = S.clone(doc.ringProfiles);
+for (const p of library.filter(p=>p.difficulty==='easy'))
+  for(const key of p.keyframes) if(key[1]!==0)key[1]=-66;
 const level = doc.levels[0];
 const assigned = M.assignProfiles(level, 42, library);
 assert.equal(assigned[0].keyframes[1][1], -66);
@@ -85,7 +85,7 @@ old.version = 2;
 delete old.ringProfiles;
 old.levels.forEach((l) => {
   l.assembly.enabled = false;
-  l.rings.forEach((r) => (r.profiles = [M.eligible(r.family)[0].id]));
+  l.playbackSpeed=1;l.rings.forEach(r=>{r.family=l.motionFamily;r.profiles=[M.eligible(r.family)[0].id]});delete l.motionFamily;
 });
 old.levels[0].rings[0].gateWidth = 91;
 old.levels[1].rings[0].gateWidth = 180;
@@ -128,7 +128,7 @@ for (let n = 1; n <= 6; n++) {
   assert(game.rings.every((r) => (r.gateArc * 180) / Math.PI >= 9.999));
 }
 console.log(
-  "PASS: v3 migrations/reporting, width steps, removed eligibility/enable flags, all-family seeded selection, negative custom keys persistence/Test Mode, protected holds and smooth entry/exit, always-on parent/world angles for all six levels",
+  "PASS: v4 migrations/reporting, width steps, removed eligibility/enable flags, all-family seeded selection, negative custom keys persistence/Test Mode, protected holds and smooth entry/exit, always-on parent/world angles for all six levels",
 );
 
 const extended = S.clone(doc.ringProfiles);
@@ -137,9 +137,5 @@ extended.push({
   id: "easy-extra",
   name: "Extra Easy",
 });
-assert.deepEqual(M.validateLibrary(extended), []);
-const used = new Set();
-for (let seed = 1; seed < 10000; seed += 17)
-  used.add(M.assignProfiles(level, seed, extended)[0].id);
-assert(used.has("easy-extra"));
-assert.equal(used.size, 6);
+assert(M.validateLibrary(extended).length);
+assert.throws(() => M.assignProfiles(level, 1, extended));
