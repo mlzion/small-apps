@@ -100,7 +100,7 @@ invalid((d) => {
   d.levels[0].fireRate = 1;
   d.levels[0].bombHealth = 20;
 }, "timer is too short");
-invalid((d) => (d.levels[0].assembly.enabled = true), "assembly");
+invalid((d) => (d.levels[0].assembly = {enabled:true,speed:999}), "assembly");
 invalid((d) => (d.levels[0].seed = -1), "seed");
 invalid((d) => (d.levels[1].number = 1), "unique");
 invalid((d) => (d.levels[0].rings[0].keyframes = []), "unknown");
@@ -148,7 +148,7 @@ formula.levels[0].name = "=1+1";
 assert(S.exportCSV(formula).includes("'=1+1"));
 const level = defaults.levels[0];
 assert.deepEqual(S.readTest(S.testPayload(level)), level);
-assert.throws(() => S.testPayload(defaults.levels[3]));
+assert.throws(() => S.testPayload(defaults.levels[6]));
 assert.throws(() => S.readTest('{"version":99}'));
 const g = new Game(undefined, undefined, {
   seed: level.seed,
@@ -180,7 +180,7 @@ g.retry();
 assert.equal(g.rings[0].profile.id, M.assignProfiles(level, 90000)[0].id);
 assert.equal(g.lives, 3);
 assert.throws(
-  () => new Game(undefined, undefined, { testLevel: defaults.levels[3] }),
+  () => new Game(undefined, undefined, { testLevel: defaults.levels[6] }),
 );
 // Published data/motion are deliberately not migrated. Intentional migrations must
 // update these snapshots and the normal-game regressions together.

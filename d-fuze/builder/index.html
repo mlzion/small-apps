@@ -8,12 +8,12 @@
     />
     <title>D::FUZE Level Builder — App Lab</title>
     <link rel="icon" href="../../assets/favicon.svg" type="image/svg+xml" />
-    <link rel="stylesheet" href="builder.css?v=builder1" />
+    <link rel="stylesheet" href="builder.css?v=phase4" />
     <script src="../motion.js" defer></script>
-    <script src="../experimental-motion.js?v=builder1" defer></script>
+    <script src="../experimental-motion.js?v=phase4" defer></script>
     <script src="../rings.js" defer></script>
-    <script src="../level-schema.js?v=builder1" defer></script>
-    <script src="builder.js?v=builder1" defer></script>
+    <script src="../level-schema.js?v=phase4" defer></script>
+    <script src="builder.js?v=phase4" defer></script>
   </head>
   <body>
     <dialog id="access-dialog" aria-labelledby="access-title">
@@ -38,8 +38,7 @@
         <button id="lock">LOCK TOOLS</button>
       </header>
       <p class="intro">
-        Experimental levels. Published gameplay stays unchanged. Multi-ring
-        gameplay arrives in Phase 4.
+        Experimental edits stay separate from published levels. One- and two-ring tests are playable; three/four rings are preview only.
       </p>
       <nav aria-label="Builder sections">
         <a href="#levels-section">Levels</a><a href="#rings-section">Rings</a
@@ -97,9 +96,24 @@
           Inside → outside. A family change enables all five of that family's
           profiles. Alignment timing belongs to the fixed profiles.
         </p>
+        <div class="details">
+          <label
+            >Enable assembly rotation<input
+              id="assembly-enabled"
+              type="checkbox" /></label
+          ><label
+            >Assembly speed °/s<input
+              id="assembly-speed"
+              type="number"
+              min="-180"
+              max="180"
+              value="0"
+          /></label>
+        </div>
         <div id="ring-editor"></div>
         <p class="hint">
-          Assembly rotation: disabled for all experimental levels.
+          Assembly speed is constant, shared by all rings, and measured in
+          degrees per gameplay second.
         </p>
       </section>
       <section id="profiles-section">

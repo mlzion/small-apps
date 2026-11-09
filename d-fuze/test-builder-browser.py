@@ -101,7 +101,7 @@ with sync_playwright() as p:
         page.get_by_role('button',name='EDIT 10',exact=True).click()
         expect(page.locator('#ring-editor .ring-row')).to_have_count(4)
         expect(page.locator('#test-level')).to_be_disabled()
-        expect(page.locator('#test-explanation')).to_contain_text('Phase 4')
+        expect(page.locator('#test-explanation')).to_contain_text('Phase 5')
         # Independent mixed families share the same preview clock.
         for number,family in [(1,'hard'),(2,'medium'),(3,'easy')]:
             page.get_by_role('combobox',name=f'Ring {number} family').select_option(family)
@@ -135,6 +135,26 @@ with sync_playwright() as p:
         page.get_by_role('button',name='RETURN TO EDITOR',exact=True).click()
         expect(page).to_have_url('http://app-lab.test'+prefix+'d-fuze/builder/')
         assert page.evaluate('JSON.stringify(current())')==expected
+        # Two-ring Test Mode uses independent edited settings in the real engine.
+        page.get_by_role('button',name='EDIT 4',exact=True).click()
+        page.locator('#assembly-enabled').check()
+        page.locator('#assembly-speed').fill('20');page.locator('#assembly-speed').press('Tab')
+        expect(page.locator('#test-level')).to_be_enabled()
+        page.locator('#test-level').click()
+        page.get_by_role('button',name='START TEST',exact=True).click()
+        assert page.evaluate('game.rings.length')==2
+        page.keyboard.press('Space')
+        assert page.evaluate('game.rings[0].gate.health')==2
+        page.evaluate("while(game.state==='PLAYING'){if(game.rings.every(r=>Math.abs(r.relativeAngle)<1e-8)){game.angle=game.rings[1].displayAngle;game.fire();}game.update(.05);}")
+        expect(page.get_by_role('button',name='RETRY LEVEL',exact=True)).to_be_visible()
+        assert page.evaluate('game.health')==0
+        original=page.evaluate('game.rings.map(r=>r.profile.id)')
+        page.get_by_role('button',name='RETRY LEVEL',exact=True).click()
+        assert page.evaluate('game.rings.map(r=>r.profile.id)')==original
+        assert page.evaluate('game.rings.map(r=>r.gate.health)')==[2,2]
+        page.keyboard.press('Escape')
+        page.get_by_role('button',name='RETURN TO EDITOR',exact=True).click()
+        expect(page.locator('#assembly-enabled')).to_be_checked()
         # Reset for the next hosting-root pass, exercising native confirmation.
         page.once('dialog',lambda d:d.accept())
         page.locator('#reset-defaults').click()
@@ -147,6 +167,9 @@ with sync_playwright() as p:
     assert not page.evaluate('game.testMode')
     assert page.evaluate('game.rings[0].profile.family.duration')==16
     expect(page.locator('#test-mode')).to_be_hidden()
+    page.evaluate("game.level=6;game.startLevel();game.transition('LEVEL_COMPLETE')")
+    expect(page.locator('#detail')).to_contain_text('All 6 available levels complete')
+    expect(page.get_by_role('button',name='PLAY NEXT LEVEL',exact=True)).to_have_count(0)
     # Responsive editor and access prompt, with real emulated phone taps.
     mobile=context(viewport={'width':375,'height':812},is_mobile=True,has_touch=True,device_scale_factor=2)
     phone=mobile.new_page();phone.goto('http://app-lab.test/small-apps/d-fuze/builder/')
@@ -161,11 +184,14 @@ with sync_playwright() as p:
         phone.screenshot(path=f'/tmp/d-fuze-builder-{width}.png',full_page=True)
     phone.set_viewport_size({'width':320,'height':480})
     phone.locator('#profile-next').tap();expect(phone.locator('#profile-title')).to_contain_text('2 of 5')
+    phone.get_by_role('button',name='EDIT 4',exact=True).tap()
     phone.locator('#test-level').tap()
     expect(phone.locator('#test-mode')).to_be_visible()
     phone.get_by_role('button',name='START TEST',exact=True).tap()
     phone.locator('[data-control=fire]').tap()
-    assert phone.evaluate('game.ammo')==39
+    assert phone.evaluate('game.ammo')==49
+    assert phone.evaluate('game.rings[0].gate.health')==2
+    assert phone.evaluate('game.rings[1].gate.health')==1
     phone.set_viewport_size({'width':812,'height':375})
     expect(phone.locator('#orientation-overlay')).to_be_visible()
     frozen=phone.evaluate('[game.elapsed,game.animationTime,game.ammo,game.rings[0].gate.health]')

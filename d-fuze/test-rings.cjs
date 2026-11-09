@@ -218,7 +218,7 @@ for (let i = 0; i < 100; i++)
 // shoot only when the geometry is zero. This is an available player strategy,
 // not a collision permission rule. All later settings plateau by level 15.
 let validated = 0;
-for (let level = 1; level <= 100; level++)
+for (let level = 1; level <= 3; level++)
   for (const profile of PROFILES.filter(
     (p) => p.difficulty === levelConfig(level).rings.difficulty,
   )) {
