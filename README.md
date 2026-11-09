@@ -2,7 +2,7 @@
 
 Small ideas. Working experiments.
 
-A static gallery for browser games, audio tools, MIDI applications, and creative projects. Calculator, Breakout, and Falling Blocks are available; Space Shooter, Synth Lab, MIDI Lab, and Paint Studio are planned.
+A static gallery for browser games, audio tools, MIDI applications, and creative projects. Calculator, Breakout, Falling Blocks, and D::FUZE are available; Space Shooter, Synth Lab, MIDI Lab, and Paint Studio are planned.
 
 ## Running locally
 
@@ -21,3 +21,7 @@ The `calculator/` directory is the existing standalone application. Its files ar
 ## Verification
 
 See `tests/README.md` for regression and responsive checks. Test tools are development-only and are not needed to run the site.
+
+## D::FUZE
+
+See [d-fuze/README.md](d-fuze/README.md) for Phase 1 architecture, controls, configuration, and verification.

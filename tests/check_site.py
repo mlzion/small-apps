@@ -49,8 +49,8 @@ with sync_playwright() as p:
     for prefix in ("/", "/small-apps/"):
         url = "http://app-lab.test" + prefix
         page.goto(url)
-        expect(page.locator(".app-card")).to_have_count(7)
-        expect(page.locator(".launch-link")).to_have_count(3)
+        expect(page.locator(".app-card")).to_have_count(8)
+        expect(page.locator(".launch-link")).to_have_count(4)
         expect(page.locator(".app-card:has(.coming-soon) a, .app-card:has(.coming-soon) button")).to_have_count(0)
         expect(page.locator("#year")).to_have_text(page.evaluate("String(new Date().getFullYear())"))
         for width, columns in ((320, 1), (375, 1), (640, 1), (768, 2), (1000, 2), (1024, 3), (1440, 3)):
@@ -127,7 +127,7 @@ with sync_playwright() as p:
     no_js.route("http://app-lab.test/**", serve)
     fallback = no_js.new_page()
     fallback.goto("http://app-lab.test/small-apps/")
-    expect(fallback.locator(".app-card")).to_have_count(7)
+    expect(fallback.locator(".app-card")).to_have_count(8)
     fallback.locator(".launch-link").first.click()
     expect(fallback).to_have_url("http://app-lab.test/small-apps/calculator/")
     print("PASS: gallery and navigation work without JavaScript")
