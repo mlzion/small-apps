@@ -155,7 +155,7 @@
     }
     return errors;
   }
-  function validateDocument(doc) {
+  function validateDocument(doc, { standalone = false } = {}) {
     if (!doc || typeof doc !== "object" || Array.isArray(doc))
       return ["Expected a configuration object."];
     const errors = [];
@@ -199,11 +199,16 @@
     const numbers = doc.levels.map((l) => l?.number);
     if (new Set(numbers).size !== numbers.length)
       errors.push("Level numbers must be unique.");
+    if (
+      !(standalone && doc.levels.length === 1) &&
+      numbers.some((n, i) => n !== i + 1)
+    )
+      errors.push("Levels must be numbered consecutively from Level 1 in table order.");
     return errors;
   }
-  function requireValid(doc) {
+  function requireValid(doc, options) {
     doc = migrate(doc);
-    const errors = validateDocument(doc);
+    const errors = validateDocument(doc, options);
     if (errors.length) throw new Error(errors.join("\n"));
     const result = clone(doc);
     if (doc.migrationNotes)
@@ -238,10 +243,6 @@
       ...validateLevel(level, "Level", assemblyProfiles),
     ];
     if (errors.length) throw new Error(errors.join("\n"));
-    if (level.ringCount > 2)
-      throw new Error(
-        "Three- and four-ring gameplay arrives in Phase 5. Use animation preview.",
-      );
     const r = level.rings[0],
       g = ringSystem.GEOMETRY;
     return {
@@ -318,16 +319,21 @@
       )
     )
       throw new Error("Invalid Test Mode transfer.");
-    const doc = requireValid({
-      format: FORMAT,
-      version: value.version,
-      motionLibrary: value.motionLibrary,
-      levels: [value.level],
-      ...(value.version === 3 ? { ringProfiles: value.ringProfiles } : {}),
-      ...(value.version >= 2
-        ? { assemblyProfiles: value.assemblyProfiles }
-        : {}),
-    });
+    // A test snapshot is one selected level, not a complete progression; retain
+    // its original number while enforcing every other schema/library rule.
+    const doc = requireValid(
+      {
+        format: FORMAT,
+        version: value.version,
+        motionLibrary: value.motionLibrary,
+        levels: [value.level],
+        ...(value.version === 3 ? { ringProfiles: value.ringProfiles } : {}),
+        ...(value.version >= 2
+          ? { assemblyProfiles: value.assemblyProfiles }
+          : {}),
+      },
+      { standalone: true },
+    );
 
     toRuntime(
       doc.levels[0],

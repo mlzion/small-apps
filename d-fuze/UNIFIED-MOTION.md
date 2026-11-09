@@ -41,9 +41,9 @@ All other published gameplay resource values remain unchanged.
 
 ## Assembly is always active
 
-All six normal levels and all experimental levels run their selected assembly profile. The enable/disable flag and checkbox are removed. New levels select **Gentle Drift** by default; migrations supply it when no profile is specified and report that choice. Existing selected profiles and their playback multipliers are retained. The separate assembly parent and its independent clock remain authoritative for world angles and collisions. An intentionally flat authored profile may have no visible rotation, but the assembly clock still runs; no enable flag bypasses it.
+All published normal levels and all experimental levels run their selected assembly profile. The enable/disable flag and checkbox are removed. New levels select **Gentle Drift** by default; migrations supply it when no profile is specified and report that choice. Existing selected profiles and their playback multipliers are retained. The separate assembly parent and its independent clock remain authoritative for world angles and collisions. An intentionally flat authored profile may have no visible rotation, but the assembly clock still runs; no enable flag bypasses it.
 
-The per-level assembly rate remains a gameplay setting, not an extra preview speed. Published Levels 1–6 now select active Gentle Drift at 1×. Ring and assembly clocks never merge, and Test Mode remains isolated. Three/four-ring gameplay remains preview-only.
+The per-level assembly rate remains a gameplay setting, not an extra preview speed. All twelve initial published levels select active Gentle Drift at 1×. Ring and assembly clocks never merge, and Test Mode remains isolated. One- through four-ring gameplay is supported in normal play and Test Mode; progression follows the published dataset. See [Phase 5](PHASE5.md).
 
 ## Schema and migrations
 

@@ -19,7 +19,7 @@ with sync_playwright() as p:
         if page.locator('#access-dialog').is_visible():
             page.locator('#access-code').fill('FUSE-LAB-3');page.get_by_role('button',name='OPEN LEVEL BUILDER').tap()
         expect(page.locator('#builder')).to_be_visible()
-        expect(page.locator('#level-table tbody tr')).to_have_count(6)
+        expect(page.locator('#level-table tbody tr')).to_have_count(12)
         assert page.evaluate('JSON.stringify(doc)===JSON.stringify(DFuzeLevels.publishedDocument())')
         expect(page.locator('#save-draft,#load-draft,#export-json,#export-csv,#reset-defaults')).to_have_count(0)
         page.locator('#level-name').fill('Memory only')
@@ -38,7 +38,7 @@ with sync_playwright() as p:
         with page.expect_download() as event:page.locator('#publish').tap()
         exported=json.loads(Path(event.value.path()).read_text())
         assert event.value.suggested_filename=='published-levels.json'
-        assert exported['version']==3 and len(exported['levels'])==6
+        assert exported['version']==3 and len(exported['levels'])==12
         assert len(exported['ringProfiles'])>=15 and exported['assemblyProfiles']
         assert exported['levels'][0]['timer']==82
         expect(page.locator('#status')).to_contain_text('NOT LIVE')

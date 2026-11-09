@@ -36,7 +36,7 @@ with sync_playwright() as p:
             page.locator('#access-code').fill('FUSE-LAB-3')
             page.get_by_role('button',name='OPEN LEVEL BUILDER').click()
         expect(page.locator('#builder')).to_be_visible()
-        expect(page.locator('#level-table tbody tr')).to_have_count(6)
+        expect(page.locator('#level-table tbody tr')).to_have_count(12)
         page.locator('#level-name').fill('Unsaved <ring> & draft')
         timer=page.get_by_role('spinbutton',name='Level 1 Timer (s)',exact=True)
         timer.fill('72');timer.press('Tab')
@@ -77,7 +77,7 @@ with sync_playwright() as p:
         # Downloads contain actual settings and schema metadata.
         with page.expect_download() as event: page.locator('#publish').click()
         exported=json.loads(Path(event.value.path()).read_text())
-        assert exported['version']==3 and len(exported['levels'])==6
+        assert exported['version']==3 and len(exported['levels'])==12
         assert exported['levels'][0]['timer']==72
         old=page.evaluate('JSON.stringify(doc)')
         bad=json.dumps({'version':99}).encode()
@@ -87,17 +87,17 @@ with sync_playwright() as p:
         page.locator('#import-json').set_input_files({'name':'levels.json','mimeType':'application/json','buffer':json.dumps(exported).encode()})
         expect(page.locator('#status')).to_contain_text('JSON imported')
         # Add/duplicate/delete/reorder mutate only the document in this browser.
-        page.locator('#duplicate-level').click();expect(page.locator('#level-table tbody tr')).to_have_count(7)
+        page.locator('#duplicate-level').click();expect(page.locator('#level-table tbody tr')).to_have_count(13)
         page.locator('#move-down').click();assert page.evaluate('selected')==2
         page.locator('#move-up').click();assert page.evaluate('selected')==1
-        page.locator('#delete-level').click();expect(page.locator('#level-table tbody tr')).to_have_count(6)
-        page.locator('#add-level').click();expect(page.locator('#level-table tbody tr')).to_have_count(7)
-        page.locator('#delete-level').click();expect(page.locator('#level-table tbody tr')).to_have_count(6)
+        page.locator('#delete-level').click();expect(page.locator('#level-table tbody tr')).to_have_count(12)
+        page.locator('#add-level').click();expect(page.locator('#level-table tbody tr')).to_have_count(13)
+        page.locator('#delete-level').click();expect(page.locator('#level-table tbody tr')).to_have_count(12)
         page.get_by_role('button',name='EDIT 4',exact=True).click()
         count=page.get_by_role('spinbutton',name='Level 4 Rings',exact=True);count.fill('4');count.press('Tab')
         expect(page.locator('#ring-editor .ring-row')).to_have_count(4)
-        expect(page.locator('#test-level')).to_be_disabled()
-        expect(page.locator('#test-explanation')).to_contain_text('Phase 5')
+        expect(page.locator('#test-level')).to_be_enabled()
+        expect(page.locator('#test-explanation')).to_contain_text('experimental level')
         # Independent mixed families share the same preview clock.
         for number,family in [(1,'hard'),(2,'medium'),(3,'easy')]:
             page.get_by_role('combobox',name=f'Ring {number} family').select_option(family)
@@ -170,8 +170,8 @@ with sync_playwright() as p:
     assert not page.evaluate('game.testMode')
     assert page.evaluate('game.rings[0].profile.family.duration')==10
     expect(page.locator('#test-mode')).to_be_hidden()
-    page.evaluate("game.level=6;game.startLevel();game.transition('LEVEL_COMPLETE')")
-    expect(page.locator('#detail')).to_contain_text('All 6 available levels complete')
+    page.evaluate("game.level=12;game.startLevel();game.transition('LEVEL_COMPLETE')")
+    expect(page.locator('#detail')).to_contain_text('All 12 available levels complete')
     expect(page.get_by_role('button',name='PLAY NEXT LEVEL',exact=True)).to_have_count(0)
     # Responsive editor and access prompt, with real emulated phone taps.
     mobile=context(viewport={'width':375,'height':812},is_mobile=True,has_touch=True,device_scale_factor=2)
@@ -215,5 +215,5 @@ with sync_playwright() as p:
     phone.locator('#lock').tap();expect(phone.locator('#builder')).to_be_hidden();expect(phone.locator('#access-dialog')).to_be_visible()
     assert not errors,errors
     assert not missing,missing
-    print('PASS: root/Pages access gate, level/ring editing, numeric validation, profile viewer, four-ring animation-only preview, validated JSON publishing, import rejection, memory edits, row actions, real-game Test Mode/retries/no advance/return, normal published isolation, mobile/desktop layouts and touch')
+    print('PASS: root/Pages access gate, level/ring editing, numeric validation, profile viewer, four-ring preview/playable testing, validated JSON publishing, import rejection, memory edits, row actions, real-game Test Mode/retries/no advance/return, normal published isolation, mobile/desktop layouts and touch')
     browser.close()

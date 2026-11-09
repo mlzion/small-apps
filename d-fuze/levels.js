@@ -15,18 +15,9 @@
   let published = initial,
     loadError = null;
   function validatePublished(data) {
-    const doc = schema.requireValid(data);
-    if (
-      doc.levels.length < 6 ||
-      doc.levels.some(
-        (l, i) => l.number !== i + 1 || (i < 6 && l.ringCount > 2),
-      )
-    )
-      throw Error(
-        "Published configuration must contain ordered playable Levels 1–6; later levels remain preview-only.",
-      );
-    return doc;
+    return schema.requireValid(data);
   }
+
   async function loadPublished(fetcher = fetch) {
     try {
       const response = await fetcher(url, { cache: "no-store" });

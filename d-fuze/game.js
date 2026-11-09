@@ -203,7 +203,7 @@ function renderUI() {
     case "MAIN_MENU":
       message.textContent = howTo ? "HOW TO PLAY" : "D::FUZE";
       detail.textContent = howTo
-        ? "Hold ← / A or CCW to orbit counterclockwise; → / D or CW to orbit clockwise. Tap or hold SPACE / FIRE. Red walls block shots. Break the blue gate, then shoot through the moving opening to defuse the bomb. Three lives. ESC pauses."
+        ? "Hold ← / A or CCW to orbit counterclockwise; → / D or CW to orbit clockwise. Tap or hold SPACE / FIRE. Red walls block shots. Break the blue gates from outside inward, then fire through all moving openings to defuse the bomb. Three lives. ESC pauses."
         : "Break the blue gate. Track the opening. Defuse.";
       button("PLAY", () => {
         howTo = false;
@@ -229,10 +229,10 @@ function renderUI() {
       message.textContent = "BOMB D::FUZED!";
       message.className = "success";
       detail.textContent = `Level ${game.level} complete. ${game.lives} lives remaining.`;
-      if (game.level < 6) button("PLAY NEXT LEVEL", () => game.nextLevel());
+      if (game.hasNextLevel) button("PLAY NEXT LEVEL", () => game.nextLevel());
       else
         detail.textContent =
-          "All 6 available levels complete! Three-ring gameplay is not available yet.";
+          `All ${game.levelCount} available levels complete!`;
       button("MAIN MENU", () => game.menu());
       break;
     case "LEVEL_FAILED":

@@ -2,7 +2,7 @@
 // Start the same game controller after the JSON request settles. A failed load
 // is retained by the loader and shown by the game's configuration-error screen.
 const controllerURL = new URL(
-  "game.js?v=publish-json",
+  "game.js?v=phase5",
   document.currentScript.src,
 ).href;
 DFuzeLevels.loadPublished()
