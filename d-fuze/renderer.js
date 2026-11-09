@@ -31,7 +31,8 @@ class Renderer {
         x.stroke();
       }
     };
-    circle(235, null, "#41474c");
+    const geometry = DFuzeRings.GEOMETRY;
+    circle(geometry.turretRadius, null, "#41474c");
     const urgency = 1 - g.remaining / g.config.time,
       pulse = Math.max(0, 1 - (g.elapsed - g.pulseAt) / 0.24),
       hit = Math.max(0, 1 - (g.elapsed - g.hitAt) / 0.12);
@@ -39,25 +40,50 @@ class Renderer {
       exploding = ["EXPLODING", "LEVEL_FAILED", "GAME_OVER"].includes(g.state);
     const fade = defusing ? Math.min(1, g.effectTime) : 0;
     const light = 42 + urgency * 12 + pulse * (8 + urgency * 7) + hit * 12;
+    for (const ring of g.rings) {
+      const start = ring.displayAngle - ring.gateArc / 2;
+      x.save();
+      x.globalAlpha = defusing
+        ? 1 - fade
+        : exploding
+          ? Math.max(0, 1 - g.effectTime / 1.3)
+          : 1;
+      x.lineWidth = ring.thickness;
+      x.lineCap = "butt";
+      x.strokeStyle = "#ef6258";
+      x.beginPath();
+      x.arc(0, 0, ring.radius, start + ring.gateArc, start + Math.PI * 2);
+      x.stroke();
+      if (ring.gate.health > 0) {
+        const flash = Math.max(0, 1 - (g.elapsed - ring.gate.hitAt) / 0.15);
+        x.globalAlpha *= ring.gate.opacity;
+        x.strokeStyle = flash > 0 ? "#b5edff" : "#56adff";
+        x.lineWidth = ring.thickness + flash * 3;
+        x.beginPath();
+        x.arc(0, 0, ring.radius, start, start + ring.gateArc);
+        x.stroke();
+      }
+      x.restore();
+    }
     circle(
-      91,
+      geometry.bombRadius,
       defusing
         ? `hsl(15 ${80 * (1 - fade)}% ${light * (1 - fade) + 18 * fade}%)`
         : `hsl(${16 - urgency * 10} 85% ${Math.min(70, light)}%)`,
     );
     if (!exploding) {
       x.fillStyle = "#fff";
-      x.font = "bold 68px ui-monospace, monospace";
+      x.font = "bold 56px ui-monospace, monospace";
       x.textAlign = "center";
       x.textBaseline = "middle";
       x.fillText(String(Math.ceil(g.remaining)), 0, -4);
       x.font = "11px ui-monospace, monospace";
-      x.fillText(defusing ? "D::FUZED" : "SECONDS", 0, 43);
+      x.fillText(defusing ? "D::FUZED" : "SECONDS", 0, 36);
     }
     if (!exploding) {
       x.save();
       x.rotate(g.angle);
-      x.translate(235, 0);
+      x.translate(geometry.turretRadius, 0);
       x.fillStyle = "#76ed91";
       x.beginPath();
       x.moveTo(-19, 0);
@@ -73,6 +99,37 @@ class Renderer {
         x.lineTo(-20, 7);
         x.fill();
       }
+      x.restore();
+    }
+    const shot = g.lastShot;
+    if (
+      shot?.point &&
+      g.elapsed - shot.time + (defusing ? g.effectTime : 0) < 0.1 &&
+      !exploding
+    ) {
+      x.save();
+      x.globalAlpha = Math.max(
+        0,
+        1 - (g.elapsed - shot.time + (defusing ? g.effectTime : 0)) / 0.1,
+      );
+      x.strokeStyle =
+        shot.kind === "gate"
+          ? "#80d1ff"
+          : shot.kind === "wall"
+            ? "#ffad91"
+            : "#c3ffd1";
+      x.lineWidth = 2;
+      x.beginPath();
+      x.moveTo(
+        Math.cos(shot.angle) * geometry.muzzleRadius,
+        Math.sin(shot.angle) * geometry.muzzleRadius,
+      );
+      x.lineTo(shot.point.x, shot.point.y);
+      x.stroke();
+      x.fillStyle = x.strokeStyle;
+      x.beginPath();
+      x.arc(shot.point.x, shot.point.y, 5, 0, Math.PI * 2);
+      x.fill();
       x.restore();
     }
     if (exploding && g.effectTime < 1.3) {
@@ -91,8 +148,8 @@ class Renderer {
           5 * (1 - p) + 2,
         );
       }
-      const tx = Math.cos(g.angle) * 235,
-        ty = Math.sin(g.angle) * 235;
+      const tx = Math.cos(g.angle) * geometry.turretRadius,
+        ty = Math.sin(g.angle) * geometry.turretRadius;
       for (let i = 0; i < 5; i++) {
         x.fillStyle = "#76ed91";
         x.fillRect(

@@ -9,12 +9,15 @@
     <meta name="theme-color" content="#222529" />
     <title>D::FUZE — App Lab</title>
     <link rel="icon" href="../assets/favicon.svg" type="image/svg+xml" />
-    <link rel="stylesheet" href="styles.css" />
-    <script src="engine.js" defer></script>
-    <script src="audio.js" defer></script>
+    <link rel="stylesheet" href="styles.css?v=phase2-ring1" />
+    <script src="motion.js?v=phase2-ring1" defer></script>
+    <script src="rings.js?v=phase2-ring1" defer></script>
+    <script src="levels.js?v=phase2-ring1" defer></script>
+    <script src="engine.js?v=phase2-ring1" defer></script>
+    <script src="audio.js?v=phase2-ring1" defer></script>
     <script src="input.js" defer></script>
-    <script src="renderer.js" defer></script>
-    <script src="game.js" defer></script>
+    <script src="renderer.js?v=phase2-ring1" defer></script>
+    <script src="game.js?v=phase2-ring1" defer></script>
   </head>
   <body>
     <main class="game">
@@ -28,8 +31,9 @@
       </header>
       <section class="hud" aria-label="Game status">
         <span>LEVEL <b id="level">1</b></span
-        ><span>AMMO <b id="ammo">8</b></span
-        ><span>HEALTH <b id="health">3</b></span
+        ><span>AMMO <b id="ammo">24</b></span
+        ><span>BOMB <b id="health">3</b></span
+        ><span>GATE <b id="gate-health">2</b></span
         ><span id="lives" aria-label="3 lives">♥ ♥ ♥</span>
       </section>
       <div class="arena">
@@ -39,11 +43,11 @@
         <div class="field">
           <canvas
             id="canvas"
-            aria-label="Circular playfield: turret orbiting the bomb. Countdown shown in the center."
+            aria-label="Circular playfield: turret orbiting a red ring with a blue destructible gate and a bomb. Countdown shown in the center."
           ></canvas>
           <section id="overlay" aria-labelledby="message">
             <div class="panel">
-              <p class="eyebrow" id="tagline">CORE ARCADE / PHASE 1</p>
+              <p class="eyebrow" id="tagline">ONE RING / ONE BOMB</p>
               <h2 id="message">D::FUZE</h2>
               <p id="detail">Orbit. Fire. Beat the countdown.</p>
               <div id="actions"></div>
@@ -62,6 +66,7 @@
         ROTATE <kbd>←</kbd> <kbd>→</kbd> / <kbd>A</kbd> <kbd>D</kbd>
         <span>FIRE <kbd>SPACE</kbd></span> <span>PAUSE <kbd>ESC</kbd></span>
       </footer>
+      <pre id="debug" hidden aria-label="Developer game information"></pre>
     </main>
     <section
       id="orientation-overlay"

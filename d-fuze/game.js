@@ -1,14 +1,23 @@
 "use strict";
 const audio = new ArcadeAudio();
-const game = new DFuze.Game((event, value) => {
-  if (event === "state") {
-    if (value !== "PLAYING") {
-      input?.clear();
-      audio.stop();
-    }
-    renderUI();
-  } else audio.play(event, value);
-});
+const debugParams = new URLSearchParams(location.search);
+const seedText = debugParams.get("seed");
+const debugEnabled = debugParams.get("debug") === "1";
+const game = new DFuze.Game(
+  (event, value) => {
+    if (event === "state") {
+      if (value !== "PLAYING") {
+        input?.clear();
+        audio.stop();
+      }
+      renderUI();
+    } else audio.play(event, value);
+  },
+  undefined,
+  seedText !== null && Number.isFinite(Number(seedText))
+    ? { seed: Number(seedText) }
+    : {},
+);
 const renderer = new Renderer(document.querySelector("#canvas"));
 let lastTime = performance.now(),
   input = null,
@@ -92,13 +101,13 @@ function renderUI() {
   if (overlay.hidden) return;
   actions.replaceChildren();
   message.className = "";
-  document.querySelector("#tagline").textContent = "CORE ARCADE / PHASE 1";
+  document.querySelector("#tagline").textContent = "ONE RING / ONE BOMB";
   switch (game.state) {
     case "MAIN_MENU":
       message.textContent = howTo ? "HOW TO PLAY" : "D::FUZE";
       detail.textContent = howTo
-        ? "Hold ← / A or CCW to orbit counterclockwise; → / D or CW to orbit clockwise. Tap or hold SPACE / FIRE to shoot inward. Defuse before time or ammo runs out. Three lives. ESC pauses."
-        : "Orbit. Fire. Beat the countdown.";
+        ? "Hold ← / A or CCW to orbit counterclockwise; → / D or CW to orbit clockwise. Tap or hold SPACE / FIRE. Red walls block shots. Break the blue gate, then shoot through the moving opening to defuse the bomb. Three lives. ESC pauses."
+        : "Break the blue gate. Track the opening. Defuse.";
       button("PLAY", () => {
         howTo = false;
         game.newGame();
@@ -147,6 +156,7 @@ function updateHUD() {
     level: game.level,
     ammo: game.ammo,
     health: game.health,
+    "gate-health": game.rings.reduce((sum, r) => sum + r.gate.health, 0),
   }))
     document.getElementById(id).textContent = value;
   const lives = document.querySelector("#lives");
@@ -181,6 +191,28 @@ function frame(now) {
   advance(now);
   updateHUD();
   renderer.draw(game);
+  if (debugEnabled) {
+    const panel = document.querySelector("#debug");
+    panel.hidden = false;
+    panel.textContent = JSON.stringify(
+      {
+        level: game.level,
+        seed: game.seed,
+        rings: game.rings.length,
+        profile: game.rings.map((r) => r.profile.name),
+        animationTime: +game.animationTime.toFixed(2),
+        playback: game.config.animationPlaybackSpeed,
+        gates: game.rings.map((r) => ({
+          angle: +r.gate.angle.toFixed(3),
+          health: r.gate.health,
+        })),
+        bomb: game.health,
+        ammo: game.ammo,
+      },
+      null,
+      2,
+    );
+  }
   requestAnimationFrame(frame);
 }
 phoneLandscape.addEventListener("change", syncOrientation);

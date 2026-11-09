@@ -27,16 +27,34 @@ with sync_playwright() as p:
         assert page.evaluate('audio.context.state')=='running'
         # A late render must not backdate a new short press into repeated shots.
         page.evaluate('''lastTime-=0.8;window.dispatchEvent(new KeyboardEvent('keydown',{key:' ',code:'Space',cancelable:true}));window.dispatchEvent(new KeyboardEvent('keyup',{key:' ',code:'Space'}));''')
-        assert page.evaluate('game.ammo')==7
+        assert page.evaluate('game.ammo')==23
         page.evaluate('game.newGame()')
         for key,direction in [('ArrowLeft',-1),('a',-1),('ArrowRight',1),('d',1)]:
             before=page.evaluate('game.angle');page.keyboard.down(key);page.wait_for_timeout(100);page.keyboard.up(key)
             assert (page.evaluate('game.angle')-before)*direction>0
         before=page.evaluate('game.ammo');page.keyboard.press('Space');assert page.evaluate('game.ammo')==before-1
         page.wait_for_timeout(270);page.keyboard.down('d');page.keyboard.down('Space');page.wait_for_timeout(280);page.keyboard.up('Space');page.keyboard.up('d')
+        # Real keyboard shots: wall blocks, blue gate absorbs damage, then the
+        # opening passes shots to the bomb. Beam ends at the actual first hit.
+        page.evaluate('game.newGame();game.angle=Math.PI/2')
+        page.keyboard.press('Space')
+        assert page.evaluate('game.lastShot.kind')=='wall'
+        assert page.evaluate('game.health')==3
+        page.evaluate('game.newGame()')
+        page.keyboard.press('Space')
+        assert page.evaluate('game.lastShot.kind')=='gate'
+        assert page.evaluate('game.rings[0].gate.health')==1
+        assert page.evaluate('Math.round(Math.hypot(game.lastShot.point.x,game.lastShot.point.y))')==112
+        page.wait_for_timeout(270);page.keyboard.press('Space')
+        assert page.evaluate('game.rings[0].gate.health')==0
+        page.wait_for_timeout(270);page.keyboard.press('Space')
+        assert page.evaluate('game.lastShot.kind')=='bomb'
+        assert page.evaluate('game.health')==2
+        assert page.evaluate('Math.round(Math.hypot(game.lastShot.point.x,game.lastShot.point.y))')==75
+        page.wait_for_timeout(270);page.keyboard.down('Space');page.wait_for_timeout(280);page.keyboard.up('Space')
         expect(page.locator('#message')).to_have_text('BOMB D::FUZED!');assert page.evaluate('game.level')==1
         page.get_by_role('button',name='PLAY NEXT LEVEL').click();assert page.evaluate('game.level')==2
-        page.keyboard.press('Escape');assert page.evaluate('game.state')=='PAUSED';remaining=page.evaluate('game.remaining');page.wait_for_timeout(250);assert page.evaluate('game.remaining')==remaining
+        page.keyboard.press('Escape');assert page.evaluate('game.state')=='PAUSED';remaining=page.evaluate('game.remaining');ring_snapshot=page.evaluate('[game.animationTime,game.rings[0].displayAngle,game.rings[0].gate.health]');page.wait_for_timeout(250);assert page.evaluate('game.remaining')==remaining;assert page.evaluate('[game.animationTime,game.rings[0].displayAngle,game.rings[0].gate.health]')==ring_snapshot
         page.keyboard.press('Escape');assert page.evaluate('game.state')=='PLAYING'
         page.evaluate("document.dispatchEvent(new Event('visibilitychange'))")
         page.evaluate("window.dispatchEvent(new Event('blur'))");assert page.evaluate('game.state')=='PAUSED';assert page.evaluate('JSON.stringify(input.held)')=='{"ccw":false,"cw":false,"fire":false}'
@@ -48,9 +66,9 @@ with sync_playwright() as p:
         page.get_by_role('button',name='PLAY',exact=True).click()
         # Exercise real controller failure transitions without waiting 90 seconds.
         for lives in [2,1,0]:
-            page.evaluate('game.update(31)');page.wait_for_timeout(1400)
+            page.evaluate('game.update(game.config.time+1)');page.wait_for_timeout(1400)
             assert page.evaluate('game.lives')==lives
-            if lives: page.get_by_role('button',name='RETRY LEVEL').click();assert page.evaluate('game.ammo')==8
+            if lives: page.get_by_role('button',name='RETRY LEVEL').click();assert page.evaluate('game.ammo')==24
         expect(page.locator('#message')).to_have_text('GAME OVER');page.get_by_role('button',name='NEW GAME').click();assert page.evaluate('game.lives')==3
         for width,height in [(1440,900),(1024,768),(768,1024),(812,375),(375,812),(320,568),(320,480),(360,640),(390,664),(568,320)]:
             page.set_viewport_size({'width':width,'height':height});page.wait_for_timeout(80)
@@ -96,9 +114,11 @@ with sync_playwright() as p:
     assert touch.evaluate('document.querySelector(".game").inert')
     assert touch.evaluate('JSON.stringify(input.held)')=='{"ccw":false,"cw":false,"fire":false}'
     snapshot=touch.evaluate('[game.level,game.remaining,game.ammo,game.lives,game.health,game.angle]')
+    ring_snapshot=touch.evaluate('[game.animationTime,game.rings[0].displayAngle,game.rings[0].gate.health]')
     assert touch.evaluate('audio.voices.size')==0
     touch.keyboard.press('Escape');touch.keyboard.press('Space');touch.wait_for_timeout(1100)
     assert touch.evaluate('[game.level,game.remaining,game.ammo,game.lives,game.health,game.angle]')==snapshot
+    assert touch.evaluate('[game.animationTime,game.rings[0].displayAngle,game.rings[0].gate.health]')==ring_snapshot
     client.send('Input.dispatchTouchEvent',{'type':'touchEnd','touchPoints':[]})
     touch.screenshot(path='/tmp/d-fuze-phone-landscape.png')
     touch.set_viewport_size({'width':375,'height':812})
@@ -106,6 +126,7 @@ with sync_playwright() as p:
     assert touch.evaluate('game.state')=='PAUSED'
     touch.wait_for_timeout(200)
     assert touch.evaluate('[game.level,game.remaining,game.ammo,game.lives,game.health,game.angle]')==snapshot
+    assert touch.evaluate('[game.animationTime,game.rings[0].displayAngle,game.rings[0].gate.health]')==ring_snapshot
     touch.get_by_role('button',name='RESUME',exact=True).last.tap()
     touch.wait_for_timeout(150)
     assert touch.evaluate('game.state')=='PLAYING'
@@ -146,8 +167,17 @@ with sync_playwright() as p:
                 assert box['y']>=0 and box['y']+box['height']<=height+1
     touch.evaluate("window.dispatchEvent(new Event('blur'))");assert touch.evaluate('game.state')=='PAUSED'
     # Audio absence must be harmless.
-    silent=context();silent.add_init_script("window.AudioContext=undefined;window.webkitAudioContext=undefined;Object.defineProperty(window,'localStorage',{get(){throw new Error('Storage unavailable')}})");noaudio=silent.new_page();noaudio.goto('http://app-lab.test/small-apps/d-fuze/');noaudio.get_by_role('button',name='PLAY',exact=True).click();noaudio.keyboard.press('Space');assert noaudio.evaluate('game.health')==2
+    silent=context();silent.add_init_script("window.AudioContext=undefined;window.webkitAudioContext=undefined;Object.defineProperty(window,'localStorage',{get(){throw new Error('Storage unavailable')}})");noaudio=silent.new_page();noaudio.goto('http://app-lab.test/small-apps/d-fuze/');noaudio.get_by_role('button',name='PLAY',exact=True).click();noaudio.keyboard.press('Space');assert noaudio.evaluate('game.rings[0].gate.health')==1
+    assert noaudio.evaluate('game.health')==3
+    # Intentional seed/debug query is hidden by default and reproducible when enabled.
+    expect(page.locator('#debug')).to_have_count(0)  # page returned to the gallery
+    debug=ctx.new_page();debug.goto('http://app-lab.test/small-apps/d-fuze/?debug=1&seed=42')
+    expect(debug.locator('#debug')).to_be_visible()
+    assert debug.evaluate('game.seed')==42
+    selected=debug.evaluate('game.rings[0].profile.name');debug.reload()
+    assert debug.evaluate('game.rings[0].profile.name')==selected
+    expect(touch.locator('#debug')).to_be_hidden()
     assert not errors,errors
     assert not missing,missing
-    print('PASS: gallery/direct navigation at both roots, keyboard/hold, victory/progression, pause/visibility/blur, lives/retry/game over, mute persistence, Web Audio/no-audio, small-phone/desktop/tablet layouts, real multitouch release/rotation/fire, rotation pause/manual resume/menu preservation, no scroll/errors/missing assets')
+    print('PASS: gallery/direct navigation at both roots, keyboard/hold, real wall/gate/opening/bomb hits and endpoints, victory/progression, pause/visibility/blur, lives/retry/game over, mute persistence, Web Audio/no-audio, small-phone/desktop/tablet layouts, real multitouch release/rotation/fire, rotation pause/manual resume/menu preservation, no scroll/errors/missing assets')
     browser.close()

@@ -4,6 +4,8 @@ const { Game, STATES, levelConfig } = require("./engine.js");
 const fresh = (emit, resolver) => {
   const g = new Game(emit, resolver);
   g.newGame();
+  // Isolate the preserved Phase 1 mechanics; ring integration has its own suite.
+  g.rings = [];
   return g;
 };
 {
@@ -16,7 +18,7 @@ const fresh = (emit, resolver) => {
     const a = fresh();
     for (let i = 0; i < fps * 2; i++) a.update(1 / fps, { cw: true });
     assert(Math.abs(a.angle - (-Math.PI / 2 + (4 * Math.PI) / 3)) < 1e-8);
-    assert(Math.abs(a.remaining - 28) < 1e-8);
+    assert(Math.abs(a.remaining - (a.config.time - 2)) < 1e-8);
     const b = fresh();
     b.update(2, { ccw: true });
     assert(Math.abs(b.angle - (-Math.PI / 2 - (4 * Math.PI) / 3)) < 1e-8);
@@ -28,7 +30,7 @@ const fresh = (emit, resolver) => {
 {
   const g = fresh();
   assert(g.fire());
-  assert.equal(g.ammo, 7);
+  assert.equal(g.ammo, 23);
   assert.equal(g.health, 2);
   assert(!g.fire());
   g.update(0.249);
@@ -50,7 +52,7 @@ const fresh = (emit, resolver) => {
   g.nextLevel();
   assert.equal(g.level, 2);
   assert.equal(g.health, 5);
-  assert.equal(g.ammo, 10);
+  assert.equal(g.ammo, 32);
 }
 {
   const shots = [];
@@ -80,12 +82,12 @@ const fresh = (emit, resolver) => {
   assert.equal(g.state, STATES.LEVEL_FAILED);
   g.retry();
   assert.equal(g.level, 1);
-  assert.equal(g.remaining, 30);
-  assert.equal(g.ammo, 8);
+  assert.equal(g.remaining, 48);
+  assert.equal(g.ammo, 24);
   assert.equal(g.health, 3);
   assert.equal(g.angle, -Math.PI / 2);
   for (let i = 0; i < 2; i++) {
-    g.update(30);
+    g.update(g.config.time);
     assert.equal(g.remaining, 0);
     g.update(2);
     if (i === 0) g.retry();
@@ -112,11 +114,11 @@ const fresh = (emit, resolver) => {
   assert.equal(JSON.stringify(g), snapshot);
   assert(!g.fire());
   g.resume();
-  g.update(21.6);
+  g.update(g.config.time - 8.4);
   assert.equal(g.remaining, 5);
-  assert.deepEqual(pulses.at(-1), [25, true]);
+  assert.deepEqual(pulses.at(-1), [g.config.time - 5, true]);
   g.update(0.5);
-  assert.equal(pulses.at(-1)[0], 25.5);
+  assert.equal(pulses.at(-1)[0], g.config.time - 4.5);
   g.update(4.5);
   const count = pulses.length;
   g.update(10);
@@ -132,17 +134,18 @@ const fresh = (emit, resolver) => {
   });
   g.fire();
   assert.equal(g.health, 3);
-  assert.equal(g.ammo, 7);
-  assert(Math.abs(shot.origin.x + shot.direction.x) < 1e-10);
-  assert(Math.abs(shot.origin.y + shot.direction.y) < 1e-10);
+  assert.equal(g.ammo, 23);
+  assert(Math.abs(shot.origin.x / 216 + shot.direction.x) < 1e-10);
+  assert(Math.abs(shot.origin.y / 216 + shot.direction.y) < 1e-10);
   for (let level = 1; level <= 10000; level++) {
     const c = levelConfig(level);
     assert(c.time >= 10);
     assert(c.ammo >= c.hits);
     assert((c.hits - 1) / c.fireRate < c.time);
-    assert.equal(c.rings.count, 0);
+    assert.equal(c.rings.count, 1);
+    assert(c.ammo > c.minimumHits);
   }
 }
 console.log(
-  "PASS: movement/frame-rate invariance, inward shots, cooldown/hold, health/ammo, final-shot precedence, pause/timer/pulses, lives/retry/progression/game over, future interception, 10,000 achievable levels",
+  "PASS: movement/frame-rate invariance, inward shots, cooldown/hold, health/ammo, final-shot precedence, pause/timer/pulses, lives/retry/progression/game over, resolver interception, 10,000 bounded one-ring configurations",
 );

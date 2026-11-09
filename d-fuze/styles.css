@@ -408,3 +408,28 @@ kbd {
     padding-inline: 6px;
   }
 }
+
+#debug {
+  position: fixed;
+  bottom: 6px;
+  left: 6px;
+  z-index: 10;
+  max-height: 40vh;
+  overflow: auto;
+  background: #181b20ee;
+  padding: 8px;
+  font-size: 10px;
+  pointer-events: none;
+}
+@media (max-width: 700px) and (orientation: portrait) {
+  .hud {
+    gap: 10px;
+    font-size: 9px;
+  }
+  .hud b {
+    font-size: 15px;
+  }
+  #lives {
+    font-size: 17px;
+  }
+}
