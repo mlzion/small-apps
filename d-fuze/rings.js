@@ -95,8 +95,17 @@
       this.assemblyAngle = 0;
       this.gate = new Gate(this, settings.gateHealth);
     }
+    get assemblyAngle() {
+      return this.parent ? this.parent.angle : this._assemblyAngle;
+    }
+    set assemblyAngle(value) {
+      this._assemblyAngle = value;
+    }
+    get localAngle() {
+      return this.relativeAngle + this.referenceOffset;
+    }
     get displayAngle() {
-      return this.relativeAngle + this.assemblyAngle + this.referenceOffset;
+      return this.assemblyAngle + this.localAngle;
     }
     update(animationTime) {
       this.relativeAngle = motion.sampleProfile(this.profile, animationTime);

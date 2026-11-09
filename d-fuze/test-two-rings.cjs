@@ -83,7 +83,11 @@ for (const family1 of ["easy", "medium", "hard"])
     const level = S.clone(S.defaults().levels[3]);
     level.rings[0] = S.defaultRing(1, family1);
     level.rings[1] = S.defaultRing(2, family2);
-    level.assembly = { enabled: true, speed: -30 };
+    level.assembly = {
+      enabled: true,
+      profileId: "gentle-drift",
+      playbackSpeed: 1,
+    };
     const g = make(level),
       same = make(level);
     assert.deepEqual(
@@ -93,7 +97,13 @@ for (const family1 of ["easy", "medium", "hard"])
     g.update(4.5);
     close(g.rings[0].relativeAngle, 0);
     close(g.rings[1].relativeAngle, 0);
-    close(g.rings[0].assemblyAngle, -Math.PI * 0.75);
+    close(
+      g.rings[0].assemblyAngle,
+      require("./assembly.js").sampleProfile(
+        require("./assembly.js").defaults()[0],
+        4.5,
+      ),
+    );
     close(g.rings[0].displayAngle, g.rings[1].displayAngle);
     g.angle = g.rings[1].displayAngle;
     g.fire();
@@ -151,5 +161,16 @@ console.log(
   "PASS: outer/inner walls and gates, independent health, outside-in immunity, one target/shot, beam endpoints, destroyed-wall blocking, retry, nine mixed-family wins, shared holds/assembly/collision/pause, seeded profiles, normal levels 1–6/end, ammo/timeout",
 );
 
-for(let level=4;level<=6;level++)for(const seed of [1,42,90000]){const g=new Game(undefined,undefined,{seed});g.level=level;g.startLevel();while(g.state==='PLAYING'){if(g.rings.every(r=>Math.abs(r.relativeAngle)<1e-8))g.fire();g.update(.05);}assert.equal(g.state,'DEFUSING');assert(g.ammo>0);}
-console.log('PASS: nine published level/seed conservative wins');
+for (let level = 4; level <= 6; level++)
+  for (const seed of [1, 42, 90000]) {
+    const g = new Game(undefined, undefined, { seed });
+    g.level = level;
+    g.startLevel();
+    while (g.state === "PLAYING") {
+      if (g.rings.every((r) => Math.abs(r.relativeAngle) < 1e-8)) g.fire();
+      g.update(0.05);
+    }
+    assert.equal(g.state, "DEFUSING");
+    assert(g.ammo > 0);
+  }
+console.log("PASS: nine published level/seed conservative wins");

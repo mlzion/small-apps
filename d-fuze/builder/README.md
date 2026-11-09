@@ -1,3 +1,5 @@
+> **Phase 4.5:** Published data is now authoritative, and a separate editable 25-second assembly parent replaces constant velocity. See [current assembly/data instructions](../PHASE45.md). Earlier phase descriptions below are historical.
+
 > **Motion migration:** All six published levels now use only the Level Builder’s 15 ten-second profiles. The legacy profile definitions have been removed. Earlier phase notes below are historical.
 
 > **Phase 4 update:** One- and two-ring gameplay tests are now supported, normal play ends after Level 6, and optional constant assembly rotation is available. See [Phase 4 instructions](../PHASE4.md) for current behavior. Historical phase descriptions below describe the earlier implementation.

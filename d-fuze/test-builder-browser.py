@@ -71,6 +71,24 @@ with sync_playwright() as p:
         page.locator('#profile-time').evaluate("el=>{el.value=4.75;el.dispatchEvent(new Event('input',{bubbles:true}));}")
         expect(page.locator('#profile-readout')).to_have_text('4.75s / 0.0°')
         assert len(page.locator('#profile-graph').evaluate('el=>el.toDataURL()'))>3000
+        # Edit a separate assembly profile, keeping the fixed ring profiles intact.
+        page.locator('#assembly-duplicate').click()
+        custom=page.locator('#assembly-edit-profile').input_value()
+        page.locator('#assembly-name').fill('Custom drift');page.locator('#assembly-name').press('Tab')
+        page.get_by_role('spinbutton',name='Assembly key 2 angle',exact=True).fill('32')
+        page.get_by_role('spinbutton',name='Assembly key 2 angle',exact=True).press('Tab')
+        page.locator('#assembly-add-key').click()
+        expect(page.locator('#assembly-keys tr')).to_have_count(7)
+        page.locator('#assembly-keys tr').nth(1).get_by_role('button',name='DELETE KEY').click()
+        expect(page.locator('#assembly-keys tr')).to_have_count(6)
+        page.locator('#assembly-profile').select_option(custom)
+        page.locator('#assembly-enabled').check()
+        page.locator('#assembly-rate').fill('1.4');page.locator('#assembly-rate').press('Tab')
+        page.locator('#assembly-play').click();page.wait_for_timeout(120);page.locator('#assembly-play').click()
+        page.locator('#assembly-time').evaluate("el=>{el.value=12;el.dispatchEvent(new Event('input',{bubbles:true}));}")
+        expect(page.locator('#assembly-readout')).to_contain_text('12.00s')
+        page.locator('#assembly-delete-profile').click()
+        expect(page.locator('#status')).to_contain_text('before deleting')
         page.locator('#save-draft').click()
         expect(page.locator('#status')).to_contain_text('only in this browser')
         page.locator('#level-name').fill('temporary change')
@@ -79,7 +97,7 @@ with sync_playwright() as p:
         # Downloads contain actual settings and schema metadata.
         with page.expect_download() as event: page.locator('#export-json').click()
         exported=json.loads(Path(event.value.path()).read_text())
-        assert exported['version']==1 and len(exported['levels'])==12
+        assert exported['version']==2 and len(exported['levels'])==12
         assert exported['levels'][0]['timer']==72
         with page.expect_download() as event: page.locator('#export-csv').click()
         rows=list(csv.reader(io.StringIO(Path(event.value.path()).read_text())))
@@ -138,7 +156,7 @@ with sync_playwright() as p:
         # Two-ring Test Mode uses independent edited settings in the real engine.
         page.get_by_role('button',name='EDIT 4',exact=True).click()
         page.locator('#assembly-enabled').check()
-        page.locator('#assembly-speed').fill('20');page.locator('#assembly-speed').press('Tab')
+        page.locator('#assembly-rate').fill('1.2');page.locator('#assembly-rate').press('Tab')
         expect(page.locator('#test-level')).to_be_enabled()
         page.locator('#test-level').click()
         page.get_by_role('button',name='START TEST',exact=True).click()
