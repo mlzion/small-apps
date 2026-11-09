@@ -147,7 +147,7 @@ function renderUI() {
   actions.replaceChildren();
   message.className = "";
   document.querySelector("#tagline").textContent =
-    game.testMode || testError ? "EXPERIMENTAL TEST" : "ONE RING / ONE BOMB";
+    game.testMode || testError ? "EXPERIMENTAL TEST" : "D::FUZE / ARCADE";
   if (game.testMode || testError) {
     renderTestUI();
     return;
@@ -182,7 +182,10 @@ function renderUI() {
       message.textContent = "BOMB D::FUZED!";
       message.className = "success";
       detail.textContent = `Level ${game.level} complete. ${game.lives} lives remaining.`;
-      button("PLAY NEXT LEVEL", () => game.nextLevel());
+      if (game.level < 6) button("PLAY NEXT LEVEL", () => game.nextLevel());
+      else
+        detail.textContent =
+          "All 6 available levels complete! Three-ring gameplay is not available yet.";
       button("MAIN MENU", () => game.menu());
       break;
     case "LEVEL_FAILED":

@@ -106,10 +106,17 @@
       fail("seed must be a whole number from 0 to 4294967295.");
     if (
       !level.assembly ||
-      level.assembly.enabled !== false ||
-      Object.keys(level.assembly).some((k) => k !== "enabled")
+      typeof level.assembly.enabled !== "boolean" ||
+      Object.keys(level.assembly).some(
+        (k) => !["enabled", "speed"].includes(k),
+      ) ||
+      (level.assembly.speed !== undefined &&
+        !number(level.assembly.speed, -180, 180)) ||
+      (level.assembly.enabled && level.assembly.speed === undefined)
     )
-      fail("assembly movement must remain disabled.");
+      fail(
+        "assembly requires enabled and a constant speed from -180 to 180 degrees/second.",
+      );
     if (!Array.isArray(level.rings) || level.rings.length !== level.ringCount)
       fail("ring configuration count must equal Rings.");
     if (Array.isArray(level.rings))
@@ -230,9 +237,9 @@
   function toRuntime(level, seed = level.seed) {
     const errors = validateLevel(level);
     if (errors.length) throw new Error(errors.join("\n"));
-    if (level.ringCount !== 1)
+    if (level.ringCount > 2)
       throw new Error(
-        "Multiple-ring gameplay arrives in Phase 4. Use animation preview for 2–4 rings.",
+        "Three- and four-ring gameplay arrives in Phase 5. Use animation preview.",
       );
     const r = level.rings[0],
       g = ringSystem.GEOMETRY;
@@ -241,11 +248,16 @@
         time: level.timer,
         hits: level.bombHealth,
         ammo: level.ammo,
+        minimumHits:
+          level.bombHealth +
+          level.rings.reduce((sum, r) => sum + r.gateHealth, 0),
         turretSpeed: level.turretSpeed,
         fireRate: level.fireRate,
         animationPlaybackSpeed: level.playbackSpeed,
+        assemblySpeed: level.assembly.enabled ? level.assembly.speed : 0,
         rings: {
-          count: 1,
+          count: level.ringCount,
+          difficulty: r.family,
           radius: g.ringRadius,
           thickness: g.ringThickness,
           spacing: g.ringSpacing,
@@ -254,6 +266,10 @@
           referenceOffset: g.referenceOffset,
         },
       },
+      ringSettings: level.rings.map((r) => ({
+        gateArc: (r.gateWidth * Math.PI) / 180,
+        gateHealth: r.gateHealth,
+      })),
       profiles: motion.assignProfiles(level, seed),
     };
   }

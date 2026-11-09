@@ -52,10 +52,11 @@
       this.emit("state", next);
     }
     resetLevel() {
-      const experimental = this.testMode
-        ? schema.toRuntime(this.testLevel, this.seed)
-        : null;
-      this.config = experimental?.config ?? levelConfig(this.level);
+      const experimental = schema.toRuntime(
+        this.testMode ? this.testLevel : levels.publishedLevel(this.level),
+        this.seed,
+      );
+      this.config = experimental.config;
       this.remaining = this.config.time;
       this.health = this.config.hits;
       this.ammo = this.config.ammo;
@@ -76,21 +77,22 @@
             i + 1,
             {
               ...this.config.rings,
+              ...experimental?.ringSettings[i],
               radius: this.config.rings.radius + i * this.config.rings.spacing,
             },
-            experimental?.profiles[i] ??
-              motion.selectProfile(
-                this.config.rings.difficulty,
-                this.random,
-                this.config.rings.profileFamily,
-              ),
+            experimental.profiles[i],
           ),
       );
       this.updateRings();
     }
     updateRings() {
       this.animationTime = this.elapsed * this.config.animationPlaybackSpeed;
-      for (const ring of this.rings) ring.update(this.animationTime);
+      this.assemblyAngle =
+        (this.elapsed * (this.config.assemblySpeed || 0) * Math.PI) / 180;
+      for (const ring of this.rings) {
+        ring.assemblyAngle = this.assemblyAngle;
+        ring.update(this.animationTime);
+      }
     }
     newGame() {
       this.random = motion.seededRandom(this.seed);
@@ -99,12 +101,19 @@
       this.startLevel();
     }
     startLevel() {
+      if (!this.testMode && this.level > 6)
+        throw new Error("Only six published levels are available.");
       this.resetLevel();
       this.transition(STATES.PLAYING);
       this.emit("begin");
     }
     nextLevel() {
-      if (this.testMode || this.state !== STATES.LEVEL_COMPLETE) return;
+      if (
+        this.testMode ||
+        this.level >= 6 ||
+        this.state !== STATES.LEVEL_COMPLETE
+      )
+        return;
       this.level++;
       this.startLevel();
     }

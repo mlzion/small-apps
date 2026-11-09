@@ -45,13 +45,14 @@ with sync_playwright() as p:
         assert page.evaluate('game.lastShot.kind')=='gate'
         assert page.evaluate('game.rings[0].gate.health')==1
         assert page.evaluate('Math.round(Math.hypot(game.lastShot.point.x,game.lastShot.point.y))')==112
-        page.wait_for_timeout(270);page.keyboard.press('Space')
+        page.wait_for_timeout(270);page.evaluate('game.angle=game.rings[0].gate.angle');page.keyboard.press('Space')
         assert page.evaluate('game.rings[0].gate.health')==0
-        page.wait_for_timeout(270);page.keyboard.press('Space')
+        page.wait_for_timeout(270);page.evaluate('game.angle=game.rings[0].gate.angle');page.keyboard.press('Space')
         assert page.evaluate('game.lastShot.kind')=='bomb'
         assert page.evaluate('game.health')==2
         assert page.evaluate('Math.round(Math.hypot(game.lastShot.point.x,game.lastShot.point.y))')==75
-        page.wait_for_timeout(270);page.keyboard.down('Space');page.wait_for_timeout(280);page.keyboard.up('Space')
+        for _ in range(2):
+            page.wait_for_timeout(270);page.evaluate('game.angle=game.rings[0].gate.angle');page.keyboard.press('Space')
         expect(page.locator('#message')).to_have_text('BOMB D::FUZED!');assert page.evaluate('game.level')==1
         page.get_by_role('button',name='PLAY NEXT LEVEL').click();assert page.evaluate('game.level')==2
         page.keyboard.press('Escape');assert page.evaluate('game.state')=='PAUSED';remaining=page.evaluate('game.remaining');ring_snapshot=page.evaluate('[game.animationTime,game.rings[0].displayAngle,game.rings[0].gate.health]');page.wait_for_timeout(250);assert page.evaluate('game.remaining')==remaining;assert page.evaluate('[game.animationTime,game.rings[0].displayAngle,game.rings[0].gate.health]')==ring_snapshot

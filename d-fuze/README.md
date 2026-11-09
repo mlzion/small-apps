@@ -1,3 +1,7 @@
+> **Motion migration:** All six published levels now use only the Level Builder’s 15 ten-second profiles. The legacy profile definitions have been removed. Earlier phase notes below are historical.
+
+> **Phase 4 update:** One- and two-ring gameplay tests are now supported, normal play ends after Level 6, and optional constant assembly rotation is available. See [Phase 4 instructions](PHASE4.md) for current behavior. Historical phase descriptions below describe the earlier implementation.
+
 # D::FUZE — Phase 2: first rotating ring
 
 A dependency-free static Canvas arcade game. Serve the repository and open `d-fuze/` directly or through App Lab; relative assets and links support both `/` and `/small-apps/`. Other apps are unchanged.

@@ -150,6 +150,8 @@ function renderRings() {
   $("selected-label").textContent = `/ Level ${level.number}`;
   $("level-name").value = level.name || "";
   $("level-seed").value = level.seed ?? "";
+  $("assembly-enabled").checked = level.assembly.enabled;
+  $("assembly-speed").value = level.assembly.speed ?? 0;
   $("ring-editor").replaceChildren();
   level.rings.forEach((ring, i) => {
     const row = document.createElement("div");
@@ -252,10 +254,10 @@ function check() {
     container.append(p);
   }
   const levelErrors = S.validateLevel(current());
-  $("test-level").disabled = errors.length > 0 || current().ringCount !== 1;
+  $("test-level").disabled = errors.length > 0 || current().ringCount > 2;
   $("test-explanation").textContent =
-    current().ringCount !== 1
-      ? "Animation preview only: multiple-ring gameplay arrives in Phase 4."
+    current().ringCount > 2
+      ? "Animation preview only: three- and four-ring gameplay arrives in Phase 5."
       : errors.length
         ? "Fix configuration errors before testing."
         : "Launches the real game with this experimental level. Published data is unchanged.";
@@ -495,7 +497,11 @@ function drawLevel() {
         ctx,
         geometry.ringRadius + i * geometry.ringSpacing,
         (r.gateWidth * Math.PI) / 180,
-        M.sampleProfile(previewProfiles[i], time) + geometry.referenceOffset,
+        M.sampleProfile(previewProfiles[i], time) +
+          geometry.referenceOffset +
+          (level.assembly.enabled
+            ? (previewTime * level.assembly.speed * Math.PI) / 180
+            : 0),
         geometry.ringThickness,
       );
   });
@@ -653,3 +659,15 @@ window.addEventListener("resize", () => {
   if (unlocked) drawGraph();
 });
 requestAnimationFrame(frame);
+
+$("assembly-enabled").addEventListener("change", () => {
+  current().assembly = {
+    enabled: $("assembly-enabled").checked,
+    speed: Number($("assembly-speed").value),
+  };
+  change();
+});
+$("assembly-speed").addEventListener("change", () => {
+  current().assembly.speed = $("assembly-speed").valueAsNumber;
+  change();
+});

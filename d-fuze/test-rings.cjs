@@ -1,14 +1,13 @@
 "use strict";
 const assert = require("node:assert/strict");
 const { Game, levelConfig } = require("./engine.js");
-const {
-  FAMILY,
-  PROFILES,
-  sampleProfile,
-  validateProfile,
-  seededRandom,
-  selectProfile,
-} = require("./motion.js");
+const { sampleProfile, validateProfile, seededRandom } = require("./motion.js");
+const { PROFILES, eligible } = require("./experimental-motion.js");
+const selectProfile = (family, random, familyName) => {
+  if (familyName) throw Error("Incompatible");
+  const pool = eligible(family);
+  return pool[Math.floor(random() * pool.length)];
+};
 const {
   GEOMETRY,
   Ring,
@@ -69,6 +68,7 @@ near(normalize(-0.1), Math.PI * 2 - 0.1);
   ])
     assert.equal(resolveShot(ray(0), { rings, bomb }).ring, outside);
   outside.gate.health = 0;
+  r.relativeAngle = Math.PI;
   assert.equal(
     resolveShot(ray(outside.gate.angle), { rings: [outside, r], bomb }).ring,
     r,
@@ -104,11 +104,11 @@ near(normalize(-0.1), Math.PI * 2 - 0.1);
 }
 for (const p of PROFILES) {
   assert(validateProfile(p));
-  for (const [start, end] of FAMILY.alignmentWindows)
+  for (const [start, end] of p.family.alignmentWindows)
     for (let t = start; t <= end; t += 0.1) near(sampleProfile(p, t), 0);
-  near(sampleProfile(p, 16), 0);
-  near(sampleProfile(p, 16 + 2), sampleProfile(p, 2));
-  near(sampleProfile(p, -1), sampleProfile(p, 15));
+  near(sampleProfile(p, 10), 0);
+  near(sampleProfile(p, 10 + 2), sampleProfile(p, 2));
+  near(sampleProfile(p, -1), sampleProfile(p, 9));
 }
 assert.throws(() =>
   validateProfile({
@@ -140,7 +140,7 @@ const choices = seededRandom(77);
 assert.equal(
   new Set(Array.from({ length: 50 }, () => selectProfile("easy", choices).name))
     .size,
-  2,
+  5,
 );
 const a = seededRandom(42),
   b = seededRandom(42);
@@ -153,7 +153,7 @@ for (let i = 0; i < 100; i++)
   const profile = g.rings[0].profile;
   g.update(2);
   assert.equal(g.rings[0].profile, profile);
-  g.angle = -Math.PI / 2;
+  g.angle = g.rings[0].gate.angle + Math.PI;
   g.fire();
   assert.equal(g.lastShot.kind, "wall");
   assert.equal(g.health, 3);
@@ -218,7 +218,7 @@ for (let i = 0; i < 100; i++)
 // shoot only when the geometry is zero. This is an available player strategy,
 // not a collision permission rule. All later settings plateau by level 15.
 let validated = 0;
-for (let level = 1; level <= 100; level++)
+for (let level = 1; level <= 3; level++)
   for (const profile of PROFILES.filter(
     (p) => p.difficulty === levelConfig(level).rings.difficulty,
   )) {

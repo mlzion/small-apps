@@ -1,10 +1,7 @@
 "use strict";
-const assert = require("node:assert/strict"),
-  crypto = require("node:crypto"),
-  fs = require("node:fs");
+const assert = require("node:assert/strict");
 const M = require("./experimental-motion.js"),
   S = require("./level-schema.js"),
-  legacy = require("./motion.js"),
   { Game } = require("./engine.js");
 assert.equal(M.PROFILES.length, 15);
 assert.equal(new Set(M.PROFILES.map((p) => p.id)).size, 15);
@@ -100,7 +97,7 @@ invalid((d) => {
   d.levels[0].fireRate = 1;
   d.levels[0].bombHealth = 20;
 }, "timer is too short");
-invalid((d) => (d.levels[0].assembly.enabled = true), "assembly");
+invalid((d) => (d.levels[0].assembly = {enabled:true,speed:999}), "assembly");
 invalid((d) => (d.levels[0].seed = -1), "seed");
 invalid((d) => (d.levels[1].number = 1), "unique");
 invalid((d) => (d.levels[0].rings[0].keyframes = []), "unknown");
@@ -148,7 +145,7 @@ formula.levels[0].name = "=1+1";
 assert(S.exportCSV(formula).includes("'=1+1"));
 const level = defaults.levels[0];
 assert.deepEqual(S.readTest(S.testPayload(level)), level);
-assert.throws(() => S.testPayload(defaults.levels[3]));
+assert.throws(() => S.testPayload(defaults.levels[6]));
 assert.throws(() => S.readTest('{"version":99}'));
 const g = new Game(undefined, undefined, {
   seed: level.seed,
@@ -180,32 +177,14 @@ g.retry();
 assert.equal(g.rings[0].profile.id, M.assignProfiles(level, 90000)[0].id);
 assert.equal(g.lives, 3);
 assert.throws(
-  () => new Game(undefined, undefined, { testLevel: defaults.levels[3] }),
+  () => new Game(undefined, undefined, { testLevel: defaults.levels[6] }),
 );
-// Published data/motion are deliberately not migrated. Intentional migrations must
-// update these snapshots and the normal-game regressions together.
-for (const [file, hash] of [
-  [
-    "motion.js",
-    "7e12bfeed66837859cad01107403020cdfc3e31fd06b63b46b3bdbf2aa0537f6",
-  ],
-  [
-    "levels.js",
-    "dadde3c03cb16157c7b55008741c8894edceb768e364cee062238a9d7a21a853",
-  ],
-])
-  assert.equal(
-    crypto
-      .createHash("sha256")
-      .update(fs.readFileSync(`${__dirname}/${file}`))
-      .digest("hex"),
-    hash,
-  );
+for(let number=1;number<=6;number++){const g=new Game(undefined,undefined,{seed:42});g.level=number;g.startLevel();assert(g.rings.every(r=>r.profile.family.duration===10&&M.BY_ID.has(r.profile.id)));assert.equal(g.rings.length,number<=3?1:2);}
 const normal = new Game(undefined, undefined, { seed: 42 });
 normal.newGame();
 assert(!normal.testMode);
-assert.equal(normal.rings[0].profile.family.duration, 16);
+assert.equal(normal.rings[0].profile.family.duration, 10);
 assert.equal(normal.config.time, 48);
 console.log(
-  "PASS: 15 fixed profiles, exact holds, 125 mixed-family combinations, interpolation/loops/playback ratios, deterministic assignment, schema/rejections, JSON/CSV, drafts, Test Mode retry/no advance, multi-ring test rejection, immutable legacy snapshots",
+  "PASS: 15 fixed profiles, exact holds, 125 mixed-family combinations, interpolation/loops/playback ratios, deterministic assignment, schema/rejections, JSON/CSV, drafts, Test Mode retry/no advance, multi-ring test rejection, published 10-second profiles",
 );

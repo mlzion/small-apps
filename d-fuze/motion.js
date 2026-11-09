@@ -4,120 +4,6 @@
   else root.DFuzeMotion = api;
 })(globalThis, () => {
   "use strict";
-  // All tracks in this family hold zero at the same points. Angles are unwrapped
-  // degrees: a 360-degree key intentionally travels a full turn, not the short arc.
-  const FAMILY = Object.freeze({
-    name: "shared-16",
-    duration: 16,
-    alignmentWindows: [
-      [0, 0.75],
-      [6, 8],
-      [14, 16],
-    ],
-  });
-  const track = (name, difficulty, first, second, easing = "smooth") => ({
-    name,
-    difficulty,
-    family: FAMILY,
-    keyframes: [
-      [0, 0, "linear"],
-      [0.75, 0, easing],
-      ...first,
-      [6, 0, "linear"],
-      [8, 0, easing],
-      ...second,
-      [14, 0, "linear"],
-      [16, 0, "linear"],
-    ],
-  });
-  const PROFILES = [
-    track(
-      "Gentle sweep",
-      "easy",
-      [
-        [2.5, 100, "smooth"],
-        [4, -55, "smooth"],
-      ],
-      [
-        [10, -100, "smooth"],
-        [12, 55, "smooth"],
-      ],
-    ),
-    track(
-      "Slow pendulum",
-      "easy",
-      [
-        [2.5, -110, "smooth"],
-        [3.5, -110, "smooth"],
-        [5, 40, "smooth"],
-      ],
-      [
-        [10, 110, "smooth"],
-        [11, 110, "smooth"],
-        [13, -40, "smooth"],
-      ],
-    ),
-    track(
-      "Double turn",
-      "medium",
-      [
-        [2, 180, "linear"],
-        [3, -100, "smooth"],
-        [4.5, 70, "smooth"],
-      ],
-      [
-        [9.5, -180, "linear"],
-        [11, 100, "smooth"],
-        [12.5, -70, "smooth"],
-      ],
-    ),
-    track(
-      "Switchback",
-      "medium",
-      [
-        [2, -160, "smooth"],
-        [3, -160, "linear"],
-        [4.5, 130, "smooth"],
-      ],
-      [
-        [9.5, 160, "smooth"],
-        [10.5, 160, "linear"],
-        [12.5, -130, "smooth"],
-      ],
-    ),
-    track(
-      "Snap reversal",
-      "hard",
-      [
-        [1.8, 240, "linear"],
-        [2.8, -160, "linear"],
-        [3.4, -160, "linear"],
-        [4.8, 160, "linear"],
-      ],
-      [
-        [9, 240, "linear"],
-        [10.2, -180, "linear"],
-        [11, -180, "linear"],
-        [12.7, 160, "linear"],
-      ],
-      "linear",
-    ),
-    track(
-      "Full circuit",
-      "hard",
-      [
-        [2.5, -360, "linear"],
-        [3.2, -360, "linear"],
-        [4.7, 150, "smooth"],
-      ],
-      [
-        [10, 360, "linear"],
-        [10.8, 360, "linear"],
-        [12.7, -150, "smooth"],
-      ],
-      "linear",
-    ),
-  ];
   function sampleProfile(profile, time) {
     const t =
       ((time % profile.family.duration) + profile.family.duration) %
@@ -158,7 +44,6 @@
     }
     return true;
   }
-  PROFILES.forEach(validateProfile);
   function seededRandom(seed) {
     let state = seed >>> 0;
     return () => {
@@ -166,19 +51,5 @@
       return state / 4294967296;
     };
   }
-  function selectProfile(difficulty, random, familyName = FAMILY.name) {
-    const pool = PROFILES.filter(
-      (p) => p.difficulty === difficulty && p.family.name === familyName,
-    );
-    if (!pool.length) throw new Error("No compatible motion profile");
-    return pool[Math.floor(random() * pool.length)];
-  }
-  return {
-    FAMILY,
-    PROFILES,
-    sampleProfile,
-    validateProfile,
-    seededRandom,
-    selectProfile,
-  };
+  return { sampleProfile, validateProfile, seededRandom };
 });
