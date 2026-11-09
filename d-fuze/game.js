@@ -13,16 +13,33 @@ const renderer = new Renderer(document.querySelector("#canvas"));
 let lastTime = performance.now(),
   input = null,
   howTo = false;
-// Space is the primary constraint; coarse input keeps short desktop windows playable.
-const phoneLandscape = matchMedia(
-  "(orientation: landscape) and (max-height: 500px) and (max-width: 1000px) and (any-pointer: coarse)",
-);
+// Constrain the usable short side, not the long side: wide phones can exceed
+// 1000 CSS pixels. Touch capability also covers a connected mouse reporting fine.
+const coarsePointer = matchMedia("(any-pointer: coarse)");
+function needsPortrait() {
+  const viewport = window.visualViewport;
+  // Normalize pinch zoom so zooming a roomy tablet does not classify it as a phone.
+  const scale = viewport?.scale || 1;
+  const width = Math.min(
+    innerWidth,
+    viewport ? viewport.width * scale : innerWidth,
+  );
+  const height = Math.min(
+    innerHeight,
+    viewport ? viewport.height * scale : innerHeight,
+  );
+  return (
+    (coarsePointer.matches || navigator.maxTouchPoints > 0) &&
+    width > height &&
+    height < 600
+  );
+}
 const orientationOverlay = document.querySelector("#orientation-overlay");
 const gameSurface = document.querySelector(".game");
 let orientationBlocked = false;
 let focusBeforeRotation = null;
 function syncOrientation() {
-  const blocked = phoneLandscape.matches;
+  const blocked = needsPortrait();
   if (blocked === orientationBlocked) return;
   orientationBlocked = blocked;
   lastTime = performance.now();
@@ -183,7 +200,10 @@ function frame(now) {
   renderer.draw(game);
   requestAnimationFrame(frame);
 }
-phoneLandscape.addEventListener("change", syncOrientation);
+coarsePointer.addEventListener("change", syncOrientation);
+window.visualViewport?.addEventListener("resize", syncOrientation);
+window.screen.orientation?.addEventListener("change", syncOrientation);
+window.addEventListener("orientationchange", syncOrientation);
 window.addEventListener("resize", syncOrientation);
 syncOrientation();
 renderUI();
