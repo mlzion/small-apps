@@ -8,12 +8,15 @@
     />
     <title>D::FUZE Level Builder — App Lab</title>
     <link rel="icon" href="../../assets/favicon.svg" type="image/svg+xml" />
-    <link rel="stylesheet" href="builder.css?v=builder-motion" />
-    <script src="../motion.js?v=builder-motion" defer></script>
-    <script src="../experimental-motion.js?v=builder-motion" defer></script>
+    <link rel="stylesheet" href="builder.css?v=assembly45" />
+    <script src="../assembly.js?v=assembly45" defer></script>
+    <script src="../motion.js?v=assembly45" defer></script>
+    <script src="../experimental-motion.js?v=assembly45" defer></script>
     <script src="../rings.js" defer></script>
-    <script src="../level-schema.js?v=builder-motion" defer></script>
-    <script src="builder.js?v=builder-motion" defer></script>
+    <script src="../level-schema.js?v=assembly45" defer></script>
+    <script src="../published-levels.js?v=assembly45" defer></script>
+    <script src="assembly-editor.js?v=assembly45" defer></script>
+    <script src="builder.js?v=assembly45" defer></script>
   </head>
   <body>
     <dialog id="access-dialog" aria-labelledby="access-title">
@@ -38,7 +41,8 @@
         <button id="lock">LOCK TOOLS</button>
       </header>
       <p class="intro">
-        Experimental edits stay separate from published levels. One- and two-ring tests are playable; three/four rings are preview only.
+        Experimental edits stay separate from published levels. One- and
+        two-ring tests are playable; three/four rings are preview only.
       </p>
       <nav aria-label="Builder sections">
         <a href="#levels-section">Levels</a><a href="#rings-section">Rings</a
@@ -101,19 +105,20 @@
             >Enable assembly rotation<input
               id="assembly-enabled"
               type="checkbox" /></label
+          ><label>Assembly profile<select id="assembly-profile"></select></label
           ><label
-            >Assembly speed °/s<input
-              id="assembly-speed"
+            >Assembly playback ×<input
+              id="assembly-rate"
               type="number"
-              min="-180"
-              max="180"
-              value="0"
+              min="0.1"
+              max="4"
+              step="0.1"
+              value="1"
           /></label>
         </div>
         <div id="ring-editor"></div>
         <p class="hint">
-          Assembly speed is constant, shared by all rings, and measured in
-          degrees per gameplay second.
+          Assembly motion is a separate parent timeline, shared by all rings.
         </p>
       </section>
       <section id="profiles-section">
@@ -166,6 +171,76 @@
             value="0"
         /></label>
       </section>
+      <section id="assembly-section">
+        <h2>Assembly Motion</h2>
+        <p class="hint">
+          Shared library: edits affect every draft level selecting this profile.
+          Ring profiles remain fixed. Key times must start at 0 and end at the
+          duration; changing duration does not stretch keys.
+        </p>
+        <div class="toolbar">
+          <label>Edit profile<select id="assembly-edit-profile"></select></label
+          ><button id="assembly-duplicate">DUPLICATE PROFILE</button
+          ><button id="assembly-new">ADD PROFILE</button
+          ><button id="assembly-delete-profile">DELETE CUSTOM PROFILE</button>
+        </div>
+        <div class="details">
+          <label>Profile name<input id="assembly-name" maxlength="80" /></label
+          ><label
+            >Cycle duration (s)<input
+              id="assembly-duration"
+              type="number"
+              min="1"
+              max="300"
+              step="any" /></label
+          ><button id="assembly-add-key">ADD KEYFRAME</button>
+        </div>
+        <div class="table-scroll">
+          <table>
+            <thead>
+              <tr>
+                <th>Time (s)</th>
+                <th>Angle (°)</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="assembly-keys"></tbody>
+          </table>
+        </div>
+        <div class="profile-visuals">
+          <canvas
+            id="assembly-graph"
+            width="700"
+            height="210"
+            aria-label="Assembly angle versus time graph"
+          ></canvas
+          ><canvas
+            id="assembly-animation"
+            width="240"
+            height="240"
+            aria-label="Animated assembly parent preview"
+          ></canvas>
+        </div>
+        <div class="toolbar">
+          <button id="assembly-play">PLAY</button
+          ><label
+            >Preview speed<select id="assembly-preview-speed">
+              <option value="0.5">0.5×</option>
+              <option value="1" selected>1×</option>
+              <option value="2">2×</option>
+            </select></label
+          ><output id="assembly-readout"></output>
+        </div>
+        <label
+          >Assembly timeline<input
+            id="assembly-time"
+            type="range"
+            min="0"
+            max="25"
+            step=".01"
+            value="0"
+        /></label>
+      </section>
       <section id="preview-section">
         <h2>04 / Level Preview / Test</h2>
         <div class="preview-layout">
@@ -212,6 +287,7 @@
               accept=".json,application/json" /></label
           ><button id="save-draft">SAVE DRAFT</button
           ><button id="load-draft">LOAD DRAFT</button
+          ><button id="load-published">LOAD PUBLISHED LEVELS</button
           ><button id="reset-defaults">RESET TO DEFAULTS</button>
         </div>
         <p>

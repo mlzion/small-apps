@@ -1,15 +1,15 @@
 (function (root, factory) {
   const api = factory(
-    typeof module === "object" ? require("./motion.js") : root.DFuzeMotion,
     typeof module === "object" ? require("./rings.js") : root.DFuzeRings,
     typeof module === "object" ? require("./levels.js") : root.DFuzeLevels,
     typeof module === "object"
       ? require("./level-schema.js")
       : root.DFuzeSchema,
+    typeof module === "object" ? require("./assembly.js") : root.DFuzeAssembly,
   );
   if (typeof module === "object") module.exports = api;
   else root.DFuze = api;
-})(globalThis, (motion, ringSystem, levels, schema) => {
+})(globalThis, (ringSystem, levels, schema, assemblyMotion) => {
   "use strict";
   const STATES = Object.freeze(
     Object.fromEntries(
@@ -25,25 +25,32 @@
       ].map((s) => [s, s]),
     ),
   );
-  const { SETTINGS, levelConfig } = levels;
+  const { levelConfig } = levels;
   const { resolveShot, GEOMETRY, Ring } = ringSystem;
   class Game {
     constructor(
       emit = () => {},
       resolver = resolveShot,
-      { seed = Math.floor(Math.random() * 4294967296), testLevel = null } = {},
+      {
+        seed = undefined,
+        testLevel = null,
+        assemblyProfiles = assemblyMotion.defaults(),
+      } = {},
     ) {
-      if (testLevel) schema.toRuntime(testLevel, seed);
+      if (testLevel) schema.toRuntime(testLevel, seed, assemblyProfiles);
       this.testLevel = testLevel ? schema.clone(testLevel) : null;
       this.testMode = !!testLevel;
-      this.seed = seed >>> 0;
-      this.random = motion.seededRandom(this.seed);
+      this.assemblyProfiles = this.testMode
+        ? schema.clone(assemblyProfiles)
+        : levels.publishedDocument().assemblyProfiles;
+      this.seedOverride = seed !== undefined;
+      this.seed =
+        (seed ?? this.testLevel?.seed ?? levels.publishedLevel(1).seed) >>> 0;
       this.emit = emit;
       this.resolver = resolver;
       this.state = STATES.MAIN_MENU;
       this.level = this.testLevel?.number ?? 1;
       this.lives = 3;
-      this.config = levelConfig(1);
       this.resetLevel();
     }
     transition(next) {
@@ -52,9 +59,12 @@
       this.emit("state", next);
     }
     resetLevel() {
+      if (!this.testMode && !this.seedOverride)
+        this.seed = levels.publishedLevel(this.level).seed;
       const experimental = schema.toRuntime(
         this.testMode ? this.testLevel : levels.publishedLevel(this.level),
         this.seed,
+        this.assemblyProfiles,
       );
       this.config = experimental.config;
       this.remaining = this.config.time;
@@ -83,19 +93,20 @@
             experimental.profiles[i],
           ),
       );
+      this.assembly = new assemblyMotion.RingsAssembly(
+        this.rings,
+        this.config.assembly,
+        experimental.assemblyProfile,
+      );
       this.updateRings();
     }
     updateRings() {
       this.animationTime = this.elapsed * this.config.animationPlaybackSpeed;
-      this.assemblyAngle =
-        (this.elapsed * (this.config.assemblySpeed || 0) * Math.PI) / 180;
-      for (const ring of this.rings) {
-        ring.assemblyAngle = this.assemblyAngle;
-        ring.update(this.animationTime);
-      }
+      this.assembly.update(this.elapsed);
+      this.assemblyAngle = this.assembly.angle;
+      for (const ring of this.rings) ring.update(this.animationTime);
     }
     newGame() {
-      this.random = motion.seededRandom(this.seed);
       this.level = this.testLevel?.number ?? 1;
       this.lives = 3;
       this.startLevel();
@@ -240,5 +251,5 @@
       }
     }
   }
-  return { Game, STATES, SETTINGS, levelConfig, resolveShot };
+  return { Game, STATES, levelConfig, resolveShot };
 });

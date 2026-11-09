@@ -4,12 +4,13 @@
       ? require("./experimental-motion.js")
       : root.DFuzeExperimentalMotion,
     typeof module === "object" ? require("./rings.js") : root.DFuzeRings,
+    typeof module === "object" ? require("./assembly.js") : root.DFuzeAssembly,
   );
   if (typeof module === "object") module.exports = api;
   else root.DFuzeSchema = api;
-})(globalThis, (motion, ringSystem) => {
+})(globalThis, (motion, ringSystem, assemblyMotion) => {
   "use strict";
-  const VERSION = 1,
+  const VERSION = 2,
     FORMAT = "d-fuze-levels",
     TEST_KEY = "d-fuze-test-v1",
     SESSION_KEY = "d-fuze-editor-session-v1",
@@ -38,6 +39,7 @@
       format: FORMAT,
       version: VERSION,
       motionLibrary: motion.LIBRARY_ID,
+      assemblyProfiles: assemblyMotion.defaults(),
       levels: Array.from({ length: 12 }, (_, i) => {
         const group = Math.floor(i / 3),
           stage = i % 3,
@@ -63,13 +65,21 @@
           ringCount: count,
           playbackSpeed: 1 + stage * 0.05,
           seed: 4200 + i,
-          assembly: { enabled: false },
+          assembly: {
+            enabled: false,
+            profileId: "gentle-drift",
+            playbackSpeed: 1,
+          },
           rings,
         };
       }),
     };
   }
-  function validateLevel(level, label = "Level") {
+  function validateLevel(
+    level,
+    label = "Level",
+    assemblyProfiles = assemblyMotion.defaults(),
+  ) {
     const errors = [];
     const fail = (s) => errors.push(`${label}: ${s}`);
     if (!level || typeof level !== "object" || Array.isArray(level))
@@ -108,14 +118,13 @@
       !level.assembly ||
       typeof level.assembly.enabled !== "boolean" ||
       Object.keys(level.assembly).some(
-        (k) => !["enabled", "speed"].includes(k),
+        (k) => !["enabled", "profileId", "playbackSpeed"].includes(k),
       ) ||
-      (level.assembly.speed !== undefined &&
-        !number(level.assembly.speed, -180, 180)) ||
-      (level.assembly.enabled && level.assembly.speed === undefined)
+      !number(level.assembly.playbackSpeed, 0.1, 4) ||
+      !assemblyProfiles.some((p) => p?.id === level.assembly.profileId)
     )
       fail(
-        "assembly requires enabled and a constant speed from -180 to 180 degrees/second.",
+        "assembly requires an existing profile ID and playback multiplier 0.1–4.",
       );
     if (!Array.isArray(level.rings) || level.rings.length !== level.ringCount)
       fail("ring configuration count must equal Rings.");
@@ -186,7 +195,15 @@
         "Unsupported configuration format, schema version, or motion library.",
       );
     for (const k of Object.keys(doc))
-      if (!["format", "version", "motionLibrary", "levels"].includes(k))
+      if (
+        ![
+          "format",
+          "version",
+          "motionLibrary",
+          "levels",
+          "assemblyProfiles",
+        ].includes(k)
+      )
         errors.push(`Unknown document field “${k}”.`);
     if (
       !Array.isArray(doc.levels) ||
@@ -194,8 +211,15 @@
       doc.levels.length > 200
     )
       return [...errors, "Provide 1–200 levels."];
+    errors.push(...assemblyMotion.validateLibrary(doc.assemblyProfiles));
     doc.levels.forEach((l, i) =>
-      errors.push(...validateLevel(l, `Row ${i + 1}`)),
+      errors.push(
+        ...validateLevel(
+          l,
+          `Row ${i + 1}`,
+          Array.isArray(doc.assemblyProfiles) ? doc.assemblyProfiles : [],
+        ),
+      ),
     );
     const numbers = doc.levels.map((l) => l?.number);
     if (new Set(numbers).size !== numbers.length)
@@ -203,6 +227,7 @@
     return errors;
   }
   function requireValid(doc) {
+    doc = migrate(doc);
     const errors = validateDocument(doc);
     if (errors.length) throw new Error(errors.join("\n"));
     return clone(doc);
@@ -234,8 +259,15 @@
       ...doc.levels.map((l) => columns.map((k) => cell(l[k])).join(",")),
     ].join("\r\n");
   }
-  function toRuntime(level, seed = level.seed) {
-    const errors = validateLevel(level);
+  function toRuntime(
+    level,
+    seed = level.seed,
+    assemblyProfiles = assemblyMotion.defaults(),
+  ) {
+    const errors = [
+      ...assemblyMotion.validateLibrary(assemblyProfiles),
+      ...validateLevel(level, "Level", assemblyProfiles),
+    ];
     if (errors.length) throw new Error(errors.join("\n"));
     if (level.ringCount > 2)
       throw new Error(
@@ -254,7 +286,7 @@
         turretSpeed: level.turretSpeed,
         fireRate: level.fireRate,
         animationPlaybackSpeed: level.playbackSpeed,
-        assemblySpeed: level.assembly.enabled ? level.assembly.speed : 0,
+        assembly: clone(level.assembly),
         rings: {
           count: level.ringCount,
           difficulty: r.family,
@@ -266,6 +298,9 @@
           referenceOffset: g.referenceOffset,
         },
       },
+      assemblyProfile: clone(
+        assemblyProfiles.find((p) => p?.id === level.assembly.profileId),
+      ),
       ringSettings: level.rings.map((r) => ({
         gateArc: (r.gateWidth * Math.PI) / 180,
         gateHealth: r.gateHealth,
@@ -273,16 +308,17 @@
       profiles: motion.assignProfiles(level, seed),
     };
   }
-  function testPayload(level) {
-    toRuntime(level);
+  function testPayload(level, assemblyProfiles = assemblyMotion.defaults()) {
+    toRuntime(level, level.seed, assemblyProfiles);
     return JSON.stringify({
       format: "d-fuze-test",
       version: VERSION,
       motionLibrary: motion.LIBRARY_ID,
       level: clone(level),
+      assemblyProfiles: clone(assemblyProfiles),
     });
   }
-  function readTest(text) {
+  function readTestData(text) {
     if (typeof text !== "string" || text.length > 1000000)
       throw new Error("Missing or oversized Test Mode transfer.");
     let value;
@@ -291,19 +327,80 @@
     } catch {
       throw new Error("Invalid Test Mode JSON.");
     }
-    if (!value || typeof value !== "object" || Array.isArray(value))
-      throw new Error("Invalid Test Mode transfer.");
     if (
+      !value ||
       value.format !== "d-fuze-test" ||
-      value.version !== VERSION ||
-      value.motionLibrary !== motion.LIBRARY_ID ||
+      ![1, 2].includes(value.version) ||
       Object.keys(value).some(
-        (k) => !["format", "version", "motionLibrary", "level"].includes(k),
+        (k) =>
+          ![
+            "format",
+            "version",
+            "motionLibrary",
+            "level",
+            "assemblyProfiles",
+          ].includes(k),
       )
     )
       throw new Error("Invalid Test Mode transfer.");
-    toRuntime(value.level);
-    return clone(value.level);
+    const doc = requireValid({
+      format: FORMAT,
+      version: value.version,
+      motionLibrary: value.motionLibrary,
+      levels: [value.level],
+      ...(value.version === 2
+        ? { assemblyProfiles: value.assemblyProfiles }
+        : {}),
+    });
+    toRuntime(doc.levels[0], doc.levels[0].seed, doc.assemblyProfiles);
+    return { level: doc.levels[0], assemblyProfiles: doc.assemblyProfiles };
+  }
+  function readTest(text) {
+    return readTestData(text).level;
+  }
+  function migrate(doc) {
+    if (!doc || doc.version !== 1) return doc;
+    if (
+      doc.format !== FORMAT ||
+      doc.motionLibrary !== motion.LIBRARY_ID ||
+      !Array.isArray(doc.levels) ||
+      doc.levels.length > 200 ||
+      Object.keys(doc).some(
+        (k) => !["format", "version", "motionLibrary", "levels"].includes(k),
+      )
+    )
+      throw new Error("Invalid version 1 configuration.");
+    const next = clone(doc);
+    next.version = VERSION;
+    next.assemblyProfiles = assemblyMotion.defaults();
+    for (const l of next.levels) {
+      const a = l?.assembly;
+      if (
+        !a ||
+        typeof a.enabled !== "boolean" ||
+        Object.keys(a).some((k) => !["enabled", "speed"].includes(k)) ||
+        (a.speed !== undefined &&
+          (!Number.isFinite(a.speed) || Math.abs(a.speed) > 180)) ||
+        (a.enabled && a.speed === undefined)
+      )
+        throw new Error("Invalid version 1 assembly settings.");
+      let id = "gentle-drift";
+      if (a.speed !== undefined) {
+        id = `migrated-constant-${a.speed < 0 ? "negative-" : ""}${String(Math.abs(a.speed)).replace(".", "-")}`;
+        if (!next.assemblyProfiles.some((p) => p.id === id))
+          next.assemblyProfiles.push({
+            id,
+            name: `Migrated constant ${a.speed}°/s`,
+            duration: 25,
+            keyframes: [
+              [0, 0],
+              [25, a.speed * 25],
+            ],
+          });
+      }
+      l.assembly = { enabled: a.enabled, profileId: id, playbackSpeed: 1 };
+    }
+    return next;
   }
   function saveDraft(storage, doc) {
     storage.setItem(DRAFT_KEY, exportJSON(doc));
@@ -332,6 +429,8 @@
     toRuntime,
     testPayload,
     readTest,
+    readTestData,
+    migrate,
     saveDraft,
     loadDraft,
   };

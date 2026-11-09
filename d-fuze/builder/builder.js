@@ -6,6 +6,7 @@ const S = DFuzeSchema,
   M = DFuzeExperimentalMotion,
   geometry = DFuzeRings.GEOMETRY;
 const $ = (id) => document.getElementById(id);
+let assemblyEditor = null;
 let doc = S.defaults(),
   selected = 0,
   unlocked = false;
@@ -151,7 +152,7 @@ function renderRings() {
   $("level-name").value = level.name || "";
   $("level-seed").value = level.seed ?? "";
   $("assembly-enabled").checked = level.assembly.enabled;
-  $("assembly-speed").value = level.assembly.speed ?? 0;
+
   $("ring-editor").replaceChildren();
   level.rings.forEach((ring, i) => {
     const row = document.createElement("div");
@@ -253,7 +254,7 @@ function check() {
     p.textContent = `${doc.levels.length} levels structurally valid. No human difficulty guarantee.`;
     container.append(p);
   }
-  const levelErrors = S.validateLevel(current());
+  const levelErrors = S.validateLevel(current(), "Level", doc.assemblyProfiles);
   $("test-level").disabled = errors.length > 0 || current().ringCount > 2;
   $("test-explanation").textContent =
     current().ringCount > 2
@@ -275,7 +276,8 @@ function check() {
 function resetPreview() {
   previewTime = 0;
   previewPlaying = false;
-  previewProfiles = S.validateLevel(current()).length
+  previewProfiles = S.validateLevel(current(), "Level", doc.assemblyProfiles)
+    .length
     ? []
     : M.assignProfiles(current());
   $("assignments").textContent =
@@ -292,6 +294,7 @@ function renderAll() {
   renderRings();
   check();
   resetPreview();
+  assemblyEditor?.render();
 }
 function loadDocument(next, message) {
   doc = next;
@@ -499,8 +502,13 @@ function drawLevel() {
         (r.gateWidth * Math.PI) / 180,
         M.sampleProfile(previewProfiles[i], time) +
           geometry.referenceOffset +
-          (level.assembly.enabled
-            ? (previewTime * level.assembly.speed * Math.PI) / 180
+          (level.assembly.enabled && previewProfiles.length
+            ? DFuzeAssembly.sampleProfile(
+                doc.assemblyProfiles.find(
+                  (p) => p.id === level.assembly.profileId,
+                ),
+                previewTime * level.assembly.playbackSpeed,
+              )
             : 0),
         geometry.ringThickness,
       );
@@ -519,7 +527,7 @@ $("preview-restart").addEventListener("click", () => {
 });
 $("test-level").addEventListener("click", () => {
   try {
-    const transfer = S.testPayload(current());
+    const transfer = S.testPayload(current(), doc.assemblyProfiles);
     sessionStorage.setItem(
       S.SESSION_KEY,
       JSON.stringify({ document: S.requireValid(doc), selected }),
@@ -601,6 +609,12 @@ function unlock() {
   $("access-dialog").close();
   $("builder").hidden = false;
   restoreSession();
+  assemblyEditor ??= DFuzeAssemblyEditor.mount({
+    document: () => doc,
+    level: current,
+    changed: change,
+    status,
+  });
   renderAll();
   renderProfile();
   rememberSession();
@@ -633,6 +647,7 @@ function frame(now) {
   const dt = Math.min(0.1, Math.max(0, (now - last) / 1000));
   last = now;
   if (unlocked && !document.hidden) {
+    assemblyEditor?.tick(dt);
     if (profilePlaying) {
       profileTime = (profileTime + dt * Number($("profile-speed").value)) % 10;
       drawProfile();
@@ -646,6 +661,7 @@ function frame(now) {
 }
 document.addEventListener("visibilitychange", () => {
   profilePlaying = previewPlaying = false;
+  assemblyEditor?.pause();
   $("profile-play").textContent = "PLAY";
   last = performance.now();
 });
@@ -661,13 +677,16 @@ window.addEventListener("resize", () => {
 requestAnimationFrame(frame);
 
 $("assembly-enabled").addEventListener("change", () => {
-  current().assembly = {
-    enabled: $("assembly-enabled").checked,
-    speed: Number($("assembly-speed").value),
-  };
+  current().assembly.enabled = $("assembly-enabled").checked;
   change();
 });
-$("assembly-speed").addEventListener("change", () => {
-  current().assembly.speed = $("assembly-speed").valueAsNumber;
-  change();
+$("load-published").addEventListener("click", () => {
+  try {
+    loadDocument(
+      S.requireValid(DFuzePublished),
+      "Published configuration loaded for editing. Draft edits do not publish automatically.",
+    );
+  } catch (e) {
+    status(e.message, true);
+  }
 });

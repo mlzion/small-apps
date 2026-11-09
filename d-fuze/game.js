@@ -4,33 +4,46 @@ const debugParams = new URLSearchParams(location.search);
 const seedText = debugParams.get("seed");
 const debugEnabled = debugParams.get("debug") === "1";
 let experimentalLevel = null,
+  experimentalProfiles = null,
   testError = null;
 if (debugParams.get("test") === "1") {
   try {
-    experimentalLevel = DFuzeSchema.readTest(
+    const transfer = DFuzeSchema.readTestData(
       sessionStorage.getItem(DFuzeSchema.TEST_KEY),
     );
+    experimentalLevel = transfer.level;
+    experimentalProfiles = transfer.assemblyProfiles;
   } catch (error) {
     testError = error.message;
   }
 }
-const game = new DFuze.Game(
-  (event, value) => {
-    if (event === "state") {
-      if (value !== "PLAYING") {
-        input?.clear();
-        audio.stop();
-      }
-      renderUI();
-    } else audio.play(event, value);
-  },
-  undefined,
-  experimentalLevel
-    ? { seed: experimentalLevel.seed, testLevel: experimentalLevel }
-    : seedText !== null && Number.isFinite(Number(seedText))
-      ? { seed: Number(seedText) }
-      : {},
-);
+let loadError = null,
+  game = null;
+try {
+  game = new DFuze.Game(
+    (event, value) => {
+      if (event === "state") {
+        if (value !== "PLAYING") {
+          input?.clear();
+          audio.stop();
+        }
+        renderUI();
+      } else audio.play(event, value);
+    },
+    undefined,
+    experimentalLevel
+      ? {
+          seed: experimentalLevel.seed,
+          testLevel: experimentalLevel,
+          assemblyProfiles: experimentalProfiles,
+        }
+      : seedText !== null && Number.isFinite(Number(seedText))
+        ? { seed: Number(seedText) }
+        : {},
+  );
+} catch (error) {
+  loadError = error.message;
+}
 const renderer = new Renderer(document.querySelector("#canvas"));
 let lastTime = performance.now(),
   input = null,
@@ -44,6 +57,7 @@ const gameSurface = document.querySelector(".game");
 let orientationBlocked = false;
 let focusBeforeRotation = null;
 function syncOrientation() {
+  if (!game) return;
   const blocked = phoneLandscape.matches;
   if (blocked === orientationBlocked) return;
   orientationBlocked = blocked;
@@ -63,6 +77,7 @@ function syncOrientation() {
   }
 }
 function advance(now = performance.now()) {
+  if (!game) return;
   // Also check at the frame/input boundary in case resize delivery is delayed.
   syncOrientation();
   if (orientationBlocked) {
@@ -84,7 +99,7 @@ function pauseToggle() {
     game.resume();
   }
 }
-input = new InputManager(game, audio, pauseToggle, advance);
+input = game ? new InputManager(game, audio, pauseToggle, advance) : null;
 const overlay = document.querySelector("#overlay"),
   message = document.querySelector("#message"),
   detail = document.querySelector("#detail"),
@@ -137,6 +152,19 @@ function renderTestUI() {
   button("RETURN TO EDITOR", returnToEditor);
 }
 function renderUI() {
+  if (loadError) {
+    overlay.hidden = false;
+    message.textContent = "CONFIGURATION ERROR";
+    detail.textContent = loadError;
+    actions.replaceChildren();
+    const link = document.createElement("a");
+    link.href = "../#apps";
+    link.textContent = "BACK TO APP LAB";
+    actions.append(link);
+    document.querySelectorAll("button").forEach((b) => (b.disabled = true));
+    return;
+  }
+
   document.querySelector("#pause").disabled = !["PLAYING", "PAUSED"].includes(
     game.state,
   );
@@ -147,8 +175,8 @@ function renderUI() {
   actions.replaceChildren();
   message.className = "";
   document.querySelector("#tagline").textContent =
-    game.testMode || testError ? "EXPERIMENTAL TEST" : "D::FUZE / ARCADE";
-  if (game.testMode || testError) {
+    game?.testMode || testError ? "EXPERIMENTAL TEST" : "D::FUZE / ARCADE";
+  if (game?.testMode || testError) {
     renderTestUI();
     return;
   }
@@ -205,6 +233,7 @@ function renderUI() {
   }
 }
 function updateHUD() {
+  if (!game) return;
   for (const [id, value] of Object.entries({
     level: game.level,
     ammo: game.ammo,
@@ -230,6 +259,7 @@ document.querySelector("#sound").addEventListener("click", () => {
 });
 document.querySelector("#pause").addEventListener("click", pauseToggle);
 function focusLost() {
+  if (!game) return;
   advance();
   input.clear();
   game.pause();
@@ -241,6 +271,7 @@ document.addEventListener("visibilitychange", () => {
   lastTime = performance.now();
 });
 function frame(now) {
+  if (!game) return;
   advance(now);
   updateHUD();
   renderer.draw(game);
@@ -271,7 +302,7 @@ function frame(now) {
 phoneLandscape.addEventListener("change", syncOrientation);
 window.addEventListener("resize", syncOrientation);
 syncOrientation();
-document.querySelector("#test-mode").hidden = !(game.testMode || testError);
+document.querySelector("#test-mode").hidden = !(game?.testMode || testError);
 renderUI();
 soundUI();
 updateHUD();

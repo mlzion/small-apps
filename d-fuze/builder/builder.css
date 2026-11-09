@@ -380,3 +380,21 @@ button {
 #errors {
   overflow-wrap: anywhere;
 }
+
+#assembly-graph {
+  width: 100%;
+  height: auto;
+}
+#assembly-animation {
+  width: 100%;
+  aspect-ratio: 1;
+}
+#assembly-keys input {
+  width: 110px;
+}
+@media (max-width: 760px) {
+  #assembly-animation {
+    width: 140px;
+    justify-self: center;
+  }
+}
