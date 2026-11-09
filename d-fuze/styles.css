@@ -197,7 +197,20 @@ kbd {
   .field {
     grid-column: 1/-1;
     grid-row: 1;
-    width: min(100%, 54svh);
+    /* Reserve space for the compact header, HUD, controls, and safe areas.
+       dvh follows browser bars; svh remains a fallback for older browsers. */
+    width: min(
+      100%,
+      calc(
+        100svh - 230px - env(safe-area-inset-top) - env(safe-area-inset-bottom)
+      )
+    );
+    width: min(
+      100%,
+      calc(
+        100dvh - 230px - env(safe-area-inset-top) - env(safe-area-inset-bottom)
+      )
+    );
     justify-self: center;
   }
   .fire {
@@ -314,4 +327,84 @@ kbd {
     grid-column: 1/-1;
   }
 }
-@media(orientation:landscape) and (max-height:600px){header{position:relative;z-index:6}#overlay{padding-top:58px}}
+@media (orientation: landscape) and (max-height: 600px) {
+  header {
+    position: relative;
+    z-index: 6;
+  }
+  #overlay {
+    padding-top: 58px;
+  }
+}
+
+/* A separate layer leaves menu/result state untouched while rotation is blocked. */
+#orientation-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 20;
+  display: grid;
+  place-items: center;
+  padding: max(20px, env(safe-area-inset-top))
+    max(20px, env(safe-area-inset-right)) max(20px, env(safe-area-inset-bottom))
+    max(20px, env(safe-area-inset-left));
+  background: #222529;
+  text-align: center;
+  overflow: auto;
+}
+#orientation-overlay[hidden] {
+  display: none;
+}
+#orientation-overlay h2 {
+  color: #76ed91;
+}
+#orientation-overlay p {
+  font-size: 13px;
+  line-height: 1.6;
+}
+@media (max-width: 700px) and (orientation: portrait) {
+  header {
+    flex-wrap: nowrap;
+    gap: 6px;
+  }
+  h1 {
+    font-size: 18px;
+    letter-spacing: 0.04em;
+  }
+  .tools {
+    gap: 4px;
+  }
+  .tools button {
+    padding: 6px;
+    font-size: 9px;
+  }
+  .control small {
+    display: none;
+  }
+  .rotation {
+    min-width: 0;
+  }
+  /* Menus may need more space than the playfield on short phones. */
+  #overlay {
+    position: fixed;
+    inset: max(68px, env(safe-area-inset-top))
+      max(12px, env(safe-area-inset-right))
+      max(12px, env(safe-area-inset-bottom))
+      max(12px, env(safe-area-inset-left));
+    z-index: 5;
+    border-radius: 8px;
+    overflow: auto;
+  }
+  .panel {
+    max-width: 360px;
+    width: 100%;
+  }
+}
+
+#orientation-overlay:focus {
+  outline: none;
+}
+@media (max-width: 700px) and (orientation: portrait) {
+  .control {
+    padding-inline: 6px;
+  }
+}

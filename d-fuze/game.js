@@ -13,12 +13,47 @@ const renderer = new Renderer(document.querySelector("#canvas"));
 let lastTime = performance.now(),
   input = null,
   howTo = false;
+// Space is the primary constraint; coarse input keeps short desktop windows playable.
+const phoneLandscape = matchMedia(
+  "(orientation: landscape) and (max-height: 500px) and (max-width: 1000px) and (any-pointer: coarse)",
+);
+const orientationOverlay = document.querySelector("#orientation-overlay");
+const gameSurface = document.querySelector(".game");
+let orientationBlocked = false;
+let focusBeforeRotation = null;
+function syncOrientation() {
+  const blocked = phoneLandscape.matches;
+  if (blocked === orientationBlocked) return;
+  orientationBlocked = blocked;
+  lastTime = performance.now();
+  input.clear();
+  if (blocked) {
+    // Do not advance held input here: rotating must never spend ammo or a life.
+    game.pause();
+    audio.stop();
+    focusBeforeRotation = document.activeElement;
+  }
+  gameSurface.inert = blocked;
+  orientationOverlay.hidden = !blocked;
+  if (blocked) orientationOverlay.focus({ preventScroll: true });
+  else if (focusBeforeRotation?.isConnected) {
+    focusBeforeRotation.focus({ preventScroll: true });
+  }
+}
 function advance(now = performance.now()) {
+  // Also check at the frame/input boundary in case resize delivery is delayed.
+  syncOrientation();
+  if (orientationBlocked) {
+    lastTime = now;
+    return;
+  }
   const dt = Math.max(0, (now - lastTime) / 1000);
   lastTime = now;
   game.update(dt, input?.held);
 }
 function pauseToggle() {
+  syncOrientation();
+  if (orientationBlocked) return;
   advance();
   if (game.state === "PLAYING") game.pause();
   else if (game.state === "PAUSED") {
@@ -36,6 +71,8 @@ function button(label, action) {
   const b = document.createElement("button");
   b.textContent = label;
   b.addEventListener("click", () => {
+    syncOrientation();
+    if (orientationBlocked) return;
     audio.unlock();
     audio.play("click");
     input.clear();
@@ -146,6 +183,9 @@ function frame(now) {
   renderer.draw(game);
   requestAnimationFrame(frame);
 }
+phoneLandscape.addEventListener("change", syncOrientation);
+window.addEventListener("resize", syncOrientation);
+syncOrientation();
 renderUI();
 soundUI();
 updateHUD();

@@ -52,9 +52,11 @@ with sync_playwright() as p:
             assert page.evaluate('game.lives')==lives
             if lives: page.get_by_role('button',name='RETRY LEVEL').click();assert page.evaluate('game.ammo')==8
         expect(page.locator('#message')).to_have_text('GAME OVER');page.get_by_role('button',name='NEW GAME').click();assert page.evaluate('game.lives')==3
-        for width,height in [(1440,900),(1024,768),(768,1024),(812,375),(375,812),(320,568),(568,320)]:
+        for width,height in [(1440,900),(1024,768),(768,1024),(812,375),(375,812),(320,568),(320,480),(360,640),(390,664),(568,320)]:
             page.set_viewport_size({'width':width,'height':height});page.wait_for_timeout(80)
             assert page.evaluate('document.documentElement.scrollWidth<=innerWidth'),(width,height)
+            if width<=700 and height>width:
+                assert page.evaluate('document.documentElement.scrollHeight<=innerHeight'),(width,height)
             boxes=[page.locator(s).bounding_box() for s in ['canvas','[data-control=fire]','[data-control=ccw]','[data-control=cw]']]
             for box in boxes:
                 assert box['x']>=0 and box['y']>=0 and box['x']+box['width']<=width+1 and box['y']+box['height']<=height+1,(width,height,box)
@@ -83,11 +85,69 @@ with sync_playwright() as p:
     client.send('Input.dispatchTouchEvent',{'type':'touchEnd','touchPoints':[fire]});ammo=touch.evaluate('game.ammo');angle=touch.evaluate('game.angle');touch.wait_for_timeout(300)
     assert touch.evaluate('game.ammo')==ammo;assert touch.evaluate('game.angle')>angle
     client.send('Input.dispatchTouchEvent',{'type':'touchEnd','touchPoints':[]});angle=touch.evaluate('game.angle');touch.wait_for_timeout(150);assert touch.evaluate('game.angle')==angle;assert touch.evaluate('scrollY')==scroll
-    touch.set_viewport_size({'width':812,'height':375});assert touch.evaluate('game.level')==1;assert touch.evaluate('game.ammo')==ammo
+    # Rotate with two real contacts still held; the orientation handler must clear both.
+    client.send('Input.dispatchTouchEvent',{'type':'touchStart','touchPoints':[fire,cw]})
+    before_rotation=touch.evaluate('[game.ammo,game.lives,game.health]')
+    touch.set_viewport_size({'width':812,'height':375})
+    expect(touch.locator('#orientation-overlay')).to_be_visible()
+    expect(touch.locator('#orientation-title')).to_have_text('ROTATE YOUR PHONE')
+    assert touch.evaluate('game.state')=='PAUSED'
+    assert touch.evaluate('[game.ammo,game.lives,game.health]')==before_rotation
+    assert touch.evaluate('document.querySelector(".game").inert')
+    assert touch.evaluate('JSON.stringify(input.held)')=='{"ccw":false,"cw":false,"fire":false}'
+    snapshot=touch.evaluate('[game.level,game.remaining,game.ammo,game.lives,game.health,game.angle]')
+    assert touch.evaluate('audio.voices.size')==0
+    touch.keyboard.press('Escape');touch.keyboard.press('Space');touch.wait_for_timeout(1100)
+    assert touch.evaluate('[game.level,game.remaining,game.ammo,game.lives,game.health,game.angle]')==snapshot
+    client.send('Input.dispatchTouchEvent',{'type':'touchEnd','touchPoints':[]})
+    touch.screenshot(path='/tmp/d-fuze-phone-landscape.png')
+    touch.set_viewport_size({'width':375,'height':812})
+    expect(touch.locator('#orientation-overlay')).to_be_hidden()
+    assert touch.evaluate('game.state')=='PAUSED'
+    touch.wait_for_timeout(200)
+    assert touch.evaluate('[game.level,game.remaining,game.ammo,game.lives,game.health,game.angle]')==snapshot
+    touch.get_by_role('button',name='RESUME',exact=True).last.tap()
+    touch.wait_for_timeout(150)
+    assert touch.evaluate('game.state')=='PLAYING'
+    assert touch.evaluate('game.remaining')<snapshot[1]
+    assert touch.evaluate('game.ammo')==snapshot[2]
+    assert touch.evaluate('game.angle')==snapshot[5]
+    # First load in landscape preserves MAIN_MENU; result/paused states also survive.
+    for prefix in ['/', '/small-apps/']:
+        touch.set_viewport_size({'width':932,'height':430})
+        touch.goto('http://app-lab.test'+prefix+'d-fuze/')
+        expect(touch.locator('#orientation-overlay')).to_be_visible()
+        assert touch.evaluate('game.state')=='MAIN_MENU'
+        touch.set_viewport_size({'width':320,'height':480})
+        expect(touch.locator('#orientation-overlay')).to_be_hidden()
+        assert touch.evaluate('game.state')=='MAIN_MENU'
+        touch.get_by_role('button',name='HOW TO PLAY',exact=True).tap()
+        for b in touch.locator('#actions > *').all():
+            box=b.bounding_box();assert box['y']>=0 and box['y']+box['height']<=480
+        touch.get_by_role('button',name='PLAY',exact=True).tap()
+        for state in ['PAUSED','LEVEL_COMPLETE','LEVEL_FAILED','GAME_OVER']:
+            touch.evaluate('(state)=>game.transition(state)',state)
+            touch.set_viewport_size({'width':568,'height':320})
+            expect(touch.locator('#orientation-overlay')).to_be_visible()
+            assert touch.evaluate('game.state')==state
+            touch.set_viewport_size({'width':320,'height':480})
+            expect(touch.locator('#orientation-overlay')).to_be_hidden()
+            assert touch.evaluate('game.state')==state
+        # Touch-capable tablets remain playable in both orientations.
+        for width,height in [(1024,768),(768,1024),(960,600),(600,960)]:
+            touch.set_viewport_size({'width':width,'height':height})
+            touch.evaluate('game.newGame()')
+            expect(touch.locator('#orientation-overlay')).to_be_hidden()
+            touch.wait_for_timeout(80)
+            assert touch.evaluate('game.state')=='PLAYING'
+            for selector in ['canvas','[data-control=fire]','[data-control=ccw]','[data-control=cw]']:
+                box=touch.locator(selector).bounding_box()
+                assert box['x']>=0 and box['x']+box['width']<=width+1
+                assert box['y']>=0 and box['y']+box['height']<=height+1
     touch.evaluate("window.dispatchEvent(new Event('blur'))");assert touch.evaluate('game.state')=='PAUSED'
     # Audio absence must be harmless.
     silent=context();silent.add_init_script("window.AudioContext=undefined;window.webkitAudioContext=undefined;Object.defineProperty(window,'localStorage',{get(){throw new Error('Storage unavailable')}})");noaudio=silent.new_page();noaudio.goto('http://app-lab.test/small-apps/d-fuze/');noaudio.get_by_role('button',name='PLAY',exact=True).click();noaudio.keyboard.press('Space');assert noaudio.evaluate('game.health')==2
     assert not errors,errors
     assert not missing,missing
-    print('PASS: gallery/direct navigation at both roots, keyboard/hold, victory/progression, pause/visibility/blur, lives/retry/game over, mute persistence, Web Audio/no-audio, seven viewports, real multitouch release/rotation/fire, orientation, no scroll/errors/missing assets')
+    print('PASS: gallery/direct navigation at both roots, keyboard/hold, victory/progression, pause/visibility/blur, lives/retry/game over, mute persistence, Web Audio/no-audio, small-phone/desktop/tablet layouts, real multitouch release/rotation/fire, rotation pause/manual resume/menu preservation, no scroll/errors/missing assets')
     browser.close()
