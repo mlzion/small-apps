@@ -22,7 +22,9 @@ Assembly profiles retain their independently editable duration and shape-preserv
 
 There is one **Play / Stop** button for the selected motion profile. Play always begins at time 0 at normal 1× profile time. Playback loops at 10 seconds for rings or the authored assembly duration. Stop resets time to 0 and redraws the starting pose. The graph's orange playhead moves during playback and is not interactive. Speed selectors, timeline sliders and Pause/Resume controls are removed.
 
-The combined Level Preview also uses a single Play/Stop button, restarting/resetting its scene clock at zero. It runs at normal elapsed-game-time speed, respecting the level's configured ring and assembly rate multipliers. These game settings are distinct from removed preview-speed overrides. Hiding/locking tools stops and resets previews. Actual game pause/resume behavior remains unchanged.
+The combined Level Preview uses a single Play/Stop button. Play starts its elapsed clock at zero and runs continuously, with no cycle-duration cutoff. Each ring samples its own ten-second profile from elapsed time multiplied by the level ring rate; the assembly independently samples its configured duration and rate. The elapsed clock itself never wraps, preserving assembly phase and unwrapped turns across ring loops. The readout shows total elapsed time plus the separate ring and assembly cycle positions. Stop immediately resets the clock and drawing to zero. Slow frames do not discard elapsed preview time. Hiding/locking tools retains the existing stop/reset behavior; actual game pause/resume behavior is unchanged.
+
+Level Preview always draws each ring's configured gate width, centered on its world angle (assembly + local profile + the game's reference offset), with the same flat-ended wall/gate arcs as gameplay. Editing a gate-width dropdown redraws immediately without stopping playback, resetting elapsed time, or reselecting profiles. Different rings retain independent widths. The separate Motion Profile previews use explicitly labeled fixed **60° reference gates**; these show profile movement, not the selected level's width.
 
 ## Gate widths
 
@@ -58,3 +60,8 @@ New `node d-fuze/test-unified-motion.cjs` covers negative custom keys, JSON/Test
 New `python d-fuze/test-unified-browser.py` covers real touch sign flips, negative preview angles and exported values, in-memory editing and JSON export, Play/Stop reset and 10/25-second looping through the actual preview clock, protected row controls, ring creation/deletion, removed controls/checkboxes, width dropdowns, visible migration adjustments, rejected v3 widths, and Android-sized/desktop layouts. Existing game, ring, builder, assembly, two-ring and App Lab regression suites are also run. Paths work at `/` and `/small-apps/`. No other App Lab source files are modified.
 
 Physical Android/iOS keyboards, audible sound quality, non-Chromium browsers, real mobile file pickers/downloads and live Pages deployment remain manual checks. Automated touch/layout checks use Chromium emulation. Human balancing may change because assembly now runs and some gate widths were normalized. Profile editing does not guarantee a humanly beatable configuration.
+
+
+## Preview correction regression
+
+`python d-fuze/test-preview-browser.py` instruments the real Canvas calls and checks rendered pixels for 10°, 60°, and 120° gates, plus four different widths in one scene. A controlled browser clock advances Level Preview beyond 10/25/50/100 seconds, including delayed frames. Preview world angles are compared with the actual game engine using mixed families, independent 1.3×/0.7× ring/assembly rates, and an unwrapped-turn assembly profile. Live width edits preserve time/profile assignment; Stop and restart reset correctly. Tests run in phone-sized and desktop Chromium under both hosting paths. No physical device retest is claimed.

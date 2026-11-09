@@ -255,11 +255,14 @@ window.DFuzeMotionEditor = {
         x.lineWidth = 6;
         x.strokeStyle = "#ef6258";
         x.beginPath();
-        x.arc(0, 0, r, -Math.PI / 2 + 0.4, Math.PI * 1.5 - 0.4);
+        // A labeled 60° reference gate, independent of selected level widths.
+        const center = DFuzeRings.GEOMETRY.referenceOffset,
+          halfWidth = Math.PI / 6;
+        x.arc(0, 0, r, center + halfWidth, center + Math.PI * 2 - halfWidth);
         x.stroke();
         x.strokeStyle = "#56adff";
         x.beginPath();
-        x.arc(0, 0, r, -Math.PI / 2 - 0.4, -Math.PI / 2 + 0.4);
+        x.arc(0, 0, r, center - halfWidth, center + halfWidth);
         x.stroke();
       }
       x.restore();
