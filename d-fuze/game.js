@@ -3,6 +3,17 @@ const audio = new ArcadeAudio();
 const debugParams = new URLSearchParams(location.search);
 const seedText = debugParams.get("seed");
 const debugEnabled = debugParams.get("debug") === "1";
+let experimentalLevel = null,
+  testError = null;
+if (debugParams.get("test") === "1") {
+  try {
+    experimentalLevel = DFuzeSchema.readTest(
+      sessionStorage.getItem(DFuzeSchema.TEST_KEY),
+    );
+  } catch (error) {
+    testError = error.message;
+  }
+}
 const game = new DFuze.Game(
   (event, value) => {
     if (event === "state") {
@@ -14,9 +25,11 @@ const game = new DFuze.Game(
     } else audio.play(event, value);
   },
   undefined,
-  seedText !== null && Number.isFinite(Number(seedText))
-    ? { seed: Number(seedText) }
-    : {},
+  experimentalLevel
+    ? { seed: experimentalLevel.seed, testLevel: experimentalLevel }
+    : seedText !== null && Number.isFinite(Number(seedText))
+      ? { seed: Number(seedText) }
+      : {},
 );
 const renderer = new Renderer(document.querySelector("#canvas"));
 let lastTime = performance.now(),
@@ -91,6 +104,38 @@ function button(label, action) {
   });
   actions.append(b);
 }
+function returnToEditor() {
+  location.href = "builder/";
+}
+function renderTestUI() {
+  if (testError) {
+    message.textContent = "TEST UNAVAILABLE";
+    detail.textContent = testError;
+    button("RETURN TO EDITOR", returnToEditor);
+    return;
+  }
+  message.className = "";
+  if (game.state === "MAIN_MENU") {
+    message.textContent = `TEST LEVEL ${game.level}`;
+    detail.textContent = `${game.testLevel.name || "Experimental level"} · Seed ${game.seed}`;
+    button("START TEST", () => game.newGame());
+  } else if (game.state === "PAUSED") {
+    message.textContent = "PAUSED";
+    detail.textContent = "Experimental level on hold.";
+    button("RESUME", () => game.resume());
+  } else {
+    const success = game.state === "LEVEL_COMPLETE";
+    message.textContent = success ? "BOMB D::FUZED!" : "BOMB ::XPLODED!";
+    message.className = success ? "success" : "failure";
+    detail.textContent = `Test Level ${game.level} · Seed ${game.seed}. No level advancement.`;
+    button("RETRY LEVEL", () => game.retry());
+    button("RETRY WITH NEW SEED", () => {
+      game.seed = Math.floor(Math.random() * 4294967296);
+      game.retry();
+    });
+  }
+  button("RETURN TO EDITOR", returnToEditor);
+}
 function renderUI() {
   document.querySelector("#pause").disabled = !["PLAYING", "PAUSED"].includes(
     game.state,
@@ -101,7 +146,12 @@ function renderUI() {
   if (overlay.hidden) return;
   actions.replaceChildren();
   message.className = "";
-  document.querySelector("#tagline").textContent = "ONE RING / ONE BOMB";
+  document.querySelector("#tagline").textContent =
+    game.testMode || testError ? "EXPERIMENTAL TEST" : "ONE RING / ONE BOMB";
+  if (game.testMode || testError) {
+    renderTestUI();
+    return;
+  }
   switch (game.state) {
     case "MAIN_MENU":
       message.textContent = howTo ? "HOW TO PLAY" : "D::FUZE";
@@ -218,6 +268,7 @@ function frame(now) {
 phoneLandscape.addEventListener("change", syncOrientation);
 window.addEventListener("resize", syncOrientation);
 syncOrientation();
+document.querySelector("#test-mode").hidden = !(game.testMode || testError);
 renderUI();
 soundUI();
 updateHUD();

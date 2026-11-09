@@ -433,3 +433,21 @@ kbd {
     font-size: 17px;
   }
 }
+
+#test-mode {
+  position: fixed;
+  bottom: max(4px, env(safe-area-inset-bottom));
+  right: max(8px, env(safe-area-inset-right));
+  z-index: 8;
+  background: #3b472b;
+  color: #d8f5a9;
+  padding: 4px 8px;
+  border: 1px solid #8da95b;
+  border-radius: 3px;
+  font-size: 10px;
+  margin: 0;
+  pointer-events: none;
+}
+#test-mode[hidden] {
+  display: none;
+}
