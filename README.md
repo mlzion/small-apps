@@ -6,7 +6,7 @@ A static gallery for browser games, audio tools, MIDI applications, and creative
 
 ## Running locally
 
-Open the root `index.html` in a modern browser, or serve this directory with any static HTTP server. No dependencies, framework, or build step are required. JavaScript only keeps the footer year current; the gallery and launch link work without it.
+Open the root `index.html` in a modern browser, or serve this directory with any static HTTP server. No dependencies, framework, or build step are required. JavaScript keeps the footer year current and opens Developer Tools; the gallery and app launch links work without it.
 
 ## GitHub Pages
 
@@ -24,4 +24,8 @@ See `tests/README.md` for regression and responsive checks. Test tools are devel
 
 ## D::FUZE
 
-See [d-fuze/README.md](d-fuze/README.md) for Phase 1 architecture, controls, configuration, and verification.
+See [d-fuze/README.md](d-fuze/README.md) for game architecture, controls, configuration, and verification.
+
+## Developer Tools
+
+The homepage footer has a **Developer Tools** button for the experimental [D::FUZE Level Builder](d-fuze/builder/README.md). Its disposable public code is `FUSE-LAB-3`, a casual-access deterrent rather than secure authentication. Published D::FUZE levels and legacy motion profiles are unchanged. See the builder documentation for editing, previews, Test Mode, JSON/CSV exports, browser drafts, and changing the code.

@@ -3,10 +3,13 @@
     typeof module === "object" ? require("./motion.js") : root.DFuzeMotion,
     typeof module === "object" ? require("./rings.js") : root.DFuzeRings,
     typeof module === "object" ? require("./levels.js") : root.DFuzeLevels,
+    typeof module === "object"
+      ? require("./level-schema.js")
+      : root.DFuzeSchema,
   );
   if (typeof module === "object") module.exports = api;
   else root.DFuze = api;
-})(globalThis, (motion, ringSystem, levels) => {
+})(globalThis, (motion, ringSystem, levels, schema) => {
   "use strict";
   const STATES = Object.freeze(
     Object.fromEntries(
@@ -28,14 +31,17 @@
     constructor(
       emit = () => {},
       resolver = resolveShot,
-      { seed = Math.floor(Math.random() * 4294967296) } = {},
+      { seed = Math.floor(Math.random() * 4294967296), testLevel = null } = {},
     ) {
+      if (testLevel) schema.toRuntime(testLevel, seed);
+      this.testLevel = testLevel ? schema.clone(testLevel) : null;
+      this.testMode = !!testLevel;
       this.seed = seed >>> 0;
       this.random = motion.seededRandom(this.seed);
       this.emit = emit;
       this.resolver = resolver;
       this.state = STATES.MAIN_MENU;
-      this.level = 1;
+      this.level = this.testLevel?.number ?? 1;
       this.lives = 3;
       this.config = levelConfig(1);
       this.resetLevel();
@@ -46,7 +52,10 @@
       this.emit("state", next);
     }
     resetLevel() {
-      this.config = levelConfig(this.level);
+      const experimental = this.testMode
+        ? schema.toRuntime(this.testLevel, this.seed)
+        : null;
+      this.config = experimental?.config ?? levelConfig(this.level);
       this.remaining = this.config.time;
       this.health = this.config.hits;
       this.ammo = this.config.ammo;
@@ -69,11 +78,12 @@
               ...this.config.rings,
               radius: this.config.rings.radius + i * this.config.rings.spacing,
             },
-            motion.selectProfile(
-              this.config.rings.difficulty,
-              this.random,
-              this.config.rings.profileFamily,
-            ),
+            experimental?.profiles[i] ??
+              motion.selectProfile(
+                this.config.rings.difficulty,
+                this.random,
+                this.config.rings.profileFamily,
+              ),
           ),
       );
       this.updateRings();
@@ -84,7 +94,7 @@
     }
     newGame() {
       this.random = motion.seededRandom(this.seed);
-      this.level = 1;
+      this.level = this.testLevel?.number ?? 1;
       this.lives = 3;
       this.startLevel();
     }
@@ -94,11 +104,21 @@
       this.emit("begin");
     }
     nextLevel() {
-      if (this.state !== STATES.LEVEL_COMPLETE) return;
+      if (this.testMode || this.state !== STATES.LEVEL_COMPLETE) return;
       this.level++;
       this.startLevel();
     }
     retry() {
+      if (
+        this.testMode &&
+        [STATES.LEVEL_COMPLETE, STATES.LEVEL_FAILED, STATES.GAME_OVER].includes(
+          this.state,
+        )
+      ) {
+        this.lives = 3;
+        this.startLevel();
+        return;
+      }
       if (this.state === STATES.LEVEL_FAILED) this.startLevel();
     }
     pause() {
