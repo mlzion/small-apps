@@ -16,26 +16,28 @@ with sync_playwright() as p:
     page.locator('#access-code').fill('FUSE-LAB-3');page.get_by_role('button',name='OPEN LEVEL BUILDER').tap()
     page.locator('#load-published').tap();expect(page.locator('#level-table tbody tr')).to_have_count(6)
     assert page.evaluate('current().timer')==48
+    page.locator('#motion-mode').select_option('assembly')
     # An invalid key disables testing/export without crashing the animation preview.
-    field=page.get_by_role('spinbutton',name='Assembly key 2 time',exact=True)
+    field=page.get_by_role('spinbutton',name='Motion key 2 time',exact=True)
     field.fill('0');field.press('Tab');expect(page.locator('#test-level')).to_be_disabled()
     expect(page.locator('#errors')).to_contain_text('increasing')
     field.fill('5');field.press('Tab');expect(page.locator('#test-level')).to_be_enabled()
-    page.locator('#assembly-new').tap();new_id=page.locator('#assembly-edit-profile').input_value()
-    expect(page.locator('#assembly-keys tr')).to_have_count(2)
-    page.locator('#assembly-delete-profile').tap()
+    page.locator('#motion-mode').select_option('assembly')
+    page.locator('#motion-new').tap();new_id=page.locator('#motion-profile').input_value()
+    expect(page.locator('#motion-keys tr')).to_have_count(2)
+    page.locator('#motion-delete').tap()
     assert not page.evaluate('(id)=>doc.assemblyProfiles.some(p=>p.id===id)',new_id)
-    page.locator('#assembly-duplicate').tap()
-    custom=page.locator('#assembly-edit-profile').input_value()
-    page.locator('#assembly-keys tr').nth(0).get_by_role('button',name='INSERT AFTER').tap()
-    expect(page.locator('#assembly-keys tr')).to_have_count(7)
+    page.locator('#motion-duplicate').tap()
+    custom=page.locator('#motion-profile').input_value()
+    page.locator('#motion-keys tr').nth(0).get_by_role('button',name='INSERT AFTER').tap()
+    expect(page.locator('#motion-keys tr')).to_have_count(7)
     page.screenshot(path='/tmp/assembly-editor-phone.png',full_page=True)
     # v1 browser draft upgrade preserves values and constant-speed behavior.
-    page.evaluate('''const old=DFuzeSchema.defaults();old.version=1;delete old.assemblyProfiles;
-      old.levels.forEach(l=>l.assembly={enabled:false});old.levels[0].timer=91;old.levels[0].assembly={enabled:true,speed:15};
+    page.evaluate('''const old=DFuzeSchema.defaults();old.version=1;delete old.assemblyProfiles;delete old.ringProfiles;
+      old.levels.forEach(l=>{l.assembly={enabled:false};l.rings.forEach(r=>r.profiles=DFuzeExperimentalMotion.eligible(r.family).map(p=>p.id));});old.levels[0].timer=91;old.levels[0].assembly={enabled:true,speed:15};
       localStorage.setItem(DFuzeSchema.DRAFT_KEY,JSON.stringify(old));''')
     page.locator('#load-draft').tap();assert page.evaluate('current().timer')==91
-    assert page.evaluate('doc.version')==2
+    assert page.evaluate('doc.version')==3
     assert page.evaluate('current().assembly.profileId').startswith('migrated-constant')
     page.locator('#test-level').tap();page.get_by_role('button',name='START TEST').tap()
     page.wait_for_timeout(100);assert page.evaluate('game.assembly.angle')>0

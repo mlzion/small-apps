@@ -5,6 +5,8 @@ const seedText = debugParams.get("seed");
 const debugEnabled = debugParams.get("debug") === "1";
 let experimentalLevel = null,
   experimentalProfiles = null,
+  experimentalRings = null,
+  experimentalNotes = [],
   testError = null;
 if (debugParams.get("test") === "1") {
   try {
@@ -13,6 +15,8 @@ if (debugParams.get("test") === "1") {
     );
     experimentalLevel = transfer.level;
     experimentalProfiles = transfer.assemblyProfiles;
+    experimentalRings = transfer.ringProfiles;
+    experimentalNotes = transfer.migrationNotes || [];
   } catch (error) {
     testError = error.message;
   }
@@ -36,6 +40,7 @@ try {
           seed: experimentalLevel.seed,
           testLevel: experimentalLevel,
           assemblyProfiles: experimentalProfiles,
+          ringProfiles: experimentalRings,
         }
       : seedText !== null && Number.isFinite(Number(seedText))
         ? { seed: Number(seedText) }
@@ -132,7 +137,7 @@ function renderTestUI() {
   message.className = "";
   if (game.state === "MAIN_MENU") {
     message.textContent = `TEST LEVEL ${game.level}`;
-    detail.textContent = `${game.testLevel.name || "Experimental level"} · Seed ${game.seed}`;
+    detail.textContent = `${game.testLevel.name || "Experimental level"} · Seed ${game.seed}. ${experimentalNotes.join(" ")}`;
     button("START TEST", () => game.newGame());
   } else if (game.state === "PAUSED") {
     message.textContent = "PAUSED";

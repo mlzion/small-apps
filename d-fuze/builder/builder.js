@@ -10,10 +10,7 @@ let assemblyEditor = null;
 let doc = S.defaults(),
   selected = 0,
   unlocked = false;
-let profileIndex = 0,
-  profileTime = 0,
-  profilePlaying = false,
-  previewTime = 0,
+let previewTime = 0,
   previewPlaying = false,
   previewProfiles = [];
 function status(text, error = false) {
@@ -41,6 +38,7 @@ function restoreSession() {
     if (saved) {
       const value = JSON.parse(saved);
       doc = S.requireValid(value.document);
+      if (doc.migrationNotes?.length) status(doc.migrationNotes.join("\n"));
       selected = Math.min(
         Math.max(0, Number(value.selected) || 0),
         doc.levels.length - 1,
@@ -151,7 +149,6 @@ function renderRings() {
   $("selected-label").textContent = `/ Level ${level.number}`;
   $("level-name").value = level.name || "";
   $("level-seed").value = level.seed ?? "";
-  $("assembly-enabled").checked = level.assembly.enabled;
 
   $("ring-editor").replaceChildren();
   level.rings.forEach((ring, i) => {
@@ -160,20 +157,20 @@ function renderRings() {
     const number = document.createElement("strong");
     number.textContent = `Ring ${i + 1}`;
     row.append(number);
-    row.append(
-      label(
-        "Gate width °",
-        inputNumber(
-          ring.gateWidth,
-          { min: 10, max: 180, step: 1 },
-          (v) => {
-            ring.gateWidth = v;
-            change();
-          },
-          `Ring ${i + 1} gate width`,
-        ),
-      ),
-    );
+    const width = document.createElement("select");
+    width.setAttribute("aria-label", `Ring ${i + 1} gate width`);
+    for (let deg = 10; deg <= 120; deg += 10) {
+      const o = document.createElement("option");
+      o.value = deg;
+      o.textContent = `${deg}°`;
+      width.append(o);
+    }
+    width.value = ring.gateWidth;
+    width.addEventListener("change", () => {
+      ring.gateWidth = Number(width.value);
+      change();
+    });
+    row.append(label("Gate width", width));
     row.append(
       label(
         "Gate health",
@@ -199,39 +196,10 @@ function renderRings() {
     family.value = ring.family;
     family.addEventListener("change", () => {
       ring.family = family.value;
-      ring.profiles = M.eligible(ring.family).map((p) => p.id);
       renderRings();
       change();
     });
     row.append(label("Motion family", family));
-    const eligible = document.createElement("fieldset");
-    eligible.className = "profiles-list";
-    const legend = document.createElement("legend");
-    legend.textContent = "Eligible profiles";
-    eligible.append(legend);
-    for (const profile of M.eligible(ring.family)) {
-      const checkbox = document.createElement("input");
-      checkbox.type = "checkbox";
-      checkbox.checked = ring.profiles.includes(profile.id);
-      checkbox.setAttribute("aria-label", `Ring ${i + 1}: ${profile.name}`);
-      checkbox.addEventListener("change", () => {
-        if (!checkbox.checked && ring.profiles.length === 1) {
-          checkbox.checked = true;
-          status("Keep at least one eligible profile for each ring.", true);
-          return;
-        }
-        ring.profiles = M.eligible(ring.family)
-          .filter((p) =>
-            p.id === profile.id
-              ? checkbox.checked
-              : ring.profiles.includes(p.id),
-          )
-          .map((p) => p.id);
-        change();
-      });
-      eligible.append(label(profile.name, checkbox));
-    }
-    row.append(eligible);
     $("ring-editor").append(row);
   });
 }
@@ -274,12 +242,13 @@ function check() {
   return errors;
 }
 function resetPreview() {
+  $("preview-play").textContent = "PLAY";
   previewTime = 0;
   previewPlaying = false;
   previewProfiles = S.validateLevel(current(), "Level", doc.assemblyProfiles)
     .length
     ? []
-    : M.assignProfiles(current());
+    : M.assignProfiles(current(), current().seed, doc.ringProfiles);
   $("assignments").textContent =
     previewProfiles
       .map(
@@ -301,7 +270,12 @@ function loadDocument(next, message) {
   selected = 0;
   renderAll();
   rememberSession();
-  status(message);
+  status(
+    message +
+      (next.migrationNotes?.length
+        ? "\n" + next.migrationNotes.join("\n")
+        : ""),
+  );
 }
 $("add-level").addEventListener("click", () => {
   const level = S.clone(current());
@@ -358,103 +332,6 @@ $("new-seed").addEventListener("click", () => {
   $("level-seed").value = current().seed;
   change();
 });
-function viewedProfile() {
-  return M.eligible($("profile-family").value)[profileIndex];
-}
-function renderProfile() {
-  profileTime = 0;
-  profilePlaying = false;
-  $("profile-play").textContent = "PLAY";
-  const p = viewedProfile();
-  $("profile-title").textContent =
-    `${M.FAMILIES[p.difficulty].label} ${profileIndex + 1} of 5 — ${p.name}`;
-  $("profile-windows").textContent =
-    `${p.id} · 10-second cycle · aligned ${p.family.alignmentWindows.map(([a, b]) => `${a}–${b}s`).join(" and ")} (shaded)`;
-  drawGraph();
-  drawProfile();
-}
-$("profile-family").addEventListener("change", () => {
-  profileIndex = 0;
-  renderProfile();
-});
-$("profile-prev").addEventListener("click", () => {
-  profileIndex = (profileIndex + 4) % 5;
-  renderProfile();
-});
-$("profile-next").addEventListener("click", () => {
-  profileIndex = (profileIndex + 1) % 5;
-  renderProfile();
-});
-$("profile-play").addEventListener("click", () => {
-  profilePlaying = !profilePlaying;
-  $("profile-play").textContent = profilePlaying ? "PAUSE" : "PLAY";
-});
-$("profile-time").addEventListener("input", () => {
-  profilePlaying = false;
-  $("profile-play").textContent = "PLAY";
-  profileTime = Number($("profile-time").value);
-  drawProfile();
-});
-function drawGraph() {
-  const canvas = $("profile-graph"),
-    ctx = canvas.getContext("2d"),
-    p = viewedProfile(),
-    width = Math.max(260, Math.round(canvas.getBoundingClientRect().width)),
-    height = width < 500 ? 210 : 260,
-    left = 52,
-    right = width - 14,
-    top = 20,
-    bottom = height - 35,
-    dpr = Math.min(devicePixelRatio || 1, 3);
-  canvas.width = width * dpr;
-  canvas.height = height * dpr;
-  canvas.style.aspectRatio = `${width}/${height}`;
-  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-  ctx.clearRect(0, 0, width, height);
-  const max = Math.max(180, ...p.keyframes.map((k) => Math.abs(k[1]))) * 1.1;
-  const px = (t) => left + (t / 10) * (right - left),
-    py = (a) => (top + bottom) / 2 - ((a / max) * (bottom - top)) / 2;
-  for (const [a, b] of p.family.alignmentWindows) {
-    ctx.fillStyle = "#35614666";
-    ctx.fillRect(px(a), top, px(b) - px(a), bottom - top);
-  }
-  ctx.strokeStyle = "#596775";
-  ctx.lineWidth = 1;
-  ctx.beginPath();
-  ctx.moveTo(left, top);
-  ctx.lineTo(left, bottom);
-  ctx.lineTo(right, bottom);
-  ctx.moveTo(left, py(0));
-  ctx.lineTo(right, py(0));
-  ctx.stroke();
-  ctx.fillStyle = "#cbd4df";
-  ctx.font = "12px monospace";
-  ctx.textAlign = "center";
-  for (let t = 0; t <= 10; t += 2) ctx.fillText(`${t}s`, px(t), height - 10);
-  ctx.textAlign = "right";
-  for (const a of [
-    -Math.floor(max / 100) * 100,
-    0,
-    Math.floor(max / 100) * 100,
-  ])
-    ctx.fillText(`${a}°`, left - 6, py(a) + 4);
-  ctx.strokeStyle = "#86bdff";
-  ctx.lineWidth = 2;
-  ctx.beginPath();
-  for (let i = 0; i <= 1000; i++) {
-    const t = i / 100,
-      angle = (M.sampleProfile(p, t) * 180) / Math.PI;
-    if (i === 0) ctx.moveTo(px(t), py(angle));
-    else ctx.lineTo(px(t), py(angle));
-  }
-  ctx.stroke();
-  ctx.fillStyle = "#e5e9ef";
-  for (const [t, a] of p.keyframes) {
-    ctx.beginPath();
-    ctx.arc(px(t), py(a), 2.5, 0, Math.PI * 2);
-    ctx.fill();
-  }
-}
 function drawRing(ctx, radius, width, angle, thickness = 8) {
   const start = angle - width / 2;
   ctx.lineWidth = thickness;
@@ -467,20 +344,6 @@ function drawRing(ctx, radius, width, angle, thickness = 8) {
   ctx.beginPath();
   ctx.arc(0, 0, radius, start, start + width);
   ctx.stroke();
-}
-function drawProfile() {
-  const canvas = $("profile-ring"),
-    ctx = canvas.getContext("2d"),
-    p = viewedProfile(),
-    angle = M.sampleProfile(p, profileTime);
-  ctx.clearRect(0, 0, 240, 240);
-  ctx.save();
-  ctx.translate(120, 120);
-  drawRing(ctx, 85, Math.PI / 3, angle + geometry.referenceOffset);
-  ctx.restore();
-  $("profile-time").value = profileTime;
-  $("profile-readout").textContent =
-    `${profileTime.toFixed(2)}s / ${((angle * 180) / Math.PI).toFixed(1)}°`;
 }
 function drawLevel() {
   const canvas = $("level-preview"),
@@ -502,7 +365,7 @@ function drawLevel() {
         (r.gateWidth * Math.PI) / 180,
         M.sampleProfile(previewProfiles[i], time) +
           geometry.referenceOffset +
-          (level.assembly.enabled && previewProfiles.length
+          (previewProfiles.length
             ? DFuzeAssembly.sampleProfile(
                 doc.assemblyProfiles.find(
                   (p) => p.id === level.assembly.profileId,
@@ -518,16 +381,19 @@ function drawLevel() {
     `Shared animation time: ${Number.isFinite(time) ? (time % 10).toFixed(2) : "—"} / 10s · level ${level.playbackSpeed}×`;
 }
 $("preview-play").addEventListener("click", () => {
-  if (previewProfiles.length) previewPlaying = true;
-});
-$("preview-pause").addEventListener("click", () => (previewPlaying = false));
-$("preview-restart").addEventListener("click", () => {
+  if (!previewProfiles.length) return;
+  previewPlaying = !previewPlaying;
   previewTime = 0;
+  $("preview-play").textContent = previewPlaying ? "STOP" : "PLAY";
   drawLevel();
 });
 $("test-level").addEventListener("click", () => {
   try {
-    const transfer = S.testPayload(current(), doc.assemblyProfiles);
+    const transfer = S.testPayload(
+      current(),
+      doc.assemblyProfiles,
+      doc.ringProfiles,
+    );
     sessionStorage.setItem(
       S.SESSION_KEY,
       JSON.stringify({ document: S.requireValid(doc), selected }),
@@ -609,14 +475,13 @@ function unlock() {
   $("access-dialog").close();
   $("builder").hidden = false;
   restoreSession();
-  assemblyEditor ??= DFuzeAssemblyEditor.mount({
+  assemblyEditor ??= DFuzeMotionEditor.mount({
     document: () => doc,
     level: current,
     changed: change,
     status,
   });
   renderAll();
-  renderProfile();
   rememberSession();
 }
 $("access-dialog").addEventListener("cancel", (e) => e.preventDefault());
@@ -637,7 +502,8 @@ $("lock").addEventListener("click", () => {
     sessionStorage.removeItem(ACCESS_KEY);
   } catch {}
   unlocked = false;
-  profilePlaying = previewPlaying = false;
+  resetPreview();
+  assemblyEditor?.pause();
   $("builder").hidden = true;
   $("access-code").value = "";
   $("access-dialog").showModal();
@@ -648,21 +514,16 @@ function frame(now) {
   last = now;
   if (unlocked && !document.hidden) {
     assemblyEditor?.tick(dt);
-    if (profilePlaying) {
-      profileTime = (profileTime + dt * Number($("profile-speed").value)) % 10;
-      drawProfile();
-    }
     if (previewPlaying) {
-      previewTime += dt * Number($("preview-speed").value);
+      previewTime += dt;
       drawLevel();
     }
   }
   requestAnimationFrame(frame);
 }
 document.addEventListener("visibilitychange", () => {
-  profilePlaying = previewPlaying = false;
+  resetPreview();
   assemblyEditor?.pause();
-  $("profile-play").textContent = "PLAY";
   last = performance.now();
 });
 try {
@@ -671,15 +532,8 @@ try {
 } catch {
   $("access-dialog").showModal();
 }
-window.addEventListener("resize", () => {
-  if (unlocked) drawGraph();
-});
 requestAnimationFrame(frame);
 
-$("assembly-enabled").addEventListener("change", () => {
-  current().assembly.enabled = $("assembly-enabled").checked;
-  change();
-});
 $("load-published").addEventListener("click", () => {
   try {
     loadDocument(

@@ -50,44 +50,29 @@ with sync_playwright() as p:
         timer.fill('72');timer.press('Tab')
         expect(page.locator('#test-level')).to_be_enabled()
         page.get_by_role('combobox',name='Ring 1 family').select_option('medium')
-        checkboxes=page.locator('#ring-editor input[type=checkbox]')
-        expect(checkboxes).to_have_count(5)
-        for i in range(4): checkboxes.nth(i).uncheck()
-        checkboxes.nth(4).click()
-        expect(checkboxes.nth(4)).to_be_checked()
-        expect(page.locator('#status')).to_contain_text('at least one')
-        # Restore all eligible profiles with a deliberate family change.
-        page.get_by_role('combobox',name='Ring 1 family').select_option('hard')
+        expect(page.locator('#ring-editor input[type=checkbox]')).to_have_count(0)
+        page.get_by_role('combobox',name='Ring 1 gate width').select_option('80')
         page.get_by_role('combobox',name='Ring 1 family').select_option('easy')
-        assert page.locator('#ring-editor input:checked').count()==5
-        page.locator('#profile-family').select_option('hard')
-        expect(page.locator('#profile-title')).to_contain_text('Hard 1 of 5')
-        page.get_by_role('button',name='Next profile',exact=True).click()
-        expect(page.locator('#profile-title')).to_contain_text('Hard 2 of 5')
-        page.get_by_role('button',name='Previous profile',exact=True).click()
-        page.locator('#profile-play').click();page.wait_for_timeout(150)
-        assert page.evaluate('profileTime')>0
-        page.locator('#profile-play').click()
-        page.locator('#profile-time').evaluate("el=>{el.value=4.75;el.dispatchEvent(new Event('input',{bubbles:true}));}")
-        expect(page.locator('#profile-readout')).to_have_text('4.75s / 0.0°')
-        assert len(page.locator('#profile-graph').evaluate('el=>el.toDataURL()'))>3000
-        # Edit a separate assembly profile, keeping the fixed ring profiles intact.
-        page.locator('#assembly-duplicate').click()
-        custom=page.locator('#assembly-edit-profile').input_value()
-        page.locator('#assembly-name').fill('Custom drift');page.locator('#assembly-name').press('Tab')
-        page.get_by_role('spinbutton',name='Assembly key 2 angle',exact=True).fill('32')
-        page.get_by_role('spinbutton',name='Assembly key 2 angle',exact=True).press('Tab')
-        page.locator('#assembly-add-key').click()
-        expect(page.locator('#assembly-keys tr')).to_have_count(7)
-        page.locator('#assembly-keys tr').nth(1).get_by_role('button',name='DELETE KEY').click()
-        expect(page.locator('#assembly-keys tr')).to_have_count(6)
+        # Shared controls edit ring then assembly data; both survive export and Test Mode.
+        page.locator('#motion-duplicate').click()
+        page.locator('#motion-name').fill('Custom ring');page.locator('#motion-name').press('Tab')
+        expect(page.locator('#motion-duration')).to_have_attribute('readonly','')
+        page.get_by_role('textbox',name='Motion key 2 angle',exact=True).fill('32')
+        page.get_by_role('textbox',name='Motion key 2 angle',exact=True).press('Tab')
+        page.get_by_role('button',name='Reverse sign key 2',exact=True).click()
+        expect(page.get_by_role('textbox',name='Motion key 2 angle',exact=True)).to_have_value('-32')
+        page.locator('#motion-play').click();page.wait_for_timeout(120);expect(page.locator('#motion-play')).to_have_text('STOP')
+        page.locator('#motion-play').click();assert page.evaluate('assemblyEditor.time')==0
+        page.locator('#motion-mode').select_option('assembly')
+        page.locator('#motion-duplicate').click()
+        custom=page.locator('#motion-profile').input_value()
+        page.locator('#motion-name').fill('Custom drift');page.locator('#motion-name').press('Tab')
+        page.locator('#motion-add-key').click()
+        expect(page.locator('#motion-keys tr')).to_have_count(7)
+        page.locator('#motion-keys tr').nth(1).get_by_role('button',name='DELETE KEY').click()
         page.locator('#assembly-profile').select_option(custom)
-        page.locator('#assembly-enabled').check()
         page.locator('#assembly-rate').fill('1.4');page.locator('#assembly-rate').press('Tab')
-        page.locator('#assembly-play').click();page.wait_for_timeout(120);page.locator('#assembly-play').click()
-        page.locator('#assembly-time').evaluate("el=>{el.value=12;el.dispatchEvent(new Event('input',{bubbles:true}));}")
-        expect(page.locator('#assembly-readout')).to_contain_text('12.00s')
-        page.locator('#assembly-delete-profile').click()
+        page.locator('#motion-delete').click()
         expect(page.locator('#status')).to_contain_text('before deleting')
         page.locator('#save-draft').click()
         expect(page.locator('#status')).to_contain_text('only in this browser')
@@ -97,7 +82,7 @@ with sync_playwright() as p:
         # Downloads contain actual settings and schema metadata.
         with page.expect_download() as event: page.locator('#export-json').click()
         exported=json.loads(Path(event.value.path()).read_text())
-        assert exported['version']==2 and len(exported['levels'])==12
+        assert exported['version']==3 and len(exported['levels'])==12
         assert exported['levels'][0]['timer']==72
         with page.expect_download() as event: page.locator('#export-csv').click()
         rows=list(csv.reader(io.StringIO(Path(event.value.path()).read_text())))
@@ -125,9 +110,9 @@ with sync_playwright() as p:
             page.get_by_role('combobox',name=f'Ring {number} family').select_option(family)
         page.locator('#preview-play').click();page.wait_for_timeout(150)
         assert page.evaluate('previewTime')>0
-        page.locator('#preview-pause').click();t=page.evaluate('previewTime')
+        page.locator('#preview-play').click();t=page.evaluate('previewTime')
         page.wait_for_timeout(120);assert page.evaluate('previewTime')==t
-        page.locator('#preview-restart').click();assert page.evaluate('previewTime')==0
+        assert page.evaluate('previewTime')==0
         page.get_by_role('button',name='EDIT 1',exact=True).click()
         expected=page.evaluate('JSON.stringify(current())')
         page.locator('#test-level').click()
@@ -155,7 +140,6 @@ with sync_playwright() as p:
         assert page.evaluate('JSON.stringify(current())')==expected
         # Two-ring Test Mode uses independent edited settings in the real engine.
         page.get_by_role('button',name='EDIT 4',exact=True).click()
-        page.locator('#assembly-enabled').check()
         page.locator('#assembly-rate').fill('1.2');page.locator('#assembly-rate').press('Tab')
         expect(page.locator('#test-level')).to_be_enabled()
         page.locator('#test-level').click()
@@ -172,7 +156,7 @@ with sync_playwright() as p:
         assert page.evaluate('game.rings.map(r=>r.gate.health)')==[2,2]
         page.keyboard.press('Escape')
         page.get_by_role('button',name='RETURN TO EDITOR',exact=True).click()
-        expect(page.locator('#assembly-enabled')).to_be_checked()
+        expect(page.locator('#assembly-profile')).to_be_visible()
         # Reset for the next hosting-root pass, exercising native confirmation.
         page.once('dialog',lambda d:d.accept())
         page.locator('#reset-defaults').click()
@@ -201,7 +185,7 @@ with sync_playwright() as p:
                 box=b.bounding_box();assert box['height']>=44 and box['width']>=44,(width,height,box)
         phone.screenshot(path=f'/tmp/d-fuze-builder-{width}.png',full_page=True)
     phone.set_viewport_size({'width':320,'height':480})
-    phone.locator('#profile-next').tap();expect(phone.locator('#profile-title')).to_contain_text('2 of 5')
+    phone.locator('#motion-play').tap();phone.locator('#motion-play').tap()
     phone.get_by_role('button',name='EDIT 4',exact=True).tap()
     phone.locator('#test-level').tap()
     expect(phone.locator('#test-mode')).to_be_visible()

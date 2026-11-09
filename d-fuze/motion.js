@@ -14,7 +14,16 @@
         b = keys[i + 1];
       if (t >= a[0] && t <= b[0]) {
         let u = (t - a[0]) / (b[0] - a[0]);
-        if (a[2] === "smooth") u = u * u * (3 - 2 * u);
+        const touchesHold =
+          profile.protected &&
+          (a[0] === 0 ||
+            b[0] === 10 ||
+            profile.family.alignmentWindows.some(
+              ([start, end]) =>
+                (a[0] >= start && a[0] <= end) ||
+                (b[0] >= start && b[0] <= end),
+            ));
+        if (a[2] === "smooth" || touchesHold) u = u * u * (3 - 2 * u);
         return ((a[1] + (b[1] - a[1]) * u) * Math.PI) / 180;
       }
     }

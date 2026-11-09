@@ -185,32 +185,11 @@ label {
 }
 .ring-row {
   display: grid;
-  grid-template-columns: 60px 110px 100px 130px minmax(220px, 1fr);
+  grid-template-columns: 60px repeat(3, minmax(110px, 1fr));
   gap: 12px;
   border-top: 1px solid #3b454f;
   padding: 16px 0;
   align-items: start;
-}
-.profiles-list {
-  display: grid;
-  gap: 5px;
-  margin: 0;
-  padding: 0;
-  border: 0;
-  min-width: 0;
-}
-.profiles-list label {
-  display: flex;
-  flex-direction: row;
-  align-items: center;
-  gap: 8px;
-  min-height: 44px;
-}
-.profiles-list input {
-  min-height: 24px;
-  min-width: 24px;
-  margin: 0;
-  accent-color: #8af5a3;
 }
 .profile-visuals {
   display: grid;
@@ -327,9 +306,6 @@ button {
   .ring-row > strong {
     grid-column: 1/-1;
   }
-  .profiles-list {
-    grid-column: 1/-1;
-  }
   .profile-visuals {
     grid-template-columns: minmax(0, 1fr);
   }
@@ -389,12 +365,28 @@ button {
   width: 100%;
   aspect-ratio: 1;
 }
-#assembly-keys input {
-  width: 110px;
-}
+
 @media (max-width: 760px) {
   #assembly-animation {
     width: 140px;
     justify-self: center;
   }
+}
+
+#motion-keys input {
+  width: 70px;
+  min-width: 60px;
+}
+#motion-keys td {
+  padding: 6px;
+}
+#motion-keys .angle-cell {
+  white-space: nowrap;
+}
+#motion-keys .angle-cell input,
+#motion-keys .angle-cell button {
+  vertical-align: middle;
+}
+#motion-keys .angle-cell button {
+  margin-left: 4px;
 }

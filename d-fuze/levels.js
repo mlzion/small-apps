@@ -31,7 +31,12 @@
     const doc = publishedDocument(),
       level = doc.levels.find((l) => l.number === number);
     if (!level) throw new Error(`Published Level ${number} is missing.`);
-    return schema.toRuntime(level, level.seed, doc.assemblyProfiles).config;
+    return schema.toRuntime(
+      level,
+      level.seed,
+      doc.assemblyProfiles,
+      doc.ringProfiles,
+    ).config;
   }
   return { publishedDocument, publishedLevel, levelConfig };
 });

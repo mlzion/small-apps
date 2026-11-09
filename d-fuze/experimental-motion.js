@@ -328,11 +328,93 @@
   function eligible(family) {
     return PROFILES.filter((p) => p.difficulty === family);
   }
-  function assignProfiles(level, seed = level.seed) {
-    const random = math.seededRandom(seed);
-    return level.rings.map((r) =>
-      BY_ID.get(r.profiles[Math.floor(random() * r.profiles.length)]),
+  function defaults() {
+    return PROFILES.map((p) => ({
+      id: p.id,
+      name: p.name,
+      difficulty: p.difficulty,
+      duration: 10,
+      keyframes: JSON.parse(JSON.stringify(p.keyframes)),
+    }));
+  }
+  function compile(p) {
+    return { ...p, family: FAMILIES[p.difficulty], protected: true };
+  }
+  function validateEditable(p) {
+    const errors = [];
+    if (!p || typeof p !== "object" || Array.isArray(p))
+      return ["Ring profile must be an object."];
+    if (
+      Object.keys(p).some(
+        (k) =>
+          !["id", "name", "difficulty", "duration", "keyframes"].includes(k),
+      )
+    )
+      errors.push("Unknown ring profile field.");
+    if (typeof p.id !== "string" || !/^[a-z0-9][a-z0-9-]{0,79}$/.test(p.id))
+      errors.push("Invalid ring profile ID.");
+    if (typeof p.name !== "string" || !p.name.trim() || p.name.length > 80)
+      errors.push("Ring profile name must be 1–80 characters.");
+    if (!Object.hasOwn(FAMILIES, p.difficulty) || p.duration !== 10)
+      errors.push(
+        "Ring profiles require Easy/Medium/Hard and a fixed 10-second duration.",
+      );
+    if (
+      !Array.isArray(p.keyframes) ||
+      p.keyframes.length < 6 ||
+      p.keyframes.length > 100
+    )
+      return [...errors, "Ring profile needs 6–100 keys."];
+    if (
+      p.keyframes.some(
+        (k) =>
+          !Array.isArray(k) ||
+          k.length !== 3 ||
+          !Number.isFinite(k[0]) ||
+          !Number.isFinite(k[1]) ||
+          Math.abs(k[1]) > 100000 ||
+          k[0] < 0 ||
+          k[0] > 10,
+      )
+    )
+      errors.push("Invalid ring key time or angle.");
+    if (!errors.length) {
+      try {
+        math.validateProfile(compile(p));
+        if (p.keyframes[0][1] !== 0 || p.keyframes.at(-1)[1] !== 0)
+          throw Error();
+      } catch {
+        errors.push(
+          "Keep ordered keys, zero endpoints and every protected alignment hold intact.",
+        );
+      }
+    }
+    return errors;
+  }
+  function validateLibrary(profiles) {
+    if (
+      !Array.isArray(profiles) ||
+      profiles.length < 3 ||
+      profiles.length > 256
+    )
+      return ["Provide 3–256 ring profiles."];
+    const errors = profiles.flatMap((p, i) =>
+      validateEditable(p).map((e) => `Ring profile ${i + 1}: ${e}`),
     );
+    if (new Set(profiles.map((p) => p?.id)).size !== profiles.length)
+      errors.push("Ring profile IDs must be unique.");
+    for (const family of Object.keys(FAMILIES))
+      if (!profiles.some((p) => p?.difficulty === family))
+        errors.push(`Keep at least one ${family} ring profile.`);
+    return errors;
+  }
+  function assignProfiles(level, seed = level.seed, profiles = defaults()) {
+    const random = math.seededRandom(seed);
+    return level.rings.map((r) => {
+      const pool = profiles.filter((p) => p.difficulty === r.family);
+      if (!pool.length) throw Error("No profiles in assigned ring family.");
+      return compile(pool[Math.floor(random() * pool.length)]);
+    });
   }
   return {
     LIBRARY_ID,
@@ -342,6 +424,10 @@
     BY_ID,
     eligible,
     assignProfiles,
+    defaults,
+    compile,
+    validateEditable,
+    validateLibrary,
     validateExperimentalProfile,
     sampleProfile: math.sampleProfile,
   };

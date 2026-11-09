@@ -125,9 +125,7 @@
     }
     update(gameTime) {
       this.time = gameTime * this.settings.playbackSpeed;
-      this.angle = this.settings.enabled
-        ? sampleProfile(this.profile, this.time)
-        : 0;
+      this.angle = sampleProfile(this.profile, this.time);
     }
   }
   return {

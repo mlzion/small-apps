@@ -1,3 +1,5 @@
+> **Current editor:** Ring and assembly profiles now share a protected keyframe editor with Play/Stop controls. Schema v3 removes eligibility/assembly-enable flags and uses 10° gate steps. See [current instructions and migration details](../UNIFIED-MOTION.md). Earlier phase notes below are historical.
+
 > **Phase 4.5:** Published data is now authoritative, and a separate editable 25-second assembly parent replaces constant velocity. See [current assembly/data instructions](../PHASE45.md). Earlier phase descriptions below are historical.
 
 > **Motion migration:** All six published levels now use only the Level Builder’s 15 ten-second profiles. The legacy profile definitions have been removed. Earlier phase notes below are historical.
