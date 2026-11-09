@@ -61,6 +61,9 @@ class ArcadeAudio {
     const sounds = {
       fire: [900, 220, 0.07, "square", 0.025],
       hit: [170, 75, 0.06, "triangle", 0.05],
+      wallHit: [110, 65, 0.06, "square", 0.025],
+      gateHit: [1250, 450, 0.09, "triangle", 0.055],
+      gateBreak: [1700, 160, 0.22, "sine", 0.065],
       pulse: urgent
         ? [1000, 700, 0.09, "square", 0.035]
         : [580, 480, 0.1, "sine", 0.07],

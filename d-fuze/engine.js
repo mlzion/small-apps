@@ -1,8 +1,12 @@
 (function (root, factory) {
-  const api = factory();
+  const api = factory(
+    typeof module === "object" ? require("./motion.js") : root.DFuzeMotion,
+    typeof module === "object" ? require("./rings.js") : root.DFuzeRings,
+    typeof module === "object" ? require("./levels.js") : root.DFuzeLevels,
+  );
   if (typeof module === "object") module.exports = api;
   else root.DFuze = api;
-})(globalThis, () => {
+})(globalThis, (motion, ringSystem, levels) => {
   "use strict";
   const STATES = Object.freeze(
     Object.fromEntries(
@@ -18,56 +22,16 @@
       ].map((s) => [s, s]),
     ),
   );
-  const SETTINGS = Object.freeze({
-    turretSpeed: 120,
-    fireRate: 4,
-    minTimer: 10,
-    timerStep: 1,
-    hitStep: 2,
-    completionMargin: 2,
-  });
-  function levelConfig(level) {
-    const initial = [
-      [30, 3, 8],
-      [27, 5, 10],
-      [24, 7, 13],
-      [21, 9, 16],
-      [18, 11, 19],
-    ];
-    const time =
-      initial[level - 1]?.[0] ??
-      Math.max(SETTINGS.minTimer, 18 - (level - 5) * SETTINGS.timerStep);
-    // Reserve two seconds to acquire the first shot; cap health once the timer floor is reached.
-    const hits =
-      initial[level - 1]?.[1] ??
-      Math.min(
-        11 + (level - 5) * SETTINGS.hitStep,
-        Math.floor((time - SETTINGS.completionMargin) * SETTINGS.fireRate),
-      );
-    return {
-      time,
-      hits,
-      ammo:
-        initial[level - 1]?.[2] ?? hits + Math.max(8, Math.ceil(hits * 0.4)),
-      turretSpeed: SETTINGS.turretSpeed,
-      fireRate: SETTINGS.fireRate,
-      rings: {
-        count: 0,
-        gateArc: null,
-        rotationSpeed: null,
-        directionChanges: false,
-        gateHealth: null,
-        alignmentTiming: null,
-        assemblyRotation: 0,
-      },
-    };
-  }
-  // Phase 2 can return the nearest wall/gate instead, without changing the weapon.
-  function resolveShot(shot, world) {
-    return { target: world.bomb, damage: 1 };
-  }
+  const { SETTINGS, levelConfig } = levels;
+  const { resolveShot, GEOMETRY, Ring } = ringSystem;
   class Game {
-    constructor(emit = () => {}, resolver = resolveShot) {
+    constructor(
+      emit = () => {},
+      resolver = resolveShot,
+      { seed = Math.floor(Math.random() * 4294967296) } = {},
+    ) {
+      this.seed = seed >>> 0;
+      this.random = motion.seededRandom(this.seed);
       this.emit = emit;
       this.resolver = resolver;
       this.state = STATES.MAIN_MENU;
@@ -94,8 +58,32 @@
       this.hitAt = -Infinity;
       this.shotAt = -Infinity;
       this.effectTime = 0;
+      this.animationTime = 0;
+      this.lastShot = null;
+      this.rings = Array.from(
+        { length: this.config.rings.count },
+        (_, i) =>
+          new Ring(
+            i + 1,
+            {
+              ...this.config.rings,
+              radius: this.config.rings.radius + i * this.config.rings.spacing,
+            },
+            motion.selectProfile(
+              this.config.rings.difficulty,
+              this.random,
+              this.config.rings.profileFamily,
+            ),
+          ),
+      );
+      this.updateRings();
+    }
+    updateRings() {
+      this.animationTime = this.elapsed * this.config.animationPlaybackSpeed;
+      for (const ring of this.rings) ring.update(this.animationTime);
     }
     newGame() {
+      this.random = motion.seededRandom(this.seed);
       this.level = 1;
       this.lives = 3;
       this.startLevel();
@@ -133,14 +121,31 @@
       this.nextShot = this.elapsed + 1 / this.config.fireRate;
       this.shotAt = this.elapsed;
       this.emit("fire");
+      this.updateRings();
       const result = this.resolver(
         {
           angle: this.angle,
-          origin: { x: Math.cos(this.angle), y: Math.sin(this.angle) },
+          origin: {
+            x: Math.cos(this.angle) * GEOMETRY.muzzleRadius,
+            y: Math.sin(this.angle) * GEOMETRY.muzzleRadius,
+          },
           direction: { x: -Math.cos(this.angle), y: -Math.sin(this.angle) },
         },
-        { bomb: this },
+        { bomb: this, rings: this.rings },
       );
+      this.lastShot = result
+        ? {
+            kind: result.kind,
+            point: result.point,
+            angle: this.angle,
+            time: this.elapsed,
+          }
+        : null;
+      if (result?.kind === "gate" && result.target.damage(this.elapsed)) {
+        this.emit("gateHit");
+        if (result.target.health === 0) this.emit("gateBreak");
+      }
+      if (result?.kind === "wall") this.emit("wallHit");
       if (result?.target === this) {
         this.health = Math.max(0, this.health - result.damage);
         this.hitAt = this.elapsed;
@@ -190,6 +195,7 @@
             180) *
           step;
         this.elapsed = next;
+        this.updateRings();
         this.remaining = Math.max(0, this.config.time - next);
         if (this.remaining <= 1e-9) {
           this.remaining = 0;
