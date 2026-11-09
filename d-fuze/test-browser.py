@@ -175,7 +175,7 @@ with sync_playwright() as p:
     debug=ctx.new_page();debug.goto('http://app-lab.test/small-apps/d-fuze/?debug=1&seed=42')
     expect(debug.locator('#debug')).to_be_visible()
     assert debug.evaluate('game.seed')==42
-    selected=debug.evaluate('game.rings[0].profile.name');debug.reload()
+    selected=debug.evaluate('game.rings[0].profile.name');debug.reload();debug.wait_for_function("typeof game !== 'undefined'")
     assert debug.evaluate('game.rings[0].profile.name')==selected
     expect(touch.locator('#debug')).to_be_hidden()
     assert not errors,errors

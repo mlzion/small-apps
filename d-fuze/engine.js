@@ -35,14 +35,21 @@
         seed = undefined,
         testLevel = null,
         assemblyProfiles = assemblyMotion.defaults(),
+        ringProfiles = undefined,
       } = {},
     ) {
-      if (testLevel) schema.toRuntime(testLevel, seed, assemblyProfiles);
+      if (testLevel)
+        schema.toRuntime(testLevel, seed, assemblyProfiles, ringProfiles);
       this.testLevel = testLevel ? schema.clone(testLevel) : null;
       this.testMode = !!testLevel;
       this.assemblyProfiles = this.testMode
         ? schema.clone(assemblyProfiles)
         : levels.publishedDocument().assemblyProfiles;
+      this.ringProfiles = this.testMode
+        ? ringProfiles
+          ? schema.clone(ringProfiles)
+          : undefined
+        : levels.publishedDocument().ringProfiles;
       this.seedOverride = seed !== undefined;
       this.seed =
         (seed ?? this.testLevel?.seed ?? levels.publishedLevel(1).seed) >>> 0;
@@ -65,6 +72,7 @@
         this.testMode ? this.testLevel : levels.publishedLevel(this.level),
         this.seed,
         this.assemblyProfiles,
+        this.ringProfiles,
       );
       this.config = experimental.config;
       this.remaining = this.config.time;

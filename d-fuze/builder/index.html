@@ -8,15 +8,15 @@
     />
     <title>D::FUZE Level Builder — App Lab</title>
     <link rel="icon" href="../../assets/favicon.svg" type="image/svg+xml" />
-    <link rel="stylesheet" href="builder.css?v=assembly45" />
-    <script src="../assembly.js?v=assembly45" defer></script>
-    <script src="../motion.js?v=assembly45" defer></script>
-    <script src="../experimental-motion.js?v=assembly45" defer></script>
+    <link rel="stylesheet" href="builder.css?v=publish-json" />
+    <script src="../assembly.js?v=publish-json" defer></script>
+    <script src="../motion.js?v=publish-json" defer></script>
+    <script src="../experimental-motion.js?v=publish-json" defer></script>
     <script src="../rings.js" defer></script>
-    <script src="../level-schema.js?v=assembly45" defer></script>
-    <script src="../published-levels.js?v=assembly45" defer></script>
-    <script src="assembly-editor.js?v=assembly45" defer></script>
-    <script src="builder.js?v=assembly45" defer></script>
+    <script src="../level-schema.js?v=publish-json" defer></script>
+    <script src="../levels.js?v=publish-json" defer></script>
+    <script src="assembly-editor.js?v=publish-json" defer></script>
+    <script src="builder.js?v=publish-json" defer></script>
   </head>
   <body>
     <dialog id="access-dialog" aria-labelledby="access-title">
@@ -46,9 +46,9 @@
       </p>
       <nav aria-label="Builder sections">
         <a href="#levels-section">Levels</a><a href="#rings-section">Rings</a
-        ><a href="#profiles-section">Profiles</a
+        ><a href="#motion-section">Motion Editor</a
         ><a href="#preview-section">Preview / Test</a
-        ><a href="#files-section">Import / Export</a>
+        ><a href="#files-section">Publish / Import</a>
       </nav>
       <p id="status" role="status" aria-live="polite">Ready.</p>
       <section id="validation" aria-labelledby="validation-title">
@@ -97,17 +97,13 @@
           ><button id="new-seed">NEW SEED</button>
         </div>
         <p class="hint">
-          Inside → outside. A family change enables all five of that family's
-          profiles. Alignment timing belongs to the fixed profiles.
+          Inside → outside. Every profile in the assigned family is used for
+          seeded selection. Alignment holds are protected in the motion editor.
         </p>
         <div class="details">
-          <label
-            >Enable assembly rotation<input
-              id="assembly-enabled"
-              type="checkbox" /></label
-          ><label>Assembly profile<select id="assembly-profile"></select></label
+          <label>Assembly profile<select id="assembly-profile"></select></label
           ><label
-            >Assembly playback ×<input
+            >Level assembly rate ×<input
               id="assembly-rate"
               type="number"
               min="0.1"
@@ -121,79 +117,42 @@
           Assembly motion is a separate parent timeline, shared by all rings.
         </p>
       </section>
-      <section id="profiles-section">
-        <h2>03 / Motion Profile Viewer</h2>
+      <section id="motion-section">
+        <h2>03 / Motion Editor</h2>
+        <p class="hint">
+          Ring profiles keep a 10-second cycle and protected zero-angle holds.
+          Boundary transitions are smoothed automatically. Library edits affect
+          every level using that family/profile.
+        </p>
         <div class="toolbar">
           <label
-            >Family<select id="profile-family">
+            >Mode<select id="motion-mode">
+              <option value="ring">Ring Profiles</option>
+              <option value="assembly">Assembly Profiles</option>
+            </select></label
+          ><label id="motion-family-label"
+            >Ring family<select id="motion-family">
               <option value="easy">Easy</option>
               <option value="medium">Medium</option>
               <option value="hard">Hard</option>
             </select></label
-          ><button id="profile-prev" aria-label="Previous profile">←</button
-          ><strong id="profile-title"></strong
-          ><button id="profile-next" aria-label="Next profile">→</button>
-        </div>
-        <p id="profile-windows" class="hint"></p>
-        <div class="profile-visuals">
-          <canvas
-            id="profile-graph"
-            width="700"
-            height="260"
-            role="img"
-            aria-label="Angle versus time graph; shaded alignment holds"
-          ></canvas
-          ><canvas
-            id="profile-ring"
-            width="240"
-            height="240"
-            role="img"
-            aria-label="Animated profile ring"
-          ></canvas>
+          ><label>Profile<select id="motion-profile"></select></label>
         </div>
         <div class="toolbar">
-          <button id="profile-play">PLAY</button
-          ><label
-            >Preview speed<select id="profile-speed">
-              <option value="0.5">0.5×</option>
-              <option value="1" selected>1×</option>
-              <option value="2">2×</option>
-            </select></label
-          ><output id="profile-readout"></output>
-        </div>
-        <label
-          >Timeline (seconds)<input
-            id="profile-time"
-            type="range"
-            min="0"
-            max="10"
-            step="0.01"
-            value="0"
-        /></label>
-      </section>
-      <section id="assembly-section">
-        <h2>Assembly Motion</h2>
-        <p class="hint">
-          Shared library: edits affect every draft level selecting this profile.
-          Ring profiles remain fixed. Key times must start at 0 and end at the
-          duration; changing duration does not stretch keys.
-        </p>
-        <div class="toolbar">
-          <label>Edit profile<select id="assembly-edit-profile"></select></label
-          ><button id="assembly-duplicate">DUPLICATE PROFILE</button
-          ><button id="assembly-new">ADD PROFILE</button
-          ><button id="assembly-delete-profile">DELETE CUSTOM PROFILE</button>
+          <button id="motion-duplicate">DUPLICATE PROFILE</button
+          ><button id="motion-new">ADD PROFILE</button
+          ><button id="motion-delete">DELETE PROFILE</button>
         </div>
         <div class="details">
-          <label>Profile name<input id="assembly-name" maxlength="80" /></label
+          <label>Profile name<input id="motion-name" maxlength="80" /></label
           ><label
             >Cycle duration (s)<input
-              id="assembly-duration"
+              id="motion-duration"
               type="number"
               min="1"
               max="300"
               step="any" /></label
-          ><button id="assembly-add-key">ADD KEYFRAME</button>
+          ><button id="motion-add-key">ADD KEYFRAME</button>
         </div>
         <div class="table-scroll">
           <table>
@@ -201,45 +160,51 @@
               <tr>
                 <th>Time (s)</th>
                 <th>Angle (°)</th>
-                <th>Actions</th>
+                <th>Motion / actions</th>
               </tr>
             </thead>
-            <tbody id="assembly-keys"></tbody>
+            <tbody id="motion-keys"></tbody>
           </table>
         </div>
+        <button id="motion-play">PLAY</button>
+      </section>
+      <section id="profiles-section">
+        <h2>Ring Motion</h2>
+        <strong id="profile-title"></strong>
+        <div class="profile-visuals">
+          <canvas
+            id="profile-graph"
+            width="700"
+            height="210"
+            aria-label="Ring angle graph with protected alignment holds and moving playhead"
+          ></canvas
+          ><canvas
+            id="profile-ring"
+            width="240"
+            height="240"
+            aria-label="Animated ring preview"
+          ></canvas>
+        </div>
+        <output id="profile-readout"></output>
+      </section>
+      <section id="assembly-section">
+        <h2>Assembly Motion</h2>
+        <strong id="assembly-title"></strong>
         <div class="profile-visuals">
           <canvas
             id="assembly-graph"
             width="700"
             height="210"
-            aria-label="Assembly angle versus time graph"
+            aria-label="Assembly angle graph and moving playhead"
           ></canvas
           ><canvas
             id="assembly-animation"
             width="240"
             height="240"
-            aria-label="Animated assembly parent preview"
+            aria-label="Animated assembly preview"
           ></canvas>
         </div>
-        <div class="toolbar">
-          <button id="assembly-play">PLAY</button
-          ><label
-            >Preview speed<select id="assembly-preview-speed">
-              <option value="0.5">0.5×</option>
-              <option value="1" selected>1×</option>
-              <option value="2">2×</option>
-            </select></label
-          ><output id="assembly-readout"></output>
-        </div>
-        <label
-          >Assembly timeline<input
-            id="assembly-time"
-            type="range"
-            min="0"
-            max="25"
-            step=".01"
-            value="0"
-        /></label>
+        <output id="assembly-readout"></output>
       </section>
       <section id="preview-section">
         <h2>04 / Level Preview / Test</h2>
@@ -254,21 +219,12 @@
           <div>
             <p id="assignments"></p>
             <div class="toolbar">
-              <button id="preview-play">PLAY</button
-              ><button id="preview-pause">PAUSE</button
-              ><button id="preview-restart">RESTART</button
-              ><label
-                >Preview speed<select id="preview-speed">
-                  <option value="0.5">0.5×</option>
-                  <option value="1" selected>1×</option>
-                  <option value="2">2×</option>
-                </select></label
-              >
+              <button id="preview-play">PLAY</button>
             </div>
             <p id="preview-readout"></p>
             <p class="hint">
-              Preview speed multiplies the level's playback setting without
-              editing it. Preview has no collisions or damage.
+              Play starts at zero using the level’s configured motion rates.
+              Stop resets to zero. Preview has no collisions or damage.
             </p>
             <button id="test-level" class="primary">TEST LEVEL</button>
             <p id="test-explanation"></p>
@@ -276,25 +232,21 @@
         </div>
       </section>
       <section id="files-section">
-        <h2>05 / Import / Export</h2>
+        <h2>05 / Publish / Import</h2>
         <div class="toolbar">
-          <button id="export-json">EXPORT JSON</button
-          ><button id="export-csv">EXPORT CSV</button
+          <button id="publish">PUBLISH (DOWNLOAD JSON)</button
           ><label class="file-label"
             >IMPORT JSON<input
               id="import-json"
               type="file"
               accept=".json,application/json" /></label
-          ><button id="save-draft">SAVE DRAFT</button
-          ><button id="load-draft">LOAD DRAFT</button
-          ><button id="load-published">LOAD PUBLISHED LEVELS</button
-          ><button id="reset-defaults">RESET TO DEFAULTS</button>
+          ><button id="reload-published">RELOAD PUBLISHED DATA</button>
         </div>
         <p>
-          Drafts are stored only in this browser. They do not sync with GitHub
-          or other devices. JSON contains the full versioned configuration; CSV
-          contains the main level table only. The editor never writes to the
-          repository.
+          Edits stay in memory in this tab. Test Mode opens a separate tab.
+          Publish downloads a complete JSON file; it is not live until Codex
+          installs it and GitHub Pages deploys it. Reloading or closing this
+          editor discards edits. The editor never writes to the repository.
         </p>
       </section>
     </main>

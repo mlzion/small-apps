@@ -36,7 +36,7 @@ with sync_playwright() as p:
             page.locator('#access-code').fill('FUSE-LAB-3')
             page.get_by_role('button',name='OPEN LEVEL BUILDER').click()
         expect(page.locator('#builder')).to_be_visible()
-        expect(page.locator('#level-table tbody tr')).to_have_count(12)
+        expect(page.locator('#level-table tbody tr')).to_have_count(6)
         page.locator('#level-name').fill('Unsaved <ring> & draft')
         timer=page.get_by_role('spinbutton',name='Level 1 Timer (s)',exact=True)
         timer.fill('72');timer.press('Tab')
@@ -50,58 +50,35 @@ with sync_playwright() as p:
         timer.fill('72');timer.press('Tab')
         expect(page.locator('#test-level')).to_be_enabled()
         page.get_by_role('combobox',name='Ring 1 family').select_option('medium')
-        checkboxes=page.locator('#ring-editor input[type=checkbox]')
-        expect(checkboxes).to_have_count(5)
-        for i in range(4): checkboxes.nth(i).uncheck()
-        checkboxes.nth(4).click()
-        expect(checkboxes.nth(4)).to_be_checked()
-        expect(page.locator('#status')).to_contain_text('at least one')
-        # Restore all eligible profiles with a deliberate family change.
-        page.get_by_role('combobox',name='Ring 1 family').select_option('hard')
+        expect(page.locator('#ring-editor input[type=checkbox]')).to_have_count(0)
+        page.get_by_role('combobox',name='Ring 1 gate width').select_option('80')
         page.get_by_role('combobox',name='Ring 1 family').select_option('easy')
-        assert page.locator('#ring-editor input:checked').count()==5
-        page.locator('#profile-family').select_option('hard')
-        expect(page.locator('#profile-title')).to_contain_text('Hard 1 of 5')
-        page.get_by_role('button',name='Next profile',exact=True).click()
-        expect(page.locator('#profile-title')).to_contain_text('Hard 2 of 5')
-        page.get_by_role('button',name='Previous profile',exact=True).click()
-        page.locator('#profile-play').click();page.wait_for_timeout(150)
-        assert page.evaluate('profileTime')>0
-        page.locator('#profile-play').click()
-        page.locator('#profile-time').evaluate("el=>{el.value=4.75;el.dispatchEvent(new Event('input',{bubbles:true}));}")
-        expect(page.locator('#profile-readout')).to_have_text('4.75s / 0.0°')
-        assert len(page.locator('#profile-graph').evaluate('el=>el.toDataURL()'))>3000
-        # Edit a separate assembly profile, keeping the fixed ring profiles intact.
-        page.locator('#assembly-duplicate').click()
-        custom=page.locator('#assembly-edit-profile').input_value()
-        page.locator('#assembly-name').fill('Custom drift');page.locator('#assembly-name').press('Tab')
-        page.get_by_role('spinbutton',name='Assembly key 2 angle',exact=True).fill('32')
-        page.get_by_role('spinbutton',name='Assembly key 2 angle',exact=True).press('Tab')
-        page.locator('#assembly-add-key').click()
-        expect(page.locator('#assembly-keys tr')).to_have_count(7)
-        page.locator('#assembly-keys tr').nth(1).get_by_role('button',name='DELETE KEY').click()
-        expect(page.locator('#assembly-keys tr')).to_have_count(6)
+        # Shared controls edit ring then assembly data; both survive export and Test Mode.
+        page.locator('#motion-duplicate').click()
+        page.locator('#motion-name').fill('Custom ring');page.locator('#motion-name').press('Tab')
+        expect(page.locator('#motion-duration')).to_have_attribute('readonly','')
+        page.get_by_role('textbox',name='Motion key 2 angle',exact=True).fill('32')
+        page.get_by_role('textbox',name='Motion key 2 angle',exact=True).press('Tab')
+        page.get_by_role('button',name='Reverse sign key 2',exact=True).click()
+        expect(page.get_by_role('textbox',name='Motion key 2 angle',exact=True)).to_have_value('-32')
+        page.locator('#motion-play').click();page.wait_for_timeout(120);expect(page.locator('#motion-play')).to_have_text('STOP')
+        page.locator('#motion-play').click();assert page.evaluate('assemblyEditor.time')==0
+        page.locator('#motion-mode').select_option('assembly')
+        page.locator('#motion-duplicate').click()
+        custom=page.locator('#motion-profile').input_value()
+        page.locator('#motion-name').fill('Custom drift');page.locator('#motion-name').press('Tab')
+        page.locator('#motion-add-key').click()
+        expect(page.locator('#motion-keys tr')).to_have_count(7)
+        page.locator('#motion-keys tr').nth(1).get_by_role('button',name='DELETE KEY').click()
         page.locator('#assembly-profile').select_option(custom)
-        page.locator('#assembly-enabled').check()
         page.locator('#assembly-rate').fill('1.4');page.locator('#assembly-rate').press('Tab')
-        page.locator('#assembly-play').click();page.wait_for_timeout(120);page.locator('#assembly-play').click()
-        page.locator('#assembly-time').evaluate("el=>{el.value=12;el.dispatchEvent(new Event('input',{bubbles:true}));}")
-        expect(page.locator('#assembly-readout')).to_contain_text('12.00s')
-        page.locator('#assembly-delete-profile').click()
+        page.locator('#motion-delete').click()
         expect(page.locator('#status')).to_contain_text('before deleting')
-        page.locator('#save-draft').click()
-        expect(page.locator('#status')).to_contain_text('only in this browser')
-        page.locator('#level-name').fill('temporary change')
-        page.locator('#load-draft').click()
-        expect(page.locator('#level-name')).to_have_value('Unsaved <ring> & draft')
         # Downloads contain actual settings and schema metadata.
-        with page.expect_download() as event: page.locator('#export-json').click()
+        with page.expect_download() as event: page.locator('#publish').click()
         exported=json.loads(Path(event.value.path()).read_text())
-        assert exported['version']==2 and len(exported['levels'])==12
+        assert exported['version']==3 and len(exported['levels'])==6
         assert exported['levels'][0]['timer']==72
-        with page.expect_download() as event: page.locator('#export-csv').click()
-        rows=list(csv.reader(io.StringIO(Path(event.value.path()).read_text())))
-        assert len(rows)==13 and 'ringCount' in rows[0]
         old=page.evaluate('JSON.stringify(doc)')
         bad=json.dumps({'version':99}).encode()
         page.locator('#import-json').set_input_files({'name':'bad.json','mimeType':'application/json','buffer':bad})
@@ -110,13 +87,14 @@ with sync_playwright() as p:
         page.locator('#import-json').set_input_files({'name':'levels.json','mimeType':'application/json','buffer':json.dumps(exported).encode()})
         expect(page.locator('#status')).to_contain_text('JSON imported')
         # Add/duplicate/delete/reorder mutate only the document in this browser.
-        page.locator('#duplicate-level').click();expect(page.locator('#level-table tbody tr')).to_have_count(13)
+        page.locator('#duplicate-level').click();expect(page.locator('#level-table tbody tr')).to_have_count(7)
         page.locator('#move-down').click();assert page.evaluate('selected')==2
         page.locator('#move-up').click();assert page.evaluate('selected')==1
-        page.locator('#delete-level').click();expect(page.locator('#level-table tbody tr')).to_have_count(12)
-        page.locator('#add-level').click();expect(page.locator('#level-table tbody tr')).to_have_count(13)
-        page.locator('#delete-level').click();expect(page.locator('#level-table tbody tr')).to_have_count(12)
-        page.get_by_role('button',name='EDIT 10',exact=True).click()
+        page.locator('#delete-level').click();expect(page.locator('#level-table tbody tr')).to_have_count(6)
+        page.locator('#add-level').click();expect(page.locator('#level-table tbody tr')).to_have_count(7)
+        page.locator('#delete-level').click();expect(page.locator('#level-table tbody tr')).to_have_count(6)
+        page.get_by_role('button',name='EDIT 4',exact=True).click()
+        count=page.get_by_role('spinbutton',name='Level 4 Rings',exact=True);count.fill('4');count.press('Tab')
         expect(page.locator('#ring-editor .ring-row')).to_have_count(4)
         expect(page.locator('#test-level')).to_be_disabled()
         expect(page.locator('#test-explanation')).to_contain_text('Phase 5')
@@ -125,18 +103,21 @@ with sync_playwright() as p:
             page.get_by_role('combobox',name=f'Ring {number} family').select_option(family)
         page.locator('#preview-play').click();page.wait_for_timeout(150)
         assert page.evaluate('previewTime')>0
-        page.locator('#preview-pause').click();t=page.evaluate('previewTime')
+        page.locator('#preview-play').click();t=page.evaluate('previewTime')
         page.wait_for_timeout(120);assert page.evaluate('previewTime')==t
-        page.locator('#preview-restart').click();assert page.evaluate('previewTime')==0
+        assert page.evaluate('previewTime')==0
+        count=page.get_by_role('spinbutton',name='Level 4 Rings',exact=True);count.fill('2');count.press('Tab')
         page.get_by_role('button',name='EDIT 1',exact=True).click()
         expected=page.evaluate('JSON.stringify(current())')
-        page.locator('#test-level').click()
+        editor=page
+        with page.expect_popup() as popup: page.locator('#test-level').click()
+        page=popup.value
         expect(page).to_have_url('http://app-lab.test'+prefix+'d-fuze/?test=1')
         expect(page.locator('#test-mode')).to_be_visible()
         assert page.evaluate('game.testMode')
         assert page.evaluate('game.rings[0].profile.family.duration')==10
         page.get_by_role('button',name='START TEST',exact=True).click()
-        page.keyboard.press('Space');assert page.evaluate('game.ammo')==39
+        page.keyboard.press('Space');assert page.evaluate('game.ammo')==23
         page.evaluate("while(game.state==='PLAYING'){game.angle=game.rings[0].gate.angle;game.fire();game.update(.25);}")
         expect(page.get_by_role('button',name='RETRY LEVEL',exact=True)).to_be_visible()
         expect(page.get_by_role('button',name='PLAY NEXT LEVEL',exact=True)).to_have_count(0)
@@ -144,21 +125,23 @@ with sync_playwright() as p:
         page.evaluate('game.nextLevel()');assert page.evaluate('game.level')==before[0]
         page.get_by_role('button',name='RETRY LEVEL',exact=True).click()
         assert page.evaluate('[game.level,game.seed,game.rings[0].profile.id]')==before
-        assert page.evaluate('game.ammo')==40
+        assert page.evaluate('game.ammo')==24
         page.evaluate('game.update(game.config.time+1)')
         expect(page.get_by_role('button',name='RETRY WITH NEW SEED',exact=True)).to_be_visible()
         page.get_by_role('button',name='RETRY WITH NEW SEED',exact=True).click()
         assert page.evaluate('game.seed')!=before[1]
         page.keyboard.press('Escape')
         page.get_by_role('button',name='RETURN TO EDITOR',exact=True).click()
+        page=editor
         expect(page).to_have_url('http://app-lab.test'+prefix+'d-fuze/builder/')
         assert page.evaluate('JSON.stringify(current())')==expected
         # Two-ring Test Mode uses independent edited settings in the real engine.
         page.get_by_role('button',name='EDIT 4',exact=True).click()
-        page.locator('#assembly-enabled').check()
         page.locator('#assembly-rate').fill('1.2');page.locator('#assembly-rate').press('Tab')
         expect(page.locator('#test-level')).to_be_enabled()
-        page.locator('#test-level').click()
+        editor=page
+        with page.expect_popup() as popup: page.locator('#test-level').click()
+        page=popup.value
         page.get_by_role('button',name='START TEST',exact=True).click()
         assert page.evaluate('game.rings.length')==2
         page.keyboard.press('Space')
@@ -172,16 +155,18 @@ with sync_playwright() as p:
         assert page.evaluate('game.rings.map(r=>r.gate.health)')==[2,2]
         page.keyboard.press('Escape')
         page.get_by_role('button',name='RETURN TO EDITOR',exact=True).click()
-        expect(page.locator('#assembly-enabled')).to_be_checked()
+        page=editor
+        expect(page.locator('#assembly-profile')).to_be_visible()
         # Reset for the next hosting-root pass, exercising native confirmation.
         page.once('dialog',lambda d:d.accept())
-        page.locator('#reset-defaults').click()
+        page.locator('#reload-published').click()
         expect(page.locator('#level-name')).to_have_value('Draft 1')
     # Direct Test Mode without a valid transfer must never silently start a normal game.
     page.evaluate("sessionStorage.setItem(DFuzeSchema.TEST_KEY,'{}')")
     page.goto('http://app-lab.test/small-apps/d-fuze/?test=1')
     expect(page.locator('#message')).to_have_text('TEST UNAVAILABLE')
     page.goto('http://app-lab.test/small-apps/d-fuze/')
+    page.wait_for_function('typeof game!=="undefined"')
     assert not page.evaluate('game.testMode')
     assert page.evaluate('game.rings[0].profile.family.duration')==10
     expect(page.locator('#test-mode')).to_be_hidden()
@@ -201,9 +186,11 @@ with sync_playwright() as p:
                 box=b.bounding_box();assert box['height']>=44 and box['width']>=44,(width,height,box)
         phone.screenshot(path=f'/tmp/d-fuze-builder-{width}.png',full_page=True)
     phone.set_viewport_size({'width':320,'height':480})
-    phone.locator('#profile-next').tap();expect(phone.locator('#profile-title')).to_contain_text('2 of 5')
+    phone.locator('#motion-play').tap();phone.locator('#motion-play').tap()
     phone.get_by_role('button',name='EDIT 4',exact=True).tap()
-    phone.locator('#test-level').tap()
+    phoneEditor=phone
+    with phone.expect_popup() as popup: phone.locator('#test-level').tap()
+    phone=popup.value
     expect(phone.locator('#test-mode')).to_be_visible()
     phone.get_by_role('button',name='START TEST',exact=True).tap()
     phone.locator('[data-control=fire]').tap()
@@ -223,9 +210,10 @@ with sync_playwright() as p:
     for b in phone.locator('#actions button').all():
         box=b.bounding_box();assert box['y']>=0 and box['y']+box['height']<=480
     phone.get_by_role('button',name='RETURN TO EDITOR',exact=True).tap()
+    phone=phoneEditor
     expect(phone.locator('#builder')).to_be_visible()
     phone.locator('#lock').tap();expect(phone.locator('#builder')).to_be_hidden();expect(phone.locator('#access-dialog')).to_be_visible()
     assert not errors,errors
     assert not missing,missing
-    print('PASS: root/Pages access gate, level/ring editing, numeric validation, profile viewer/scrub, four-ring animation-only preview, JSON/CSV, import rejection, drafts, row actions, real-game Test Mode/retries/no advance/return, normal legacy isolation, mobile/desktop layouts and touch')
+    print('PASS: root/Pages access gate, level/ring editing, numeric validation, profile viewer, four-ring animation-only preview, validated JSON publishing, import rejection, memory edits, row actions, real-game Test Mode/retries/no advance/return, normal published isolation, mobile/desktop layouts and touch')
     browser.close()

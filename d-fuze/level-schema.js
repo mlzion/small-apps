@@ -10,11 +10,9 @@
   else root.DFuzeSchema = api;
 })(globalThis, (motion, ringSystem, assemblyMotion) => {
   "use strict";
-  const VERSION = 2,
+  const VERSION = 3,
     FORMAT = "d-fuze-levels",
-    TEST_KEY = "d-fuze-test-v1",
-    SESSION_KEY = "d-fuze-editor-session-v1",
-    DRAFT_KEY = "d-fuze-builder-draft-v1";
+    TEST_KEY = "d-fuze-test-v1";
   const FIELDS = {
     timer: { label: "Timer (s)", min: 5, max: 300, step: 1 },
     bombHealth: { label: "Bomb HP", min: 1, max: 100, step: 1 },
@@ -31,7 +29,6 @@
       gateWidth: 100,
       gateHealth: 2,
       family,
-      profiles: motion.eligible(family).map((p) => p.id),
     };
   }
   function defaults() {
@@ -40,6 +37,7 @@
       version: VERSION,
       motionLibrary: motion.LIBRARY_ID,
       assemblyProfiles: assemblyMotion.defaults(),
+      ringProfiles: motion.defaults(),
       levels: Array.from({ length: 12 }, (_, i) => {
         const group = Math.floor(i / 3),
           stage = i % 3,
@@ -50,7 +48,7 @@
           ];
           return {
             ...defaultRing(r + 1, family),
-            gateWidth: 110 - stage * 15 - r * 4,
+            gateWidth: Math.round((110 - stage * 15 - r * 4) / 10) * 10,
             gateHealth: 2 + stage,
           };
         });
@@ -66,7 +64,6 @@
           playbackSpeed: 1 + stage * 0.05,
           seed: 4200 + i,
           assembly: {
-            enabled: false,
             profileId: "gentle-drift",
             playbackSpeed: 1,
           },
@@ -79,6 +76,7 @@
     level,
     label = "Level",
     assemblyProfiles = assemblyMotion.defaults(),
+    ringProfiles = motion.defaults(),
   ) {
     const errors = [];
     const fail = (s) => errors.push(`${label}: ${s}`);
@@ -116,9 +114,8 @@
       fail("seed must be a whole number from 0 to 4294967295.");
     if (
       !level.assembly ||
-      typeof level.assembly.enabled !== "boolean" ||
       Object.keys(level.assembly).some(
-        (k) => !["enabled", "profileId", "playbackSpeed"].includes(k),
+        (k) => !["profileId", "playbackSpeed"].includes(k),
       ) ||
       !number(level.assembly.playbackSpeed, 0.1, 4) ||
       !assemblyProfiles.some((p) => p?.id === level.assembly.profileId)
@@ -135,42 +132,18 @@
           return;
         }
         for (const k of Object.keys(ring))
-          if (
-            ![
-              "number",
-              "gateWidth",
-              "gateHealth",
-              "family",
-              "profiles",
-            ].includes(k)
-          )
+          if (!["number", "gateWidth", "gateHealth", "family"].includes(k))
             fail(`Ring ${i + 1}: unknown field “${k}”.`);
         if (ring.number !== i + 1)
           fail("rings must be numbered consecutively from the inside outward.");
-        if (!number(ring.gateWidth, 10, 180))
-          fail(`Ring ${i + 1}: gate width must be 10–180 degrees.`);
+        if (!number(ring.gateWidth, 10, 120) || ring.gateWidth % 10 !== 0)
+          fail(
+            `Ring ${i + 1}: gate width must be 10–120 degrees in 10-degree steps.`,
+          );
         if (!number(ring.gateHealth, 1, 50, true))
           fail(`Ring ${i + 1}: gate health must be 1–50.`);
         if (!Object.hasOwn(motion.FAMILIES, ring.family))
           fail(`Ring ${i + 1}: unknown motion family.`);
-        if (
-          !Array.isArray(ring.profiles) ||
-          ring.profiles.length === 0 ||
-          ring.profiles.length > 5
-        ) {
-          fail(`Ring ${i + 1}: enable at least one of its five profiles.`);
-          return;
-        }
-        if (new Set(ring.profiles).size !== ring.profiles.length)
-          fail(`Ring ${i + 1}: duplicate profile IDs.`);
-        for (const id of ring.profiles)
-          if (
-            typeof id !== "string" ||
-            motion.BY_ID.get(id)?.difficulty !== ring.family
-          )
-            fail(
-              `Ring ${i + 1}: profile “${String(id)}” does not belong to ${ring.family}.`,
-            );
       });
     if (errors.length === 0) {
       const minimumHits =
@@ -202,6 +175,7 @@
           "motionLibrary",
           "levels",
           "assemblyProfiles",
+          "ringProfiles",
         ].includes(k)
       )
         errors.push(`Unknown document field “${k}”.`);
@@ -212,6 +186,7 @@
     )
       return [...errors, "Provide 1–200 levels."];
     errors.push(...assemblyMotion.validateLibrary(doc.assemblyProfiles));
+    errors.push(...motion.validateLibrary(doc.ringProfiles));
     doc.levels.forEach((l, i) =>
       errors.push(
         ...validateLevel(
@@ -230,7 +205,12 @@
     doc = migrate(doc);
     const errors = validateDocument(doc);
     if (errors.length) throw new Error(errors.join("\n"));
-    return clone(doc);
+    const result = clone(doc);
+    if (doc.migrationNotes)
+      Object.defineProperty(result, "migrationNotes", {
+        value: doc.migrationNotes,
+      });
+    return result;
   }
   function importJSON(text) {
     if (typeof text !== "string" || text.length > 1000000)
@@ -246,26 +226,15 @@
   function exportJSON(doc) {
     return JSON.stringify(requireValid(doc), null, 2);
   }
-  function exportCSV(doc) {
-    requireValid(doc);
-    const columns = ["number", "name", ...Object.keys(FIELDS), "seed"];
-    const cell = (v) => {
-      let text = String(v ?? "");
-      if (/^[=+@\-\t\r]/.test(text)) text = "'" + text;
-      return `"${text.replace(/"/g, '""')}"`;
-    };
-    return [
-      columns.join(","),
-      ...doc.levels.map((l) => columns.map((k) => cell(l[k])).join(",")),
-    ].join("\r\n");
-  }
   function toRuntime(
     level,
     seed = level.seed,
     assemblyProfiles = assemblyMotion.defaults(),
+    ringProfiles = motion.defaults(),
   ) {
     const errors = [
       ...assemblyMotion.validateLibrary(assemblyProfiles),
+      ...motion.validateLibrary(ringProfiles),
       ...validateLevel(level, "Level", assemblyProfiles),
     ];
     if (errors.length) throw new Error(errors.join("\n"));
@@ -305,17 +274,22 @@
         gateArc: (r.gateWidth * Math.PI) / 180,
         gateHealth: r.gateHealth,
       })),
-      profiles: motion.assignProfiles(level, seed),
+      profiles: motion.assignProfiles(level, seed, ringProfiles),
     };
   }
-  function testPayload(level, assemblyProfiles = assemblyMotion.defaults()) {
-    toRuntime(level, level.seed, assemblyProfiles);
+  function testPayload(
+    level,
+    assemblyProfiles = assemblyMotion.defaults(),
+    ringProfiles = motion.defaults(),
+  ) {
+    toRuntime(level, level.seed, assemblyProfiles, ringProfiles);
     return JSON.stringify({
       format: "d-fuze-test",
       version: VERSION,
       motionLibrary: motion.LIBRARY_ID,
       level: clone(level),
       assemblyProfiles: clone(assemblyProfiles),
+      ringProfiles: clone(ringProfiles),
     });
   }
   function readTestData(text) {
@@ -330,7 +304,7 @@
     if (
       !value ||
       value.format !== "d-fuze-test" ||
-      ![1, 2].includes(value.version) ||
+      ![1, 2, 3].includes(value.version) ||
       Object.keys(value).some(
         (k) =>
           ![
@@ -339,6 +313,7 @@
             "motionLibrary",
             "level",
             "assemblyProfiles",
+            "ringProfiles",
           ].includes(k),
       )
     )
@@ -348,17 +323,29 @@
       version: value.version,
       motionLibrary: value.motionLibrary,
       levels: [value.level],
-      ...(value.version === 2
+      ...(value.version === 3 ? { ringProfiles: value.ringProfiles } : {}),
+      ...(value.version >= 2
         ? { assemblyProfiles: value.assemblyProfiles }
         : {}),
     });
-    toRuntime(doc.levels[0], doc.levels[0].seed, doc.assemblyProfiles);
-    return { level: doc.levels[0], assemblyProfiles: doc.assemblyProfiles };
+
+    toRuntime(
+      doc.levels[0],
+      doc.levels[0].seed,
+      doc.assemblyProfiles,
+      doc.ringProfiles,
+    );
+    return {
+      level: doc.levels[0],
+      assemblyProfiles: doc.assemblyProfiles,
+      ringProfiles: doc.ringProfiles,
+      migrationNotes: doc.migrationNotes ?? [],
+    };
   }
   function readTest(text) {
     return readTestData(text).level;
   }
-  function migrate(doc) {
+  function migrateV1(doc) {
     if (!doc || doc.version !== 1) return doc;
     if (
       doc.format !== FORMAT ||
@@ -371,7 +358,7 @@
     )
       throw new Error("Invalid version 1 configuration.");
     const next = clone(doc);
-    next.version = VERSION;
+    next.version = 2;
     next.assemblyProfiles = assemblyMotion.defaults();
     for (const l of next.levels) {
       const a = l?.assembly;
@@ -402,20 +389,90 @@
     }
     return next;
   }
-  function saveDraft(storage, doc) {
-    storage.setItem(DRAFT_KEY, exportJSON(doc));
-  }
-  function loadDraft(storage) {
-    const text = storage.getItem(DRAFT_KEY);
-    if (!text) throw new Error("No draft saved in this browser.");
-    return importJSON(text);
+  function migrate(doc) {
+    if (!doc || ![1, 2].includes(doc.version)) return doc;
+    if (
+      doc.version === 2 &&
+      (doc.format !== FORMAT ||
+        doc.motionLibrary !== motion.LIBRARY_ID ||
+        !Array.isArray(doc.levels) ||
+        doc.levels.length > 200 ||
+        Object.keys(doc).some(
+          (k) =>
+            ![
+              "format",
+              "version",
+              "motionLibrary",
+              "levels",
+              "assemblyProfiles",
+            ].includes(k),
+        ))
+    )
+      throw Error("Invalid version 2 configuration.");
+    const notes = [];
+    let next = doc.version === 1 ? migrateV1(doc) : clone(doc);
+    if (next.version !== 2) throw Error("Unsupported configuration version.");
+    const libraryErrors = assemblyMotion.validateLibrary(next.assemblyProfiles);
+    if (libraryErrors.length) throw Error(libraryErrors.join("\n"));
+    next.version = VERSION;
+    next.ringProfiles = motion.defaults();
+    for (const l of next.levels) {
+      if (
+        !l.assembly ||
+        Object.keys(l.assembly).some(
+          (k) => !["enabled", "profileId", "playbackSpeed"].includes(k),
+        ) ||
+        (l.assembly.enabled !== undefined &&
+          typeof l.assembly.enabled !== "boolean")
+      )
+        throw Error("Invalid legacy assembly configuration.");
+      delete l.assembly.enabled;
+      if (!l.assembly.profileId) {
+        l.assembly.profileId = "gentle-drift";
+        if (!next.assemblyProfiles.some((p) => p.id === "gentle-drift"))
+          next.assemblyProfiles.push(assemblyMotion.defaults()[0]);
+        notes.push(`Level ${l.number}: selected default Gentle Drift.`);
+      }
+      if (l.assembly.playbackSpeed === undefined) l.assembly.playbackSpeed = 1;
+      if (!Array.isArray(l.rings)) throw Error("Missing legacy ring settings.");
+      for (const r of l.rings) {
+        if (
+          !r ||
+          !Array.isArray(r.profiles) ||
+          !r.profiles.length ||
+          r.profiles.length > 5 ||
+          new Set(r.profiles).size !== r.profiles.length ||
+          r.profiles.some((id) => motion.BY_ID.get(id)?.difficulty !== r.family)
+        )
+          throw Error("Invalid legacy ring profile selection.");
+        if (
+          !Number.isFinite(r.gateWidth) ||
+          r.gateWidth < 10 ||
+          r.gateWidth > 180
+        )
+          throw Error("Invalid legacy gate width.");
+        const width = Math.min(
+          120,
+          Math.max(10, Math.round(r.gateWidth / 10) * 10),
+        );
+        if (width !== r.gateWidth)
+          notes.push(
+            `Level ${l.number}, Ring ${r.number}: gate width ${r.gateWidth}° adjusted to ${width}°.`,
+          );
+        r.gateWidth = width;
+        delete r.profiles;
+      }
+    }
+    notes.push(
+      "Migrated to schema v3: all family profiles are eligible; assembly motion is active on every level.",
+    );
+    Object.defineProperty(next, "migrationNotes", { value: notes });
+    return next;
   }
   return {
     VERSION,
     FORMAT,
     TEST_KEY,
-    SESSION_KEY,
-    DRAFT_KEY,
     FIELDS,
     clone,
     defaultRing,
@@ -425,13 +482,10 @@
     requireValid,
     importJSON,
     exportJSON,
-    exportCSV,
     toRuntime,
     testPayload,
     readTest,
     readTestData,
     migrate,
-    saveDraft,
-    loadDraft,
   };
 });

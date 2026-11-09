@@ -64,7 +64,7 @@ for (const q of [
 ])
   assert(A.validateProfile(q).length);
 const doc = S.defaults();
-doc.levels[3].assembly = { enabled: true, profileId: p.id, playbackSpeed: 1.7 };
+doc.levels[3].assembly = { profileId: p.id, playbackSpeed: 1.7 };
 doc.levels[3].playbackSpeed = 1.2;
 assert.deepEqual(S.importJSON(S.exportJSON(doc)), doc);
 const g = new Game(undefined, undefined, {
@@ -98,17 +98,27 @@ near(g.assembly.angle, 0);
 const old = S.clone(doc);
 old.version = 1;
 delete old.assemblyProfiles;
-old.levels.forEach((l) => (l.assembly = { enabled: false }));
+delete old.ringProfiles;
+old.levels.forEach((l) => {
+  l.assembly = { enabled: false };
+  l.rings.forEach((r) => (r.profiles = M.eligible(r.family).map((p) => p.id)));
+});
 old.levels[3].assembly = { enabled: true, speed: -30 };
 const migrated = S.importJSON(JSON.stringify(old));
-assert.equal(migrated.version, 2);
-assert.deepEqual(migrated.levels[3].rings, doc.levels[3].rings);
+assert.equal(migrated.version, 3);
+assert.deepEqual(
+  migrated.levels[3].rings,
+  doc.levels[3].rings.map((r) => ({
+    ...r,
+    gateWidth: Math.round(r.gateWidth / 10) * 10,
+  })),
+);
 const cp = migrated.assemblyProfiles.find(
   (p) => p.id === migrated.levels[3].assembly.profileId,
 );
 near(A.sampleProfile(cp, 51), (-1530 * Math.PI) / 180);
 const storage = { getItem: () => JSON.stringify(old) };
-assert.deepEqual(S.loadDraft(storage), migrated);
+assert.deepEqual(S.importJSON(storage.getItem()), migrated);
 assert.throws(() => S.importJSON(JSON.stringify({ ...doc, version: 99 })));
 const bad = S.clone(doc);
 bad.levels[0].assembly.profileId = "missing";
@@ -133,7 +143,7 @@ for (let n = 1; n <= 6; n++) {
     published.rings.map((r) => r.gateHealth),
   );
 }
-const published = require("./published-levels.js"),
+const published = require("./published-levels.json"),
   saved = published.levels[0].timer;
 published.levels[0].timer = 0;
 assert.throws(() => new Game(), /Timer/);
@@ -144,7 +154,7 @@ console.log(
   "PASS: published source/no overrides/invalid rejection, parent/world collisions, independent clocks, no overshoot/C1 loops/unwrapped turns, keys/library validation, JSON/draft v1 migration, pause/retry, unchanged 10-second library",
 );
 
-const source = require("./published-levels.js"),
+const source = require("./published-levels.json"),
   original = S.clone(source.levels[0]);
 try {
   Object.assign(source.levels[0], {
@@ -155,7 +165,7 @@ try {
     fireRate: 5,
     seed: 123,
   });
-  Object.assign(source.levels[0].rings[0], { gateWidth: 77, gateHealth: 3 });
+  Object.assign(source.levels[0].rings[0], { gateWidth: 70, gateHealth: 3 });
   const live = new Game();
   live.newGame();
   assert.equal(live.config.time, 89);
@@ -164,7 +174,7 @@ try {
   assert.equal(live.config.turretSpeed, 90);
   assert.equal(live.config.fireRate, 5);
   assert.equal(live.seed, 123);
-  near(live.rings[0].gateArc, (77 * Math.PI) / 180);
+  near(live.rings[0].gateArc, (70 * Math.PI) / 180);
   assert.equal(live.rings[0].gate.maxHealth, 3);
   source.levels[0].timer = 0;
   const test = new Game(undefined, undefined, {

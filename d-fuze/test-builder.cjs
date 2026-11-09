@@ -86,18 +86,17 @@ invalid((d) => (d.levels[0].ringCount = 5), "Rings");
 invalid((d) => (d.levels[0].rings[0].gateWidth = 0), "gate width");
 invalid((d) => (d.levels[0].rings[0].gateHealth = -1), "gate health");
 invalid((d) => (d.levels[0].rings[0].family = "legacy"), "family");
-invalid((d) => (d.levels[0].rings[0].profiles = []), "enable at least");
-invalid(
-  (d) => (d.levels[0].rings[0].profiles = ["hard-01"]),
-  "does not belong",
-);
+invalid((d) => (d.levels[0].rings[0].profiles = []), "unknown");
 invalid((d) => (d.levels[0].ammo = 1), "ammo must");
 invalid((d) => {
   d.levels[0].timer = 5;
   d.levels[0].fireRate = 1;
   d.levels[0].bombHealth = 20;
 }, "timer is too short");
-invalid((d) => (d.levels[0].assembly = {enabled:true,speed:999}), "assembly");
+invalid(
+  (d) => (d.levels[0].assembly = { enabled: true, speed: 999 }),
+  "assembly",
+);
 invalid((d) => (d.levels[0].seed = -1), "seed");
 invalid((d) => (d.levels[1].number = 1), "unique");
 invalid((d) => (d.levels[0].rings[0].keyframes = []), "unknown");
@@ -110,39 +109,9 @@ for (const text of [
 ])
   assert.throws(() => S.importJSON(text));
 assert.throws(() => S.importJSON(" ".repeat(1000001)));
-const storage = {
-  data: new Map(),
-  setItem(k, v) {
-    this.data.set(k, v);
-  },
-  getItem(k) {
-    return this.data.get(k) ?? null;
-  },
-};
-S.saveDraft(storage, defaults);
-assert.deepEqual(S.loadDraft(storage), defaults);
-assert.throws(() =>
-  S.saveDraft(
-    {
-      setItem() {
-        throw Error("Quota full");
-      },
-    },
-    defaults,
-  ),
-);
-assert.throws(() =>
-  S.loadDraft({
-    getItem() {
-      return null;
-    },
-  }),
-);
-const csv = S.exportCSV(defaults);
-assert(csv.includes("turretSpeed"));
-const formula = S.clone(defaults);
-formula.levels[0].name = "=1+1";
-assert(S.exportCSV(formula).includes("'=1+1"));
+assert.equal(S.saveDraft, undefined);
+assert.equal(S.loadDraft, undefined);
+assert.equal(S.exportCSV, undefined);
 const level = defaults.levels[0];
 assert.deepEqual(S.readTest(S.testPayload(level)), level);
 assert.throws(() => S.testPayload(defaults.levels[6]));
@@ -170,7 +139,7 @@ g.retry();
 assert.equal(g.state, "PLAYING");
 assert.equal(g.elapsed, 0);
 assert.equal(g.rings[0].gate.health, level.rings[0].gateHealth);
-assert.equal(g.rings[0].profile, profile);
+assert.equal(g.rings[0].profile.id, profile.id);
 g.seed = 90000;
 g.transition("LEVEL_FAILED");
 g.retry();
@@ -179,12 +148,22 @@ assert.equal(g.lives, 3);
 assert.throws(
   () => new Game(undefined, undefined, { testLevel: defaults.levels[6] }),
 );
-for(let number=1;number<=6;number++){const g=new Game(undefined,undefined,{seed:42});g.level=number;g.startLevel();assert(g.rings.every(r=>r.profile.family.duration===10&&M.BY_ID.has(r.profile.id)));assert.equal(g.rings.length,number<=3?1:2);}
+for (let number = 1; number <= 6; number++) {
+  const g = new Game(undefined, undefined, { seed: 42 });
+  g.level = number;
+  g.startLevel();
+  assert(
+    g.rings.every(
+      (r) => r.profile.family.duration === 10 && M.BY_ID.has(r.profile.id),
+    ),
+  );
+  assert.equal(g.rings.length, number <= 3 ? 1 : 2);
+}
 const normal = new Game(undefined, undefined, { seed: 42 });
 normal.newGame();
 assert(!normal.testMode);
 assert.equal(normal.rings[0].profile.family.duration, 10);
 assert.equal(normal.config.time, 48);
 console.log(
-  "PASS: 15 fixed profiles, exact holds, 125 mixed-family combinations, interpolation/loops/playback ratios, deterministic assignment, schema/rejections, JSON/CSV, drafts, Test Mode retry/no advance, multi-ring test rejection, published 10-second profiles",
+  "PASS: 15 starter profiles, exact holds, 125 mixed-family combinations, interpolation/loops/playback ratios, deterministic assignment, schema/rejections, JSON, removed draft helpers, Test Mode retry/no advance, multi-ring test rejection, published 10-second profiles",
 );

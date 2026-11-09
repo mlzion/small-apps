@@ -84,7 +84,6 @@ for (const family1 of ["easy", "medium", "hard"])
     level.rings[0] = S.defaultRing(1, family1);
     level.rings[1] = S.defaultRing(2, family2);
     level.assembly = {
-      enabled: true,
       profileId: "gentle-drift",
       playbackSpeed: 1,
     };
