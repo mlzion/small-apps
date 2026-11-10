@@ -3,6 +3,7 @@
 const {World, Input, W, H, defaults} = LaserBreak;
 const world = new World();
 world.start();
+const audio = new LaserSound.LaserAudio();
 const canvas = document.querySelector('canvas'), ctx = canvas.getContext('2d');
 const arena = document.querySelector('#arena'), status = document.querySelector('#status');
 const pads = {left: document.querySelector('#left-pad'), right: document.querySelector('#right-pad')};
@@ -14,44 +15,83 @@ const perfOutput = document.querySelector('#performance');
 const fullscreenButton = document.querySelector('#fullscreen');
 const viewStatus = document.querySelector('#view-status');
 const portrait = matchMedia('(orientation: portrait)');
-const input = new Input((a, b) => {world.fire(a, b); needsDraw = true;},
-  () => world.ready() && setup.hidden, () => world.settings.mode);
+const input = new Input((a, b) => {
+  if (world.fire(a, b)) audio.playShot(world.lastShotSounds);
+  needsDraw = true;
+}, () => world.ready());
 let needsDraw = true, fieldBox, previous, lastRender, lastHUD = -Infinity, lastDiagnostics = 0;
 let focusBeforeRotation;
 const diagnostics = {frameMs: 16.7, renderMs: 0, updateMs: 0, objects: 0, fps: 60, pixels: 0};
 const pacing = {slow: 0, fast: 0};
 const controls = [
   ['cooldown', 'Laser cooldown', 0, 2, .05, 's'],
+  ['blastMultiplier', 'Blast diameter multiplier', 1, 5, .5, '×'],
   ['targetSize', 'Target diameter', 12, 70, 2, 'px'],
   ['targetSpeed', 'Target falling speed', 0, 180, 5, 'px/s'],
   ['barLength', 'Bar length', 30, 220, 5, 'px'],
   ['barSpeed', 'Bar falling speed', 0, 180, 5, 'px/s'],
   ['barRotation', 'Bar rotation speed', -240, 240, 5, '°/s'],
-  ['density', 'Object density', 0, 100, 1, '%']
+  ['density', 'Object density', 0, 100, 1, '%'],
+  ['barPercentage', 'Bar Percentage', 0, 100, 10, '%']
 ];
 const sliders = new Map();
 for (const [key, label, min, max, step, unit] of controls) {
   const row = document.createElement('div');
+  row.className = 'setting-row';
   row.innerHTML = `<label class="slider-label" for="${key}">${label}<output for="${key}"></output></label><input id="${key}" type="range" min="${min}" max="${max}" step="${step}">`;
   document.querySelector('#sliders').append(row);
   const slider = row.querySelector('input'), output = row.querySelector('output');
   sliders.set(key, {slider, output, unit});
+  installTouchSlider(slider);
   slider.addEventListener('input', () => {
     world.configure(key, Number(slider.value));
     output.value = `${slider.value}${unit}`; // Only the changed slider; never rewrite the others mid-drag.
   });
+}
+// Touch sliders commit only a tap or deliberate horizontal drag, never a vertical swipe.
+function installTouchSlider(slider) {
+  let gesture;
+  function adjust(x) {
+    const box = gesture.box, inset = 14;
+    const fraction = Math.max(0, Math.min(1, (x - box.left - inset) / (box.width - inset * 2)));
+    const min = Number(slider.min), max = Number(slider.max), step = Number(slider.step);
+    slider.value = min + Math.round(fraction * (max - min) / step) * step;
+    slider.dispatchEvent(new Event('input', {bubbles: true}));
+  }
+  // Disable the range's eager native touch edit; pointer intent below owns touch input.
+  slider.addEventListener('touchstart', e => e.preventDefault(), {passive: false});
+  slider.addEventListener('pointerdown', e => {
+    if (e.pointerType !== 'touch') return;
+    e.preventDefault();
+    gesture = {id: e.pointerId, x: e.clientX, y: e.clientY, scrollTop: setup.scrollTop, box: slider.getBoundingClientRect(), intent: null};
+    slider.setPointerCapture(e.pointerId);
+  });
+  slider.addEventListener('pointermove', e => {
+    if (!gesture || gesture.id !== e.pointerId) return;
+    if (setup.hidden) {gesture = null; return;}
+    const dx = Math.abs(e.clientX - gesture.x), dy = Math.abs(e.clientY - gesture.y);
+    if (!gesture.intent && Math.max(dx, dy) > 8) gesture.intent = dx > dy ? 'adjust' : 'scroll';
+    if (gesture.intent === 'adjust') {e.preventDefault(); adjust(e.clientX);}
+    else if (gesture.intent === 'scroll') setup.scrollTop = gesture.scrollTop - (e.clientY - gesture.y);
+  });
+  slider.addEventListener('pointerup', e => {
+    if (!gesture || gesture.id !== e.pointerId) return;
+    if (setup.hidden) {gesture = null; return;}
+    if (gesture.intent !== 'scroll') {adjust(e.clientX); slider.focus({preventScroll: true});}
+    gesture = null;
+  });
+  for (const event of ['pointercancel', 'lostpointercapture']) slider.addEventListener(event, () => {gesture = null;});
 }
 function sync() {
   for (const [key, {slider, output, unit}] of sliders) {
     slider.value = world.settings[key];
     output.value = `${world.settings[key]}${unit}`;
   }
-  document.querySelector('#mode').value = world.settings.mode;
+  document.querySelector('#sound').checked = world.settings.sound;
+  audio.setEnabled(world.settings.sound);
   document.querySelector('#debug').checked = world.settings.debug;
   syncSession();
-  document.querySelector('#hint').textContent = world.settings.mode === 'touch'
-    ? 'Touch both pads to fire · release both to re-arm'
-    : 'Hold both pads · slide to aim · release to fire';
+  document.querySelector('#hint').textContent = 'Hold both pads · slide to aim · release to fire';
 }
 function syncSession() {
   pauseButton.textContent = world.paused ? 'Resume' : 'Pause';
@@ -60,18 +100,42 @@ function syncSession() {
   lastHUD = -Infinity;
   needsDraw = true;
 }
+function syncSurface() {
+  const blocked = world.orientationBlocked || world.settingsOpen;
+  arena.inert = blocked;
+  document.querySelector('header').inert = blocked;
+  setup.inert = world.orientationBlocked;
+}
 function panel(open) {
+  if (open === world.settingsOpen) return;
+  if (open && world.orientationBlocked) return;
+  cancelInput(); audio.stop(); resetClock();
+  world.settingsOpen = open; // Separate from explicit paused/running state; nothing to rewind on close.
   setup.hidden = !open;
   toggle.setAttribute('aria-expanded', String(open));
-  if (open) cancelInput();
+  syncSurface();
+  if (open) {setup.scrollTop = 0; document.querySelector('#close-setup').focus({preventScroll: true});}
+  else if (!world.orientationBlocked) toggle.focus({preventScroll: true});
+  needsDraw = true;
 }
-toggle.onclick = () => panel(setup.hidden);
-document.querySelector('#close-setup').onclick = () => {panel(false); toggle.focus();};
+toggle.addEventListener('pointerdown', e => {if (e.button === 0) {e.preventDefault(); panel(true);}});
+toggle.onclick = () => panel(true);
+const closeSetup = document.querySelector('#close-setup');
+closeSetup.addEventListener('pointerdown', e => {if (e.button === 0) {e.preventDefault(); panel(false);}});
+closeSetup.onclick = () => panel(false);
 document.addEventListener('keydown', e => {
-  if (e.code === 'Escape' && !setup.hidden) {panel(false); toggle.focus();}
+  if (e.code === 'Escape' && !setup.hidden) {e.preventDefault(); panel(false);}
 });
-document.querySelector('#mode').onchange = e => {
-  world.configure('mode', e.target.value); cancelInput(); sync();
+setup.addEventListener('keydown', e => {
+  if (e.key !== 'Tab') return;
+  const controls = Array.from(setup.querySelectorAll('button, input'));
+  const first = controls[0], last = controls[controls.length - 1];
+  if (e.shiftKey && document.activeElement === first) {e.preventDefault(); last.focus();}
+  else if (!e.shiftKey && document.activeElement === last) {e.preventDefault(); first.focus();}
+});
+document.querySelector('#sound').onchange = e => {
+  world.configure('sound', e.target.checked); audio.setEnabled(e.target.checked);
+  if (e.target.checked) audio.unlock();
 };
 document.querySelector('#debug').onchange = e => {
   world.configure('debug', e.target.checked); needsDraw = true;
@@ -82,15 +146,15 @@ document.querySelector('#diagnostics').onchange = e => {
 };
 pauseButton.onclick = () => {
   if (world.orientationBlocked || !world.running) return;
-  world.paused = !world.paused; cancelInput(); syncSession(); resetClock();
+  world.paused = !world.paused; audio.stop(); cancelInput(); syncSession(); resetClock();
 };
 sessionButton.onclick = () => {
   if (world.orientationBlocked) return;
-  world.running ? world.stop() : world.start(); cancelInput(); syncSession(); resetClock();
+  world.running ? world.stop() : world.start(); audio.stop(); cancelInput(); syncSession(); resetClock();
 };
-document.querySelector('#clear').onclick = () => {world.clear(); cancelInput(); needsDraw = true;};
+document.querySelector('#clear').onclick = () => {world.clear(); audio.stop(); cancelInput(); needsDraw = true;};
 document.querySelector('#reset').onclick = () => {
-  world.settings = {...defaults}; world.start(); cancelInput(); sync(); resetClock();
+  world.settings = {...defaults}; world.start(); audio.stop(); cancelInput(); sync(); resetClock();
 };
 function refreshPads() {
   const [left, right] = input.pair();
@@ -160,7 +224,8 @@ fullscreenButton.onclick = async () => {
     viewStatus.hidden = false;
   } finally {fullscreenButton.disabled = false; syncFullscreen();}
 };
-document.addEventListener('pointerdown', tryLandscapeLock, {passive: true});
+document.addEventListener('pointerdown', () => {tryLandscapeLock(); if (!world.orientationBlocked) audio.unlock();}, {passive: true});
+document.addEventListener('keydown', () => {if (!world.orientationBlocked) audio.unlock();});
 document.addEventListener('fullscreenchange', () => {
   cancelInput(); resetClock(); syncFullscreen(); syncOrientation(); resize();
   if (document.fullscreenElement) tryLandscapeLock();
@@ -196,6 +261,7 @@ document.addEventListener('keyup', e => {
 });
 function resetClock() {previous = lastRender = undefined;}
 function suspend() {
+  audio.stop();
   if (world.running) world.paused = true;
   cancelInput(); syncSession(); resetClock();
 }
@@ -208,10 +274,12 @@ function syncOrientation() {
   cancelInput(); resetClock();
   if (blocked) {focusBeforeRotation = document.activeElement; panel(false);}
   // Freeze the session clock without changing the user's explicit Pause/Stop state.
-  for (const element of [arena, document.querySelector('header'), setup]) element.inert = blocked;
+  syncSurface();
+  if (blocked) audio.stop();
   overlay.hidden = !blocked;
   if (blocked) overlay.focus({preventScroll: true});
-  else if (focusBeforeRotation?.isConnected) focusBeforeRotation.focus({preventScroll: true});
+  else if (focusBeforeRotation?.isConnected && focusBeforeRotation.getClientRects().length) focusBeforeRotation.focus({preventScroll: true});
+  else toggle.focus({preventScroll: true});
   needsDraw = true;
 }
 portrait.addEventListener('change', () => {syncOrientation(); resize();});
@@ -253,7 +321,7 @@ function ring(x, y, r, color) {
 function draw() {
   ctx.clearRect(0, 0, W, world.height);
   const [a, b] = input.pair();
-  if (world.settings.mode === 'release' && a && b && !input.locked) {
+  if (a && b && !input.locked) {
     ctx.setLineDash([5, 8]); line({x: 0, y: a.y}, {x: W, y: b.y}, '#a2eee944'); ctx.setLineDash([]);
   }
   for (const o of world.objects) {
@@ -346,7 +414,7 @@ function frame(now) {
   let t = performance.now();
   world.step(elapsed);
   diagnostics.updateMs += (performance.now() - t - diagnostics.updateMs) * .1;
-  if ((world.running && !world.paused) || needsDraw) {
+  if ((world.running && !world.paused && !world.settingsOpen) || needsDraw) {
     t = performance.now(); draw();
     diagnostics.renderMs += (performance.now() - t - diagnostics.renderMs) * .1;
     needsDraw = false;

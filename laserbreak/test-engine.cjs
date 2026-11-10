@@ -7,12 +7,12 @@ function world(){const w=new World(()=>.5);Object.assign(w.settings,{density:0,t
 function target(id,x,y=250,radius=15){return {id,type:'target',x,y,radius,color:'#36fff3',speed:0,extent:radius};}
 function bar(id,x,y=250,angle=0,length=100,thickness=10){return {id,type:'bar',x,y,angle,length,thickness,speed:0,rotation:0,extent:Math.hypot(length,thickness)/2};}
 function finish(w){w.step(.6);}
-function controls(mode='touch') {let shots=[];let ready=true;const i=new Input((a,b)=>shots.push([a,b]),()=>ready,()=>mode);return {i,shots,setReady:r=>ready=r};}
-test('touch: opposite pads, endpoint movement, extra pointers, full release re-arm',()=>{
- const {i,shots}=controls();i.down(1,'left',100);i.down(2,'left',150);assert.equal(shots.length,0);
- i.move(1,180);i.down(3,'right',200);assert.deepEqual(shots,[[180,200]]);
- i.up(3);i.down(4,'right',200);assert.equal(shots.length,1);[1,2,4].forEach(id=>i.up(id));
- i.down(5,'right',300);i.down(6,'left',400);assert.deepEqual(shots[1],[400,300]);
+function controls() {let shots=[];let ready=true;const i=new Input((a,b)=>shots.push([a,b]),()=>ready);return {i,shots,setReady:r=>ready=r};}
+test('release-only: first and opposite contacts never fire on touch; movement and full re-arm',()=>{
+ const {i,shots}=controls();i.down(1,'left',100);i.down(2,'left',150);i.move(1,180);i.down(3,'right',200);
+ assert.equal(shots.length,0);i.up(3);assert.deepEqual(shots,[[180,200]]);
+ i.down(4,'right',200);i.up(4);assert.equal(shots.length,1);[1,2].forEach(id=>i.up(id));
+ i.down(5,'right',300);i.down(6,'left',400);assert.equal(shots.length,1);i.up(6);assert.deepEqual(shots[1],[400,300]);
 });
 test('release: aim, either release fires once, cancellation aborts',()=>{
  for(const first of [1,2]) {const {i,shots}=controls('release');i.down(1,'left',100);i.down(2,'right',200);
@@ -22,12 +22,12 @@ test('release: aim, either release fires once, cancellation aborts',()=>{
 test('release: unrelated third finger cannot fire; duplicate/unknown pointers ignored',()=>{
  const {i,shots}=controls('release');i.down(1,'left',100);i.down(1,'right',200);i.down(2,'right',150);i.down(3,'left',180);i.up(3);i.up(99);assert.equal(shots.length,0);i.up(2);assert.deepEqual(shots,[[100,150]]);
 });
-test('cooldown and full release, with immediate resolution and frozen pause timing',()=>{
- const w=world(),i=new Input((a,b)=>w.fire(a,b),()=>w.ready(),()=>w.settings.mode);
- const gesture=()=>{i.down(1,'left',250);i.down(2,'right',250);};
- gesture();assert.equal(w.effects.length,1);i.up(1);i.up(2);gesture();assert.equal(w.effects.length,1);
- w.step(.76);assert.equal(w.effects.length,0);i.up(1);i.down(1,'left',250);assert.equal(w.effects.length,0);
- i.up(1);i.up(2);gesture();assert.equal(w.effects.length,1);
+test('cooldown rejection locks gesture until every contact releases; pause freezes time',()=>{
+ const w=world(),i=new Input((a,b)=>w.fire(a,b),()=>w.ready());
+ i.down(1,'left',250);i.down(2,'right',250);assert.equal(w.effects.length,0);i.up(2);assert.equal(w.effects.length,1);i.up(1);
+ i.down(1,'left',250);i.down(2,'right',250);i.up(2);w.step(.76);assert.equal(w.effects.length,0);
+ i.down(2,'right',250);i.up(2);assert.equal(w.effects.length,0);i.up(1);
+ i.down(1,'left',250);i.down(2,'right',250);i.up(1);assert.equal(w.effects.length,1);i.up(2);
  const time=w.time;w.paused=true;w.step(10);assert.equal(w.ready(),false);assert.equal(w.time,time);
 });
 test('release mode respects cooldown',()=>{
@@ -66,9 +66,9 @@ test('targets never block beams; single hits dissolve immediately',()=>{
  assert.deepEqual(w.objects.map(o=>o.id),[4]);assert.equal(w.effects.filter(e=>e.type==='dissolve').length,3);
  assert.equal(w.effects.some(e=>e.type==='explosion'),false);
 });
-test('targets away from midpoint explode immediately on double hit at 2x radius',()=>{
+test('targets away from midpoint explode immediately on double hit at selected blast radius',()=>{
  for(const x of [150,500,850]) {const w=world();w.objects=[target(1,x)];w.fire(250,250);
- assert.equal(w.objects.length,0);const e=w.effects.find(e=>e.type==='explosion');assert.equal(e.r,30);assert.equal(e.age,0);assert.equal(e.x,x);}
+ assert.equal(w.objects.length,0);const e=w.effects.find(e=>e.type==='explosion');assert.equal(e.r,45);assert.equal(e.age,0);assert.equal(e.x,x);}
 });
 test('a blocking bar prevents double hits for targets beyond it',()=>{
  const w=world();w.objects=[bar(1,460,250,Math.PI/2),target(2,500)];w.fire(250,250);
@@ -82,17 +82,17 @@ test('immediate blasts include circle edges and rotated bar corners with no chai
  assert.equal(blastHits({x:0,y:0},30,bar(6,50,0,0,40,2)),true);
 });
 test('target defaults are diameter 40; bars are fixed solid 100x12 geometry',()=>{
- const w=new World(()=>.1);w.spawn();assert.equal(w.objects[0].radius,20);assert.equal(w.objects[0].angle,undefined);
- w.random=()=>.9;w.spawn();const b=w.objects.find(o=>o.type==='bar');assert.equal(b.length,100);assert.equal(b.thickness,12);assert.equal(BAR_THICKNESS,12);
+ const w=new World(()=>.1);w.bag=['target'];w.spawn();assert.equal(w.objects[0].radius,20);assert.equal(w.objects[0].angle,undefined);
+ w.random=()=>.9;w.bag=['bar'];w.spawn();const b=w.objects.find(o=>o.type==='bar');assert.equal(b.length,100);assert.equal(b.thickness,12);assert.equal(BAR_THICKNESS,12);
  assert.equal(defaults.barThickness,undefined);
 });
 test('settings snapshot size, speed, and rotation on spawn; current objects stay unchanged',()=>{
- const w=new World(()=>.1);w.spawn();const t=w.objects[0],snapshot={...t};
+ const w=new World(()=>.1);w.bag=['target'];w.spawn();const t=w.objects[0],snapshot={...t};
  w.configure('targetSize',60);w.configure('targetSpeed',160);assert.deepEqual(t,snapshot);
- w.spawn();assert.equal(w.objects[1].radius,30);assert.equal(w.objects[1].speed,160);
- w.random=()=>.9;w.spawn();const b=w.objects.at(-1),bs={...b};
+ w.bag=['target'];w.spawn();assert.equal(w.objects[1].radius,30);assert.equal(w.objects[1].speed,160);
+ w.random=()=>.9;w.bag=['bar'];w.spawn();const b=w.objects.at(-1),bs={...b};
  w.configure('barLength',200);w.configure('barSpeed',120);w.configure('barRotation',-90);assert.deepEqual(b,bs);
- w.spawn();const newBar=w.objects.at(-1);assert.equal(newBar.length,200);assert.equal(newBar.speed,120);assert.equal(newBar.rotation,-Math.PI/2);
+ w.bag=['bar'];w.spawn();const newBar=w.objects.at(-1);assert.equal(newBar.length,200);assert.equal(newBar.speed,120);assert.equal(newBar.rotation,-Math.PI/2);
  w.configure('density',0);w.step(.5);assert.equal(t.y,snapshot.y+snapshot.speed*.5);assert.equal(b.angle,bs.angle+bs.rotation*.5);
 });
 test('rotation and movement are updated once per frame using each object properties',()=>{
@@ -166,6 +166,73 @@ test('particle cap, repeated bursts, pause freeze, stop/start and clear cleanup'
  w.objects=[target(99,150)];w.fire(250,250);w.clear();assert.equal(w.particles.length,0);
  w.objects=[target(100,150)];w.fire(250,250);w.stop();assert.equal(w.particles.length,0);
  w.start();assert.equal(w.particles.length,0);
+});
+test('blast multiplier changes collision radius and ring together, snapshots at firing',()=>{
+ for(const multiplier of [1,1.5,3,5]) {
+   const w=world();w.settings.blastMultiplier=multiplier;
+   w.objects=[target(1,250,250,20),target(2,250,250+20*multiplier+10,10),target(3,250,250+20*multiplier+10.1,10)];
+   w.fire(250,250);const explosion=w.effects.find(e=>e.type==='explosion');
+   assert.equal(explosion.r,20*multiplier);assert.deepEqual(w.objects.map(o=>o.id),[3]);
+   w.configure('blastMultiplier',2);assert.equal(explosion.r,20*multiplier);
+ }
+ assert.equal(defaults.blastMultiplier,3);
+});
+test('six-target/four-bar shuffle bags, randomized order, failed placement retains entry',()=>{
+ const w=seededWorld();const bags=[];
+ for(let bag=0;bag<5;bag++) {
+   const types=[];
+   for(let n=0;n<10;n++){w.objects=[];assert.equal(w.spawn(),true);types.push(w.objects[0].type);}
+   assert.equal(types.filter(t=>t==='target').length,6);assert.equal(types.filter(t=>t==='bar').length,4);bags.push(types.join(','));
+ }
+ assert.ok(new Set(bags).size>1);
+ w.objects=Array.from({length:11},(_,id)=>target(id,id*100,-12,100));
+ assert.equal(w.spawn(),false);const snapshot=[...w.bag],id=w.nextId;
+ assert.equal(w.spawn(),false);assert.deepEqual(w.bag,snapshot);assert.equal(w.nextId,id);
+ w.objects=[];assert.equal(w.spawn(),true);assert.equal(w.objects[0].type,snapshot.at(-1));assert.equal(w.bag.length,snapshot.length-1);
+ w.configure('density',0);w.start();assert.equal(w.bag.length,0);assert.equal(w.objects.length,0);
+ w.configure('density',20);w.start();assert.equal(w.bag.length,7);
+});
+test('0/40/70/100 percent ratios refill exact ten-object bags and preserve failed entries',()=>{
+ assert.equal(defaults.barPercentage,40);
+ for(const percentage of [0,40,70,100]) {
+   const w=seededWorld();w.configure('barPercentage',percentage);
+   for(let round=0;round<3;round++) {
+     const types=[];
+     for(let n=0;n<10;n++){w.objects=[];assert.equal(w.spawn(),true);types.push(w.objects[0].type);}
+     assert.equal(types.filter(t=>t==='bar').length,percentage/10);
+     assert.equal(types.filter(t=>t==='target').length,10-percentage/10);
+   }
+   w.objects=Array.from({length:11},(_,id)=>target(id,id*100,-12,100));
+   assert.equal(w.spawn(),false);const pending=[...w.bag],id=w.nextId;
+   assert.equal(w.spawn(),false);assert.deepEqual(w.bag,pending);assert.equal(w.nextId,id);
+   w.objects=[];assert.equal(w.spawn(),true);assert.equal(w.objects[0].type,pending.at(-1));
+ }
+});
+test('ratio change immediately replaces remaining bag, without altering live objects or timing',()=>{
+ const w=seededWorld();w.start();const snapshot=JSON.stringify(w.objects),time=w.time,clock=w.spawnClock;
+ assert.equal(w.bag.length,7);w.configure('barPercentage',70);
+ assert.equal(w.bag.length,10);assert.equal(w.bag.filter(t=>t==='bar').length,7);
+ assert.equal(JSON.stringify(w.objects),snapshot);assert.equal(w.time,time);assert.equal(w.spawnClock,clock);
+ w.objects=[];w.spawn();const bag=[...w.bag];w.configure('barPercentage',70);assert.deepEqual(w.bag,bag);
+ w.configure('barPercentage',0);assert.equal(w.bag.length,10);assert.ok(w.bag.every(t=>t==='target'));
+ w.configure('barPercentage',100);assert.equal(w.bag.length,10);assert.ok(w.bag.every(t=>t==='bar'));
+ w.start();assert.equal(w.bag.length,7);assert.ok(w.objects.every(o=>o.type==='bar'));
+});
+test('settings panel freezes clock and effects without modifying explicit session state',()=>{
+ for(const state of ['active','paused','stopped']) {
+   const w=seededWorld();w.start();w.fire(250,250);
+   if(state==='paused')w.paused=true;if(state==='stopped')w.stop();
+   const snapshot=JSON.stringify([w.objects,w.effects,w.particles,w.time,w.spawnClock,w.bag,w.running,w.paused]);
+   w.settingsOpen=true;w.step(5);assert.equal(w.fire(100,100),false);
+   assert.equal(JSON.stringify([w.objects,w.effects,w.particles,w.time,w.spawnClock,w.bag,w.running,w.paused]),snapshot);
+   w.settingsOpen=false;assert.equal(w.running,state!=='stopped');assert.equal(w.paused,state==='paused');
+ }
+});
+test('shot audio summary aggregates direct doubles, singles, and blast-destroyed bars',()=>{
+ const w=world();w.objects=[target(1,150),bar(2,170,290,0,20,12)];w.fire(250,250);
+ assert.deepEqual(w.lastShotSounds,{single:0,double:1,bars:1});
+ const single=world();single.objects=[target(1,150),bar(2,500)];single.fire(250,250);
+ assert.deepEqual(single.lastShotSounds,{single:1,double:0,bars:0});
 });
 test('frame update avoids collision geometry reads; 60-object update budget',()=>{
  const w=world();w.objects=Array.from({length:60},(_,id)=>target(id,id*16,0));

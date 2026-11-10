@@ -56,6 +56,7 @@ with sync_playwright() as p:
           }
           latency.sort((a,b)=>a-b);return {meanMs:latency.reduce((x,y)=>x+y,0)/latency.length,p95Ms:latency[23]};
         }''')
+        page.locator('#close-setup').tap()
         if not ref:
             assert result['objects'] == 60
             assert result['pixels'] <= 1000000
@@ -89,7 +90,6 @@ with sync_playwright() as p:
             assert result['particles']['update']['p95Ms'] < 5, result
             assert result['particles']['raf']['p95Ms'] < 75, result
             # No Canvas blur or per-frame layout reads. Stable HUD/pads should not mutate.
-            page.locator('#close-setup').tap()
             counters = page.evaluate('''async()=>{
               window.counts={blur:0,layout:0,mutations:0};
               const descriptor=Object.getOwnPropertyDescriptor(CanvasRenderingContext2D.prototype,'shadowBlur');
