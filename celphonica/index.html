@@ -12,7 +12,7 @@
 </head>
 <body>
   <main>
-    <header><a href="../#apps">a_ <span>App Lab</span></a><h1>Celphonica<span> / 0.1</span></h1><button id="fullscreen" type="button">Full screen</button></header>
+    <header><a href="../#apps">a_ <span>App Lab</span></a><h1>Celphonica<span> / 0.2</span></h1><button id="fullscreen" type="button">Full screen</button></header>
     <section class="settings" aria-label="Instrument settings">
       <label>Root<select id="root" aria-label="Root note"></select></label>
       <label>Scale<select id="scale"><option value="major">Major</option><option value="minor">Minor</option><option value="pentatonic">Major pentatonic</option><option value="chromatic">Chromatic</option></select></label>
@@ -21,6 +21,18 @@
     </section>
     <section class="readout" aria-label="Played notes">
       <div><p class="eyebrow">TOUCH · SLIDE · PLAY</p><output id="notes" aria-label="Active notes">Ready to play</output></div>
+      <section class="motion-panel" aria-label="Motion expression preview">
+        <button id="motion-level" type="button" aria-label="Recenter motion bubble" title="Recenter motion bubble" disabled>
+          <span class="level-crosshair" aria-hidden="true"></span><span id="motion-bubble" aria-hidden="true"></span>
+          <span class="level-caption" aria-hidden="true">RECENTER</span>
+        </button>
+        <div class="motion-controls">
+          <button id="motion-enable" type="button" aria-pressed="false">Enable motion</button>
+          <label for="motion-sensitivity">Sensitivity <span id="motion-sensitivity-value">1×</span></label>
+          <input id="motion-sensitivity" aria-label="Motion sensitivity" type="range" min="0.5" max="4" step="0.25" value="1">
+          <p id="motion-status" role="status">Visual only · Sensors off</p>
+        </div>
+      </section>
       <div class="range-controls"><button id="octave-down" aria-label="Octave down">−8ve</button><span id="range"></span><button id="octave-up" aria-label="Octave up">+8ve</button></div>
     </section>
     <section class="performance" aria-label="Performance surface">

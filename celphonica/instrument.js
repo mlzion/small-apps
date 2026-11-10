@@ -1,5 +1,6 @@
 import { Synth } from './synth.js';
 import { NOTE_NAMES, noteName, noteRows } from './music.js';
+import { initMotion } from './motion.js';
 
 const $ = id => document.getElementById(id);
 const synth = new Synth();
@@ -164,3 +165,4 @@ $('fullscreen').addEventListener('click', async () => {
 document.addEventListener('fullscreenchange', () => { $('fullscreen').textContent = document.fullscreenElement ? 'Exit full screen' : 'Full screen'; });
 renderKeyboard();
 updateExpression({});
+initMotion();
