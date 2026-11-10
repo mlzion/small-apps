@@ -1,6 +1,6 @@
 'use strict';
 const assert=require('node:assert/strict');
-const {World,Input,circleHit,barHit,blastHits,MAX_OBJECTS,defaults,BAR_THICKNESS,spawnOverlaps,entryOverlaps}=require('./engine.js');
+const {World,Input,circleHit,barHit,blastHits,MAX_OBJECTS,MAX_PARTICLES,defaults,BAR_THICKNESS,spawnOverlaps,entryOverlaps}=require('./engine.js');
 let count=0;
 function test(name,run){run();count++;console.log('PASS:',name);}
 function world(){const w=new World(()=>.5);Object.assign(w.settings,{density:0,targetSpeed:0,barSpeed:0,barRotation:0});return w;}
@@ -46,31 +46,31 @@ test('oriented rectangle geometry respects thickness and rotation, including end
  assert.notEqual(barHit({x:100,y:0},{x:100,y:200},b),null);
  assert.notEqual(barHit({x:65,y:65},{x:65,y:65},b),null);
 });
-test('instant beams terminate at the midpoint of a sloped line, without traveling state',()=>{
+test('instant beams cross a sloped line to opposite boundaries, without traveling state',()=>{
  const w=world();w.fire(100,400);
  assert.equal(w.shots,undefined);const beams=w.effects.find(e=>e.type==='flash').beams;
- assert.deepEqual(beams,[{from:{x:0,y:100},to:{x:500,y:250}},{from:{x:1000,y:400},to:{x:500,y:250}}]);
+ assert.deepEqual(beams,[{from:{x:0,y:100},to:{x:1000,y:400}},{from:{x:1000,y:400},to:{x:0,y:100}}]);
 });
-test('each half stops at its nearest bar; targets behind it survive',()=>{
+test('each beam stops at its nearest bar; targets behind it survive',()=>{
  const w=world();w.objects=[bar(1,100),bar(2,800),target(3,20),target(4,950),target(5,450)];
  assert.equal(w.fire(250,250),true);assert.deepEqual(w.objects.map(o=>o.id),[1,2,5]);
  const beams=w.effects.find(e=>e.type==='flash').beams;assert.equal(beams[0].to.x,50);assert.equal(beams[1].to.x,850);
  assert.equal(w.effects.filter(e=>e.type==='dissolve').length,2);
 });
-test('bars beyond the midpoint cannot block the opposite beam',()=>{
+test('bars past the midpoint still block beams crossing from either side',()=>{
  const w=world();w.objects=[bar(1,700)];w.fire(250,250);
- const beams=w.effects.find(e=>e.type==='flash').beams;assert.equal(beams[0].to.x,500);assert.equal(beams[1].to.x,750);
+ const beams=w.effects.find(e=>e.type==='flash').beams;assert.equal(beams[0].to.x,650);assert.equal(beams[1].to.x,750);
 });
 test('targets never block beams; single hits dissolve immediately',()=>{
- const w=world();w.objects=[target(1,100),target(2,200),target(3,850)];w.fire(250,250);
- assert.equal(w.objects.length,0);assert.equal(w.effects.filter(e=>e.type==='dissolve').length,3);
+ const w=world();w.objects=[target(1,100),target(2,200),target(3,850),bar(4,500)];w.fire(250,250);
+ assert.deepEqual(w.objects.map(o=>o.id),[4]);assert.equal(w.effects.filter(e=>e.type==='dissolve').length,3);
  assert.equal(w.effects.some(e=>e.type==='explosion'),false);
 });
-test('midpoint target is hit by both halves and explodes immediately at 2x radius',()=>{
- const w=world();w.objects=[target(1,500)];w.fire(250,250);
- assert.equal(w.objects.length,0);const e=w.effects.find(e=>e.type==='explosion');assert.equal(e.r,30);assert.equal(e.age,0);
+test('targets away from midpoint explode immediately on double hit at 2x radius',()=>{
+ for(const x of [150,500,850]) {const w=world();w.objects=[target(1,x)];w.fire(250,250);
+ assert.equal(w.objects.length,0);const e=w.effects.find(e=>e.type==='explosion');assert.equal(e.r,30);assert.equal(e.age,0);assert.equal(e.x,x);}
 });
-test('blocked half prevents a double hit even if the other half touches target edge',()=>{
+test('a blocking bar prevents double hits for targets beyond it',()=>{
  const w=world();w.objects=[bar(1,460,250,Math.PI/2),target(2,500)];w.fire(250,250);
  assert.equal(w.effects.filter(e=>e.type==='explosion').length,0);assert.equal(w.effects.filter(e=>e.type==='dissolve').length,1);
 });
@@ -81,8 +81,8 @@ test('immediate blasts include circle edges and rotated bar corners with no chai
  assert.equal(blastHits({x:0,y:0},30,target(6,45.1,0)),false);
  assert.equal(blastHits({x:0,y:0},30,bar(6,50,0,0,40,2)),true);
 });
-test('target defaults are diameter 24; bars are fixed solid 100x12 geometry',()=>{
- const w=new World(()=>.1);w.spawn();assert.equal(w.objects[0].radius,12);assert.equal(w.objects[0].angle,undefined);
+test('target defaults are diameter 40; bars are fixed solid 100x12 geometry',()=>{
+ const w=new World(()=>.1);w.spawn();assert.equal(w.objects[0].radius,20);assert.equal(w.objects[0].angle,undefined);
  w.random=()=>.9;w.spawn();const b=w.objects.find(o=>o.type==='bar');assert.equal(b.length,100);assert.equal(b.thickness,12);assert.equal(BAR_THICKNESS,12);
  assert.equal(defaults.barThickness,undefined);
 });
@@ -108,7 +108,7 @@ test('density zero stops immediately; higher density increases accepted spawn co
  for(const density of [0,20,50,100]) {const w=seededWorld();w.configure('density',density);advance(w,5);counts.push(w.nextId-1);}
  assert.equal(counts[0],0);assert.ok(counts[1]>0&&counts[1]<counts[2]&&counts[2]<counts[3],counts);
  const w=seededWorld();w.configure('density',100);advance(w,3);const id=w.nextId;w.configure('density',0);advance(w,2);assert.equal(w.nextId,id);
- assert.equal(w.settings.targetSize,24);assert.equal(w.settings.barSpeed,32);
+ assert.equal(w.settings.targetSize,40);assert.equal(w.settings.barSpeed,32);
 });
 test('every new/initial object has rotation-safe clearance; alternate positions and skip',()=>{
  const w=seededWorld();w.start();assert.equal(w.objects.length,3);
@@ -135,12 +135,37 @@ test('active cap is enforced, objects fully leave bottom, effects stay bounded',
 });
 test('pause, stop, start, and orientation blocking freeze timing and gate firing',()=>{
  const w=seededWorld();w.start();advance(w,1);w.fire(250,250);w.paused=true;
- const snapshot=JSON.stringify({objects:w.objects,effects:w.effects,time:w.time,spawn:w.spawnClock});w.step(2);
- assert.equal(JSON.stringify({objects:w.objects,effects:w.effects,time:w.time,spawn:w.spawnClock}),snapshot);assert.equal(w.fire(200,200),false);
- w.paused=false;w.step(.1);assert.ok(w.time>1);w.stop();const t=w.time;w.step(10);assert.equal(w.time,t);assert.equal(w.objects.length+w.effects.length,0);assert.equal(w.fire(1,1),false);
+ const snapshot=JSON.stringify({objects:w.objects,effects:w.effects,particles:w.particles,time:w.time,spawn:w.spawnClock});w.step(2);
+ assert.equal(JSON.stringify({objects:w.objects,effects:w.effects,particles:w.particles,time:w.time,spawn:w.spawnClock}),snapshot);assert.equal(w.fire(200,200),false);
+ w.paused=false;w.step(.1);assert.ok(w.time>1);w.stop();const t=w.time;w.step(10);assert.equal(w.time,t);assert.equal(w.objects.length+w.effects.length+w.particles.length,0);assert.equal(w.fire(1,1),false);
  w.start();assert.equal(w.objects.length,3);assert.equal(w.ready(),true);assert.equal(w.time,0);
  w.orientationBlocked=true;w.step(10);assert.equal(w.time,0);assert.equal(w.fire(1,1),false);
  w.orientationBlocked=false;w.step(.1);assert.equal(w.time,.1);
+});
+test('single hits fragment briefly; double hits have larger, faster, longer bursts',()=>{
+ const single=world();single.objects=[target(1,150),bar(2,500)];single.fire(250,250);
+ assert.equal(single.particles.length,6);
+ const double=world();double.objects=[target(1,150)];double.fire(250,250);
+ assert.equal(double.particles.length,14);
+ assert.ok(double.particles[0].life>single.particles[0].life);
+ assert.ok(Math.hypot(double.particles[0].vx,double.particles[0].vy)>Math.hypot(single.particles[0].vx,single.particles[0].vy));
+ const p=double.particles[0],x=p.x;double.step(.1);assert.notEqual(p.x,x);assert.equal(p.age,.1);
+ double.step(.4);assert.equal(double.particles.length,0);assert.equal(double.effects.length,0);
+});
+test('blast-destroyed bars emit shards without causing another explosion',()=>{
+ const w=world();w.objects=[target(1,150),bar(2,170,279,0,20,12)];w.fire(250,250);
+ assert.equal(w.objects.length,0);assert.equal(w.effects.filter(e=>e.type==='explosion').length,1);
+ assert.equal(w.particles.filter(p=>p.color==='#9bb9cd').length,8);
+});
+test('particle cap, repeated bursts, pause freeze, stop/start and clear cleanup',()=>{
+ const w=world();w.settings.cooldown=0;
+ for(let shot=0;shot<20;shot++){w.objects=[target(shot+1,150)];w.fire(250,250);}
+ assert.equal(w.particles.length,MAX_PARTICLES);const snapshot=JSON.stringify(w.particles);
+ w.paused=true;w.step(1);assert.equal(JSON.stringify(w.particles),snapshot);
+ w.paused=false;w.step(.5);assert.equal(w.particles.length,0);
+ w.objects=[target(99,150)];w.fire(250,250);w.clear();assert.equal(w.particles.length,0);
+ w.objects=[target(100,150)];w.fire(250,250);w.stop();assert.equal(w.particles.length,0);
+ w.start();assert.equal(w.particles.length,0);
 });
 test('frame update avoids collision geometry reads; 60-object update budget',()=>{
  const w=world();w.objects=Array.from({length:60},(_,id)=>target(id,id*16,0));

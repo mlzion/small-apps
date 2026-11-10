@@ -11,6 +11,8 @@ const setup = document.querySelector('#setup'), toggle = document.querySelector(
 const pauseButton = document.querySelector('#pause'), sessionButton = document.querySelector('#session');
 const overlay = document.querySelector('#orientation-overlay');
 const perfOutput = document.querySelector('#performance');
+const fullscreenButton = document.querySelector('#fullscreen');
+const viewStatus = document.querySelector('#view-status');
 const portrait = matchMedia('(orientation: portrait)');
 const input = new Input((a, b) => {world.fire(a, b); needsDraw = true;},
   () => world.ready() && setup.hidden, () => world.settings.mode);
@@ -112,17 +114,59 @@ function interactive() {
   syncOrientation();
   return world.running && !world.paused && !world.orientationBlocked && setup.hidden;
 }
-// Some Android browsers require fullscreen before orientation.lock can succeed.
-// Try the supported API on a user gesture; rejection leaves the rotation overlay as fallback.
-let lockPending = false;
-async function tryLandscapeLock() {
-  if (lockPending || !screen.orientation?.lock) return;
-  lockPending = true;
-  try {await screen.orientation.lock('landscape');} catch { /* Unsupported/requires fullscreen. */ }
-  finally {lockPending = false;}
+// Celphonica-style fullscreen lifecycle: request first, then try landscape lock.
+// Own and release successful locks, including a promise that finishes after exit.
+let lockPending = false, ownsOrientationLock = false, orientationEpoch = 0;
+function releaseOrientation() {
+  if (!ownsOrientationLock) return;
+  ownsOrientationLock = false;
+  try {screen.orientation?.unlock?.();} catch { /* Browser may have unlocked already. */ }
 }
+async function tryLandscapeLock() {
+  if (lockPending || typeof screen.orientation?.lock !== 'function') return;
+  lockPending = true;
+  const epoch = orientationEpoch, beganFullscreen = !!document.fullscreenElement;
+  let acquired = false;
+  try {
+    await screen.orientation.lock('landscape');
+    acquired = true;
+    ownsOrientationLock = true;
+    if (epoch !== orientationEpoch || (beganFullscreen && !document.fullscreenElement)) releaseOrientation();
+  } catch { /* Unsupported/requires fullscreen: keep the landscape overlay fallback. */ }
+  finally {
+    lockPending = false;
+    // A gesture lock attempted before fullscreen may reject after fullscreen succeeds.
+    if (!acquired && !beganFullscreen && document.fullscreenElement && epoch === orientationEpoch) tryLandscapeLock();
+  }
+}
+function syncFullscreen() {
+  const active = !!document.fullscreenElement;
+  fullscreenButton.setAttribute('aria-pressed', String(active));
+  const label = active ? 'Exit fullscreen' : 'Enter fullscreen';
+  fullscreenButton.setAttribute('aria-label', label);
+  fullscreenButton.title = label;
+  fullscreenButton.textContent = active ? '↙' : '⛶';
+}
+fullscreenButton.hidden = !(document.fullscreenEnabled && document.documentElement.requestFullscreen && document.exitFullscreen);
+fullscreenButton.onclick = async () => {
+  cancelInput();
+  fullscreenButton.disabled = true;
+  try {
+    if (document.fullscreenElement) await document.exitFullscreen();
+    else await document.documentElement.requestFullscreen();
+    viewStatus.hidden = true;
+  } catch {
+    viewStatus.value = 'Full screen unavailable in this browser.';
+    viewStatus.hidden = false;
+  } finally {fullscreenButton.disabled = false; syncFullscreen();}
+};
 document.addEventListener('pointerdown', tryLandscapeLock, {passive: true});
-document.addEventListener('fullscreenchange', () => {tryLandscapeLock(); resize();});
+document.addEventListener('fullscreenchange', () => {
+  cancelInput(); resetClock(); syncFullscreen(); syncOrientation(); resize();
+  if (document.fullscreenElement) tryLandscapeLock();
+  else {orientationEpoch++; releaseOrientation();}
+});
+window.addEventListener('pagehide', () => {orientationEpoch++; releaseOrientation();});
 for (const [side, pad] of Object.entries(pads)) {
   pad.addEventListener('pointerdown', e => {
     if (e.button !== 0 || !interactive()) return;
@@ -195,7 +239,7 @@ for (const color of ['#36fff3', '#fff04b']) {
   const c = sprite.getContext('2d'), glow = c.createRadialGradient(48, 48, 18, 48, 48, 46);
   glow.addColorStop(0, color + '65'); glow.addColorStop(.35, color + '28'); glow.addColorStop(1, color + '00');
   c.fillStyle = glow; c.fillRect(0, 0, 96, 96);
-  c.strokeStyle = color; c.lineWidth = 3; c.beginPath(); c.arc(48, 48, 25, 0, Math.PI * 2); c.stroke();
+  c.strokeStyle = color; c.lineWidth = 3; c.beginPath(); c.arc(48, 48, 23.5, 0, Math.PI * 2); c.stroke();
   c.strokeStyle = '#f4ffff'; c.lineWidth = 1; c.stroke();
   targetSprites.set(color, sprite);
 }
@@ -252,6 +296,18 @@ function draw() {
     }
     ctx.globalAlpha = 1;
   }
+  // Small layered squares suggest neon shards without blur, shadows, or extra canvases.
+  for (const p of world.particles) {
+    const fade = 1 - p.age / p.life, size = p.size * (.5 + fade * .5);
+    ctx.fillStyle = p.color;
+    ctx.globalAlpha = fade * .16;
+    ctx.fillRect(p.x - size, p.y - size, size * 2, size * 2);
+    ctx.globalAlpha = fade;
+    ctx.fillRect(p.x - size / 2, p.y - size / 2, size, size);
+    ctx.fillStyle = '#edffff';
+    ctx.fillRect(p.x - size / 4, p.y - size / 4, size / 2, size / 2);
+  }
+  ctx.globalAlpha = 1;
 }
 function hud(now) {
   if (now - lastHUD >= 100) {
