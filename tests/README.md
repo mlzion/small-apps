@@ -12,4 +12,4 @@ The test routes a reserved `.test` origin to the local repository through Playwr
 
 Calculator regression checks cover arithmetic, sequential operations, replacing operators, starting or continuing after results, decimals, precision, backspace, clearing, input limits, divide-by-zero messaging and recovery, and both mouse and keyboard controls. Original calculator Git blob hashes are checked to ensure all four existing files are unchanged.
 
-Synth Lab audio, lesson, keyboard, touch, and display checks are documented in [synth-lab/README.md](../synth-lab/README.md). Its gallery card adds a sixth launch link while preserving the nine-card collection.
+Synth Lab audio, lesson, keyboard, touch, and display checks are documented in [synth-lab/README.md](../synth-lab/README.md). LaserBreak brings the gallery to ten cards and seven launch links. Its engine and mobile landscape checks are documented in [laserbreak/README.md](../laserbreak/README.md).
