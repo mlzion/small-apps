@@ -17,11 +17,25 @@ header button { min-height: 36px; font-size: 11px; }
 label { display: flex; flex-direction: column; gap: 4px; font-size: 10px; color: #a4b2c9; letter-spacing: .4px; min-width: 0; }
 select { width: 100%; height: 44px; padding: 0 8px; font-size: 13px; }
 input[type=range] { width: 100%; min-width: 0; margin: 0; height: 44px; accent-color: var(--accent); touch-action: none; }
-.readout { display: flex; justify-content: space-between; align-items: center; gap: 12px; min-height: 76px; padding: 0 8px; }
+.readout { display: flex; justify-content: space-between; align-items: center; gap: 12px; min-height: 104px; padding: 0 8px; }
 .eyebrow { font: 9px ui-monospace, monospace; color: #929eaf; letter-spacing: 1.4px; margin: 0 0 6px; }
 output { display: block; font-size: clamp(20px, 3.6vw, 44px); letter-spacing: -1px; color: #9da8bc; overflow-wrap: anywhere; }
 output.playing { color: #c2d4ff; }
 .readout > div:first-child { flex: 1; min-width: 0; }
+.motion-panel { display: flex; align-items: center; gap: 10px; flex: 0 0 auto; }
+#motion-level { position: relative; width: 84px; height: 84px; min-height: 0; padding: 0; border-radius: 50%; overflow: hidden; background: radial-gradient(circle, #263950 0, #162130 72%); border-color: #526e97; }
+#motion-level:disabled { opacity: .5; }
+.level-crosshair { position: absolute; inset: 14%; border: 1px solid #93b4ff35; border-radius: 50%; pointer-events: none; }
+.level-crosshair::before, .level-crosshair::after { content: ''; position: absolute; background: #93b4ff35; }
+.level-crosshair::before { width: 1px; height: 140%; left: 50%; top: -20%; }
+.level-crosshair::after { height: 1px; width: 140%; top: 50%; left: -20%; }
+#motion-bubble { position: absolute; left: 50%; top: 50%; width: 16px; height: 16px; border-radius: 50%; background: #bce9d5; box-shadow: 0 0 12px #8ed6bd50; transform: translate(-50%, -50%); pointer-events: none; }
+.level-caption { position: absolute; bottom: 9px; left: 0; right: 0; font: 7px ui-monospace, monospace; color: #b4c6df; pointer-events: none; }
+.motion-controls { display: grid; grid-template-columns: 120px; align-items: center; }
+.motion-controls button { min-height: 36px; font-size: 11px; padding: 4px; }
+.motion-controls label { flex-direction: row; justify-content: space-between; margin-top: 3px; font-size: 9px; }
+.motion-controls input[type=range] { height: 30px; }
+#motion-status { margin: 0; color: #a4b2c9; font-size: 9px; line-height: 1.25; max-width: 120px; min-height: 22px; }
 .range-controls { display: flex; align-items: center; gap: 10px; }
 #range { font: 11px ui-monospace, monospace; color: #a4b2c9; }
 .performance { display: grid; grid-template-columns: minmax(120px, 20%) 1fr; gap: 12px; flex: 1; min-height: 0; }
@@ -41,17 +55,31 @@ output.playing { color: #c2d4ff; }
 footer { display: flex; justify-content: space-between; gap: 10px; color: #9ca8ba; font-size: 10px; line-height: 1.5; }
 @media (max-height: 500px) and (orientation: landscape) {
   main { gap: 6px; } .settings { padding: 5px 10px; gap: 10px; } label { gap: 2px; }
-  .readout { min-height: 54px; } output { font-size: 26px; } .eyebrow { font-size: 8px; margin-bottom: 2px; }
+  .readout { min-height: 104px; } output { font-size: 26px; } .eyebrow { font-size: 8px; margin-bottom: 2px; }
+  #motion-level { width: 68px; height: 68px; } .motion-panel { gap: 6px; }
   .expression { padding: 6px; gap: 4px; } .expression label { font-size: 9px; }
   .range-controls { gap: 8px; } footer { font-size: 9px; }
 }
 @media (orientation: portrait) {
   .settings { grid-template-columns: 1fr 1.6fr; gap: 6px 12px; }
   header a span { display: none; } h1 { font-size: 18px; }
-  .readout { align-items: stretch; flex-direction: column; gap: 8px; padding: 2px; }
-  .range-controls { justify-content: space-between; }
+  .readout { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 8px; padding: 2px; }
+  .motion-panel { gap: 5px; } #motion-level { width: 54px; height: 54px; }
+  .motion-controls { grid-template-columns: 104px; } #motion-status { max-width: 104px; }
+  .level-caption { font-size: 6px; bottom: 6px; }
+  .range-controls { justify-content: space-between; grid-column: 1 / -1; }
   .performance { grid-template-columns: 92px 1fr; gap: 8px; }
   .expression { padding: 6px; } .expression select { padding: 0 2px; font-size: 11px; }
   .octave-row { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 4px; }
   .note { font-size: 12px; } .orientation-hint { display: none; }
+}
+@media (orientation: portrait) and (max-height: 650px) {
+  main { gap: 6px; }
+  .settings { padding: 6px 10px; }
+  .readout { gap: 4px; }
+  #keyboard { gap: 6px; }
+}
+@media (orientation: landscape) and (max-height: 340px) {
+  main { gap: 4px; }
+  .settings { padding-block: 3px; }
 }

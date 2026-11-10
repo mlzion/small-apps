@@ -1,4 +1,4 @@
-# Celphonica v0.1
+# Celphonica v0.2
 
 A browser instrument for landscape Android phones, played with two thumbs. Launch from App Lab or serve the repository and open `/small-apps/celphonica/` (a domain-root deployment also works). No runtime dependencies or build step. Serve over HTTP/HTTPS; ES modules do not load reliably from `file://`.
 
@@ -6,7 +6,9 @@ Touch a note to unlock audio. Hold for sound, release to stop, or slide between 
 
 Choose the root, chromatic/major/natural minor/major pentatonic scale, sine/triangle/sawtooth sound, and master volume. Octave buttons shift all three rows together; the starting root octave is bounded to 1–6. Changes to root, scale, or octave release held notes. Full screen provides more playing space where supported. Portrait works as a fallback with notes wrapping within each octave row.
 
-The left XY pad maps horizontal position to filter brightness and vertical position to expression level. It retains its values after release but never sustains a note. Vertical slider mode controls brightness and restores expression level to 100%; master volume remains independent. The pad and notes support simultaneous touches. There are no sensor permissions or motion controls in this version.
+The left XY pad maps horizontal position to filter brightness and vertical position to expression level. It retains its values after release but never sustains a note. Vertical slider mode controls brightness and restores expression level to 100%; master volume remains independent. The pad and notes support simultaneous touches.
+
+The v0.2 circular motion preview is **visual only**. Tap **Enable motion**, then grant sensor access if requested. Each new note press captures the latest orientation as neutral, including additional fingers in a chord; sliding keeps the existing reference. Tilt the phone to move the bubble, adjust sensitivity from 0.5× to 4×, or tap the circular **Recenter** control. No motion reading changes pitch, volume, or filter cutoff. Orientation readings are preferred, with gravity-based motion fallback where available. Sensors need HTTPS or localhost; disabled, denied, missing, or stalled sensors leave the instrument playable. See [MOTION.md](MOTION.md) for behavior, limitations, and phone tests.
 
 `music.js` defines scale intervals and pitch labels. `instrument.js` owns DOM, pointer capture, hit testing, cancellation and expression mapping. `synth.js` owns the lazily created interactive AudioContext, per-pointer oscillators, 1 ms attack / 35 ms release, lowpass filter, and master gain. The output has no compressor or other look-ahead processing. `Synth.setExpression({brightness, level})` accepts normalized values so future motion inputs can use the same engine interface. Oscillators and envelopes disconnect after release. Backgrounding, blur, page exit, and resize clear held notes; late audio unlock promises cannot restart released pointers. Settings, expression, and fullscreen pointer gestures can also prepare audio silently before the first note.
 
@@ -15,5 +17,7 @@ The left XY pad maps horizontal position to filter brightness and vertical posit
 Run `python celphonica/test-browser.py` from the repository root with development-only Python Playwright and Chromium installed. It exercises real browser audio nodes, delayed unlock/release, mouse dragging, Android-style CDP multitouch, cancellation, settings, expressions, viewport layouts, and navigation at `/` and `/small-apps/`. Screenshots are written to `/tmp/celphonica-desktop.png`, `/tmp/celphonica-landscape.png`, and `/tmp/celphonica-portrait.png`. Run the existing regression commands in `tests/README.md` and each app's README as well.
 
 Run `python celphonica/test-latency.py` for synchronous pointer-to-start assertions and offline audio onset measurements. It checks production Synth code at 44.1/48 kHz against the v0.1 topology and isolated filter, attack, and compressor paths. Results go to `/tmp/celphonica-latency.json`. See [LATENCY.md](LATENCY.md) for the comparison, measured results, tradeoffs, and physical testing procedure.
+
+Run `python celphonica/test-motion.py` for simulated orientation/gravity streams, permission and unavailable-sensor handling, reference capture, smoothing, sensitivity, screen rotation, circular bounds, simultaneous touch/audio/XY behavior, and portrait/landscape layouts. Screenshots are written to `/tmp/celphonica-motion-844.png` and `/tmp/celphonica-motion-375.png`.
 
 Physical Android testing remains necessary: speaker audibility and distortion, perceived latency and click suppression, thumb reach and fatigue (especially 12-column chromatic mode), real multitouch/palm behavior, browser edge gestures, full screen and browser chrome, interruptions/audio focus, and recovery after lock/unlock. Browser automation verifies audio graph behavior; it cannot establish perceived sound quality or hardware ergonomics.
