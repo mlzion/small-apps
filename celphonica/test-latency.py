@@ -53,7 +53,8 @@ with sync_playwright() as p:
     page.goto('https://app-lab.test/small-apps/celphonica/')
     assert page.evaluate('probe.contexts.length') == 0
     # A settings gesture prepares output without playing or allocating an oscillator.
-    page.locator('#volume').click()
+    page.locator('#settings-open').click()
+    page.locator('#settings-close').click()
     page.wait_for_function('probe.contexts[0]?.state === "running"')
     assert page.evaluate('probe.starts.length') == 0
     assert page.evaluate('probe.options.latencyHint') == 'interactive'

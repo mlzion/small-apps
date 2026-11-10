@@ -1,12 +1,14 @@
 import { Synth } from './synth.js';
 import { NOTE_NAMES, noteName, noteRows } from './music.js';
 import { initMotion } from './motion.js';
+import { initPerformanceUI } from './performance-ui.js';
 
 const $ = id => document.getElementById(id);
 const synth = new Synth();
 const pointers = new Map();
 let octave = 3;
 let padPointer = null;
+const view = initPerformanceUI(silence);
 NOTE_NAMES.forEach((name, value) => $('root').add(new Option(name, value)));
 
 function updateReadout() {
@@ -43,7 +45,13 @@ function renderKeyboard() {
       const button = document.createElement('button');
       button.className = 'note' + (midi % 12 === Number($('root').value) ? ' root-note' : '');
       button.dataset.midi = midi;
-      button.textContent = noteName(midi);
+      const pitch = document.createElement('span');
+      pitch.className = 'note-name';
+      pitch.textContent = NOTE_NAMES[midi % 12];
+      const register = document.createElement('small');
+      register.textContent = Math.floor(midi / 12) - 1;
+      button.append(pitch, register);
+      button.setAttribute('aria-label', noteName(midi));
       button.setAttribute('aria-pressed', 'false');
       row.append(button);
     }
@@ -67,7 +75,7 @@ function moveNote(id, midi) {
 }
 $('keyboard').addEventListener('pointerdown', event => {
   const button = event.target.closest('.note');
-  if (event.button !== 0 || !button) return;
+  if (event.button !== 0 || !button || !view.isPlayable()) return;
   event.preventDefault();
   $('keyboard').setPointerCapture(event.pointerId);
   // The event already identifies the initial key: no layout hit test is needed.
@@ -129,7 +137,7 @@ function updateExpression(values) {
   const { brightness, level } = synth.expression;
   $('cursor').style.left = `${brightness * 100}%`;
   $('cursor').style.top = `${(1 - level) * 100}%`;
-  $('filter-slider').value = Math.round(brightness * 100);
+  $('volume-slider').value = Math.round(level * 100);
   $('expression-value').textContent = `Bright ${Math.round(brightness * 100)}% · Level ${Math.round(level * 100)}%`;
 }
 function movePad(event) {
@@ -137,7 +145,7 @@ function movePad(event) {
   updateExpression({ brightness: (event.clientX - box.left) / box.width, level: 1 - (event.clientY - box.top) / box.height });
 }
 $('xy-pad').addEventListener('pointerdown', event => {
-  if (event.button !== 0 || padPointer !== null) return;
+  if (event.button !== 0 || padPointer !== null || !view.isPlayable()) return;
   event.preventDefault();
   padPointer = event.pointerId;
   $('xy-pad').setPointerCapture(padPointer);
@@ -152,17 +160,10 @@ $('expression-mode').addEventListener('change', event => {
   const slider = event.target.value === 'slider';
   $('xy-pad').hidden = slider;
   $('slider-control').hidden = !slider;
-  updateExpression({ level: 1 });
+  $('expression-type').textContent = slider ? 'Volume slider' : 'XY pad';
+  updateExpression({});
 });
-$('filter-slider').addEventListener('input', event => updateExpression({ brightness: Number(event.target.value) / 100 }));
-$('fullscreen').hidden = !document.fullscreenEnabled;
-$('fullscreen').addEventListener('click', async () => {
-  try {
-    if (document.fullscreenElement) await document.exitFullscreen();
-    else await document.documentElement.requestFullscreen();
-  } catch { $('audio-status').textContent = 'Full screen unavailable. You can still play here.'; }
-});
-document.addEventListener('fullscreenchange', () => { $('fullscreen').textContent = document.fullscreenElement ? 'Exit full screen' : 'Full screen'; });
+$('volume-slider').addEventListener('input', event => updateExpression({ level: Number(event.target.value) / 100 }));
 renderKeyboard();
 updateExpression({});
 initMotion();

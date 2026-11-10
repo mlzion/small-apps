@@ -139,11 +139,13 @@ with sync_playwright() as p:
     assert live(page) == 0
     sample(page, beta=30, gamma=50)
     assert live(page) == 0
+    page.click('#settings-open')
     page.select_option('#expression-mode', 'slider')
-    page.locator('#filter-slider').fill('55')
-    expect(page.locator('#expression-value')).to_have_text('Bright 55% · Level 100%')
     page.locator('#motion-sensitivity').fill('4')
     expect(page.locator('#motion-sensitivity-value')).to_have_text('4×')
+    page.click('#settings-close')
+    page.locator('#volume-slider').fill('55')
+    expect(page.locator('#expression-value')).to_have_text('Bright 30% · Level 55%')
     page.wait_for_timeout(180); sample(page, beta=80, gamma=80)
     x, y = xy(page)
     assert x*x + y*y <= 1.0002
@@ -247,16 +249,22 @@ with sync_playwright() as p:
     gravity(test, x=-9)
     assert xy(test) == [0, 0]
     fallback.close()
-    # All note and motion controls remain visible/hittable in both orientations.
+    # Notes are landscape-only. Portrait shows a rotate message.
     page.click('#motion-enable'); sample(page)
     for width, height in [(1280,800),(844,390),(844,320),(740,360),(667,375),(375,812),(320,568)]:
         page.set_viewport_size({'width':width,'height':height})
+        if height >= width:
+            expect(page.locator('#rotate-message')).to_be_visible()
+            expect(page.locator('#keyboard')).to_be_hidden()
+            continue
         for scale in ['major','minor','pentatonic','chromatic']:
+            page.click('#settings-open')
             page.select_option('#scale',scale)
+            page.click('#settings-close')
             assert page.evaluate('document.documentElement.scrollWidth<=innerWidth && document.documentElement.scrollHeight<=innerHeight')
-            for element in page.locator('.note, #motion-enable, #motion-level, #motion-sensitivity').all():
-                assert element.evaluate('''el => {const r=el.getBoundingClientRect();return r.width>15&&r.height>15&&r.y>=0&&r.bottom<=innerHeight&&document.elementFromPoint(r.x+r.width/2,r.y+r.height/2)===el;}'''), (width,height,scale)
-        if (width,height) in [(844,390),(375,812)]:
+            for element in page.locator('.note, #motion-enable, #motion-level').all():
+                assert element.evaluate('''el => {const r=el.getBoundingClientRect();return r.width>15&&r.height>15&&r.y>=0&&r.bottom<=innerHeight&&el.contains(document.elementFromPoint(r.x+r.width/2,r.y+r.height/2));}'''), (width,height,scale)
+        if (width,height) == (844,390):
             sample(page); page.click('#motion-level')
             page.wait_for_timeout(60); sample(page,beta=5,gamma=7); xy(page)
             page.screenshot(path=f'/tmp/celphonica-motion-{width}.png')
