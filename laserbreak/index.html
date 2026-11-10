@@ -7,9 +7,9 @@
   <link rel="stylesheet" href="styles.css"><script src="engine.js" defer></script><script src="game.js" defer></script>
 </head>
 <body>
-  <header><a href="../" class="back" aria-label="Back to App Lab">↖ App Lab</a><h1>LASER<span>BREAK</span> <small>MECHANICS LAB / 01</small></h1><output id="status" aria-label="Laser status">READY</output><button id="setup-toggle" aria-controls="setup" aria-expanded="false">Setup <span aria-hidden="true">☷</span></button></header>
+  <header><a href="../" class="back" aria-label="Back to App Lab">↖ App Lab</a><h1>LASER<span>BREAK</span> <small>MECHANICS LAB / 01</small></h1><output id="status" aria-label="Laser status">READY</output><div class="session-controls" role="group" aria-label="Session controls"><button id="pause">Pause</button><button id="session">Stop</button></div><button id="setup-toggle" aria-controls="setup" aria-expanded="false">Setup <span aria-hidden="true">☷</span></button></header>
   <main id="arena" aria-label="LaserBreak playing field">
-    <canvas aria-label="Falling targets, spinning bars, and laser pulses"></canvas>
+    <canvas aria-label="Falling targets, spinning bars, and instantaneous laser beams"></canvas>
     <div class="field-label top-label" aria-hidden="true">RANDOM FIELD <span>∞</span></div>
     <div class="field-label bottom-label" id="hint">Touch both pads to fire · release both to re-arm</div>
     <div class="pad left" id="left-pad" aria-label="Left firing pad"><span>LEFT<br><b>＋</b><br>FIRE PAD</span><i></i></div>
@@ -20,9 +20,14 @@
     <label class="select-label" for="mode">Firing mode<select id="mode"><option value="touch">Fire on touch</option><option value="release">Fire on release · experimental</option></select></label>
     <div id="sliders"></div>
     <label class="debug"><input type="checkbox" id="debug"> Collision debug overlay</label>
-    <div class="actions"><button id="pause">Pause</button><button id="clear">Clear objects</button><button id="reset">Reset to defaults</button></div>
+    <label class="debug"><input type="checkbox" id="diagnostics"> Performance diagnostics</label>
+    <div class="actions"><button id="clear">Clear objects</button><button id="reset">Reset to defaults</button></div>
     <p class="panel-note">Endless random objects. Try two thumbs in landscape. On desktop, hold a pad with the mouse and press Space to place the opposite endpoint at the same height.</p>
   </aside>
-  <div class="rotate-note">↻ Rotate your phone for two-thumb play</div>
+  <output id="performance" hidden aria-label="Performance diagnostics"></output>
+  <section id="orientation-overlay" hidden tabindex="-1" role="dialog" aria-modal="true" aria-labelledby="orientation-title">
+    <p aria-hidden="true">↻</p><h2 id="orientation-title">Rotate your phone to play LaserBreak.</h2>
+    <a href="../">↖ App Lab</a>
+  </section>
 </body>
 </html>
