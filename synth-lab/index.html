@@ -1,0 +1,34 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#101216"><meta name="description" content="Learn sound synthesis by playing. Meet your first oscillator in Synth Lab.">
+  <title>Synth Lab — First Oscillator</title>
+  <link rel="icon" href="../assets/favicon.svg" type="image/svg+xml"><link rel="stylesheet" href="styles.css">
+  <script type="module" src="app.js"></script>
+</head>
+<body>
+  <a class="skip-link" href="#oscillator">Skip to instrument</a>
+  <header class="topbar"><a href="../" class="back-link">← App Lab</a><span class="edition">SYNTH LAB / 0.1</span><button id="enable" class="primary">Enable audio</button></header>
+  <main>
+    <div class="intro"><p class="eyebrow">A little signal. A world of sound.</p><h1>Synth Lab<span>First Oscillator</span></h1><p>Play a note. Change its shape. Hear what happens.</p></div>
+    <div class="modebar"><div class="modes" role="group" aria-label="Learning mode"><button id="guided" aria-pressed="true">Guided</button><button id="free" aria-pressed="false">Free Play</button></div><button id="restart" class="text-button">Restart lesson ↺</button></div>
+    <p id="audio-status" role="status">Enable audio, then press and hold a key. Start with a comfortable listening level.</p>
+    <div id="intro-slot" class="lesson-slot"></div>
+    <section id="oscillator" class="block" aria-labelledby="osc-title">
+      <div class="block-heading"><div><p class="eyebrow">01 / SOUND SOURCE</p><h2 id="osc-title">Oscillator</h2><p>A repeating signal. The beginning of your sound.</p></div><button class="help-button" data-help="oscillator" aria-label="Explain the oscillator">?</button></div>
+      <fieldset id="waveforms"><legend>Waveform <button class="help-button" data-help="waveform" aria-label="Explain waveforms" type="button">?</button></legend><div class="wave-options">
+        <button data-wave="sine" aria-pressed="true"><span aria-hidden="true">∿</span>Sine</button><button data-wave="triangle" aria-pressed="false"><span aria-hidden="true">△</span>Triangle</button><button data-wave="sawtooth" aria-pressed="false"><span aria-hidden="true">⩘</span>Sawtooth</button><button data-wave="square" aria-pressed="false"><span aria-hidden="true">⊓</span>Square</button>
+      </div></fieldset>
+      <div id="wave-slot" class="lesson-slot"></div>
+      <div class="parameters"><div><label for="tuning">Reference tuning <output id="tuning-value" for="tuning">440 Hz</output></label><input id="tuning" type="range" min="400" max="480" value="440" step="1" aria-describedby="tuning-help"><p id="tuning-help">A4 frequency · tunes every key together <button class="help-button" data-help="pitch" aria-label="Explain pitch">?</button></p></div><div><label for="volume">Master volume <output id="volume-value" for="volume">20%</output></label><input id="volume" type="range" min="0" max="100" value="20" aria-describedby="volume-help"><p id="volume-help">Start low. Turn up gently. <button class="help-button" data-help="volume" aria-label="Explain volume">?</button></p></div></div>
+      <div class="visuals"><section id="scope-panel" class="display"><div class="display-heading"><h3>Waveform</h3><span>TIME →</span></div><canvas id="scope" role="img" aria-label="Live oscilloscope: signal amplitude over time"></canvas><p>The shape of the signal <button class="help-button" data-help="scope" aria-label="Explain the waveform display">?</button></p></section><div id="scope-slot" class="lesson-slot"></div><section id="spectrum-panel" class="display"><div class="display-heading"><h3>Spectrum</h3><span>FREQUENCY →</span></div><canvas id="spectrum" role="img" aria-label="Live spectrum: frequency content from 20 Hz to 20 kHz"></canvas><div class="axis"><span>20 Hz</span><span>200</span><span>2k</span><span>20k Hz</span></div><p>The frequencies inside your sound <button class="help-button" data-help="spectrum" aria-label="Explain the spectrum">?</button></p></section><div id="spectrum-slot" class="lesson-slot"></div></div>
+    </section>
+    <div class="connection" aria-label="Oscillator connected to audio output"><span></span>↓<p>AUDIO OUTPUT</p></div>
+    <aside id="help" hidden aria-labelledby="help-title"><div class="help-heading"><h2 id="help-title"></h2><button id="help-close" aria-label="Close explanation">Close ×</button></div><p id="help-copy"></p></aside>
+    <p class="footnote">One oscillator. Four shapes. Plenty to discover.</p>
+  </main>
+  <section id="keyboard" class="keyboard-dock" aria-labelledby="keyboard-title"><div class="keyboard-meta"><h2 id="keyboard-title">Play <span>C4 — C5</span></h2><span id="note-status" role="status">Hold a key to listen</span></div><div id="keys" class="keys" role="group" aria-label="Musical keyboard"></div><p class="keyboard-hint">Touch or click and hold · Tab to a key, then hold Space or Enter · Computer keys A W S E D F T G Y H U J K</p></section>
+  <section id="lesson" class="lesson" aria-labelledby="lesson-title"><div class="lesson-top"><span id="lesson-progress"></span><button id="skip" class="text-button">Skip step</button></div><h2 id="lesson-title" tabindex="-1"></h2><p id="lesson-copy"></p><p id="lesson-hint" class="lesson-hint" role="status"></p><div class="lesson-actions"><button id="back">Back</button><button id="lesson-restart" hidden>Repeat Lesson</button><button id="next" class="primary">Next →</button></div></section>
+  <noscript><p class="noscript">Synth Lab needs JavaScript for audio, the keyboard, and lessons.</p></noscript>
+</body></html>

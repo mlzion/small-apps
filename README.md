@@ -2,7 +2,7 @@
 
 Small ideas. Working experiments.
 
-A static gallery for browser games, audio tools, MIDI applications, and creative projects. Calculator, Breakout, Falling Blocks, D::FUZE, and Celphonica are available; Space Shooter, Synth Lab, MIDI Lab, and Paint Studio are planned.
+A static gallery for browser games, audio tools, MIDI applications, and creative projects. Calculator, Breakout, Falling Blocks, D::FUZE, Celphonica, and Synth Lab are available; Space Shooter, MIDI Lab, and Paint Studio are planned.
 
 ## Running locally
 
@@ -33,3 +33,7 @@ The homepage footer has a **Developer Tools** button for the experimental [D::FU
 ## Celphonica
 
 See [celphonica/README.md](celphonica/README.md) for the touchscreen instrument, audio architecture, and verification.
+
+## Synth Lab
+
+See [synth-lab/README.md](synth-lab/README.md) for the educational oscillator, lesson system, and verification.
