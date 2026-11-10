@@ -62,6 +62,12 @@ with sync_playwright() as p:
         before=values();page.evaluate('setup.scrollTop=0');page.wait_for_timeout(80)
         swipe(slider['x']-16,slider['y']+22,slider['x']+slider['width']*.4,slider['y']+22)
         assert values()==before
+        # The new ratio row uses the same touch handling and preserves live objects.
+        page.locator('#barPercentage').scroll_into_view_if_needed();page.wait_for_timeout(80)
+        ratio=page.locator('#barPercentage').bounding_box();existing=page.evaluate('JSON.stringify(world.objects)')
+        swipe(ratio['x']+14+(ratio['width']-28)*.4,ratio['y']+22,ratio['x']+14+(ratio['width']-28)*.7,ratio['y']+22)
+        assert page.evaluate('world.settings.barPercentage===70 && world.bag.length===10 && world.bag.filter(t=>t==="bar").length===7')
+        assert page.evaluate('JSON.stringify(world.objects)')==existing
         # Sticky upper-left close remains reachable after scrolling to the end.
         page.evaluate('setup.scrollTop=setup.scrollHeight');expect(page.locator('#close-setup')).to_be_in_viewport()
         close=page.locator('#close-setup').bounding_box();assert close['x']<40 and close['y']<40

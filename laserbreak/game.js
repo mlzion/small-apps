@@ -31,7 +31,8 @@ const controls = [
   ['barLength', 'Bar length', 30, 220, 5, 'px'],
   ['barSpeed', 'Bar falling speed', 0, 180, 5, 'px/s'],
   ['barRotation', 'Bar rotation speed', -240, 240, 5, '°/s'],
-  ['density', 'Object density', 0, 100, 1, '%']
+  ['density', 'Object density', 0, 100, 1, '%'],
+  ['barPercentage', 'Bar Percentage', 0, 100, 10, '%']
 ];
 const sliders = new Map();
 for (const [key, label, min, max, step, unit] of controls) {

@@ -21,7 +21,7 @@ with sync_playwright() as p:
     page.get_by_role('link',name='Launch LaserBreak').click()
     expect(page).to_have_url('http://app-lab.test/small-apps/laserbreak/')
     assert page.locator('#mode').count()==0
-    assert page.evaluate('world.settings.targetSize===40 && world.settings.blastMultiplier===3 && world.settings.sound')
+    assert page.evaluate('world.settings.targetSize===40 && world.settings.blastMultiplier===3 && world.settings.barPercentage===40 && world.settings.sound')
     page.locator('#pause').click();before=page.evaluate('JSON.stringify([world.objects,world.effects,world.particles,world.time,world.spawnClock])')
     page.wait_for_timeout(80);assert page.evaluate('JSON.stringify([world.objects,world.effects,world.particles,world.time,world.spawnClock])')==before
     page.locator('#pause').click();page.locator('#session').click()
@@ -32,11 +32,15 @@ with sync_playwright() as p:
     page.wait_for_timeout(100);assert page.evaluate('JSON.stringify([world.objects,world.effects,world.particles,world.time,world.spawnClock])')==before
     assert page.evaluate('world.settingsOpen && !world.paused && arena.inert && !world.ready()')
     existing=page.evaluate('JSON.stringify(world.objects)')
-    values={'cooldown':1.25,'blastMultiplier':4.5,'targetSize':44,'targetSpeed':65,'barLength':140,'barSpeed':55,'barRotation':-90,'density':0}
+    values={'cooldown':1.25,'blastMultiplier':4.5,'targetSize':44,'targetSpeed':65,'barLength':140,'barSpeed':55,'barRotation':-90,'density':0,'barPercentage':70}
     for key,value in values.items():
         page.locator('#'+key).evaluate('(el,v)=>{el.value=v;el.dispatchEvent(new Event("input",{bubbles:true}));}',value)
         assert page.evaluate('k=>world.settings[k]',key)==value
     assert page.evaluate('JSON.stringify(world.objects)')==existing
+    expect(page.get_by_role('slider',name='Bar Percentage',exact=True)).to_have_attribute('min','0')
+    expect(page.locator('#barPercentage')).to_have_attribute('max','100')
+    expect(page.locator('#barPercentage')).to_have_attribute('step','10')
+    assert page.evaluate('world.bag.length===10 && world.bag.filter(t=>t==="bar").length===7')
     expect(page.locator('#blastMultiplier')).to_have_attribute('step','0.5')
     page.locator('#sound').uncheck();assert page.evaluate('!audio.enabled && !world.settings.sound')
     page.locator('#sound').check();assert page.evaluate('audio.enabled && world.settings.sound')

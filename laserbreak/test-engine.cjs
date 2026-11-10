@@ -192,6 +192,32 @@ test('six-target/four-bar shuffle bags, randomized order, failed placement retai
  w.configure('density',0);w.start();assert.equal(w.bag.length,0);assert.equal(w.objects.length,0);
  w.configure('density',20);w.start();assert.equal(w.bag.length,7);
 });
+test('0/40/70/100 percent ratios refill exact ten-object bags and preserve failed entries',()=>{
+ assert.equal(defaults.barPercentage,40);
+ for(const percentage of [0,40,70,100]) {
+   const w=seededWorld();w.configure('barPercentage',percentage);
+   for(let round=0;round<3;round++) {
+     const types=[];
+     for(let n=0;n<10;n++){w.objects=[];assert.equal(w.spawn(),true);types.push(w.objects[0].type);}
+     assert.equal(types.filter(t=>t==='bar').length,percentage/10);
+     assert.equal(types.filter(t=>t==='target').length,10-percentage/10);
+   }
+   w.objects=Array.from({length:11},(_,id)=>target(id,id*100,-12,100));
+   assert.equal(w.spawn(),false);const pending=[...w.bag],id=w.nextId;
+   assert.equal(w.spawn(),false);assert.deepEqual(w.bag,pending);assert.equal(w.nextId,id);
+   w.objects=[];assert.equal(w.spawn(),true);assert.equal(w.objects[0].type,pending.at(-1));
+ }
+});
+test('ratio change immediately replaces remaining bag, without altering live objects or timing',()=>{
+ const w=seededWorld();w.start();const snapshot=JSON.stringify(w.objects),time=w.time,clock=w.spawnClock;
+ assert.equal(w.bag.length,7);w.configure('barPercentage',70);
+ assert.equal(w.bag.length,10);assert.equal(w.bag.filter(t=>t==='bar').length,7);
+ assert.equal(JSON.stringify(w.objects),snapshot);assert.equal(w.time,time);assert.equal(w.spawnClock,clock);
+ w.objects=[];w.spawn();const bag=[...w.bag];w.configure('barPercentage',70);assert.deepEqual(w.bag,bag);
+ w.configure('barPercentage',0);assert.equal(w.bag.length,10);assert.ok(w.bag.every(t=>t==='target'));
+ w.configure('barPercentage',100);assert.equal(w.bag.length,10);assert.ok(w.bag.every(t=>t==='bar'));
+ w.start();assert.equal(w.bag.length,7);assert.ok(w.objects.every(o=>o.type==='bar'));
+});
 test('settings panel freezes clock and effects without modifying explicit session state',()=>{
  for(const state of ['active','paused','stopped']) {
    const w=seededWorld();w.start();w.fire(250,250);

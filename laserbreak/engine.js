@@ -2,7 +2,7 @@
 (function (root) {
   'use strict';
   const defaults = Object.freeze({ blastMultiplier: 3, sound: true, cooldown: .75, targetSize: 40, targetSpeed: 45,
-    barLength: 100, barSpeed: 32, barRotation: 65, density: 20, debug: false });
+    barPercentage: 40, barLength: 100, barSpeed: 32, barRotation: 65, density: 20, debug: false });
   const W = 1000, H = 500, MAX_OBJECTS = 60, BAR_THICKNESS = 12, SPAWN_CLEARANCE = 5, MAX_EFFECTS = 160, MAX_PARTICLES = 128;
   const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
   // Return first segment parameter inside a circle, including tangencies and starts inside.
@@ -105,18 +105,23 @@
     }
     configure(key, value) {
       // Object properties are snapshots, assigned only by spawn().
+      if (key === 'barPercentage') value = clamp(Math.round(value / 10) * 10, 0, 100);
+      const changed = this.settings[key] !== value;
       this.settings[key] = value;
       if (key === 'density') this.spawnClock = 0;
+      if (key === 'barPercentage' && changed) this.refillBag();
+    }
+    refillBag() {
+      const bars = this.settings.barPercentage / 10;
+      this.bag = Array.from({length: 10}, (_, i) => i < 10 - bars ? 'target' : 'bar');
+      for (let i = this.bag.length - 1; i > 0; i--) {
+        const j = Math.floor(this.random() * (i + 1));
+        [this.bag[i], this.bag[j]] = [this.bag[j], this.bag[i]];
+      }
     }
     spawn(initialY) {
       if (!this.running || this.settings.density === 0 || this.objects.length >= MAX_OBJECTS) return false;
-      if (!this.bag.length) {
-        this.bag = ['target', 'target', 'target', 'target', 'target', 'target', 'bar', 'bar', 'bar', 'bar'];
-        for (let i = this.bag.length - 1; i > 0; i--) {
-          const j = Math.floor(this.random() * (i + 1));
-          [this.bag[i], this.bag[j]] = [this.bag[j], this.bag[i]];
-        }
-      }
+      if (!this.bag.length) this.refillBag();
       const target = this.bag[this.bag.length - 1] === 'target';
       const o = target ? {
         id: this.nextId, type: 'target', radius: this.settings.targetSize / 2,
