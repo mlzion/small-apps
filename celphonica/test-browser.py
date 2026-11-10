@@ -76,7 +76,7 @@ with sync_playwright() as p:
         page.wait_for_function('audioProbe.oscillators.length === 1')
         assert abs(page.evaluate('audioProbe.oscillators[0].node.frequency.value') - 130.8128) < .01
         page.mouse.move(**point(page, '.note', 1))
-        expect(page.locator('#notes')).to_have_text('D3')
+        expect(page.locator('#notes')).to_have_text('Key: C maj | Note: D3')
         assert live(page) == 1
         page.mouse.move(**point(page, 'header'))
         assert live(page) == 0
@@ -156,7 +156,7 @@ with sync_playwright() as p:
     touch.wait_for_function('audioProbe.oscillators.filter(o => !o.stopped).length === 2')
     a = dict(point(touch, '.note', 1), id=1)
     send('touchMove', [a, b])
-    expect(touch.locator('#notes')).to_have_text('D3 · E3')
+    expect(touch.locator('#notes')).to_have_text('Key: C maj | Note: D3·E3')
     assert live(touch) == 2
     # Two independent voices sharing one highlighted note; one release keeps it held.
     a = dict(point(touch, '.note', 2, x=.25), id=1)

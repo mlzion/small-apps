@@ -69,13 +69,18 @@ with sync_playwright() as p:
     def live(page):
         return page.evaluate('audioProbe.voices.filter(v => !v.stopped).length')
 
+    def toggle_motion(page):
+        page.click('#settings-open')
+        if page.locator('#motion-enable').is_enabled(): page.click('#motion-enable')
+        page.click('#settings-close')
+
     ctx = context(viewport={'width': 844, 'height': 390}, is_mobile=True, has_touch=True)
     page = ctx.new_page()
     page.goto('https://app-lab.test/small-apps/celphonica/')
     assert page.evaluate('permissionCalls') == []
     sample(page, gamma=20)
     assert xy(page) == [0, 0]
-    page.click('#motion-enable')
+    toggle_motion(page)
     expect(page.locator('#motion-enable')).to_have_attribute('aria-pressed', 'true')
     assert page.evaluate('permissionCalls') == ['orientation', 'motion']
     assert live(page) == 0
@@ -174,7 +179,7 @@ with sync_playwright() as p:
     expect(page.locator('#motion-level')).to_be_disabled()
     sample(page, gamma=5)
     assert xy(page) == [0, 0]
-    page.click('#motion-enable')
+    toggle_motion(page)
     expect(page.locator('#motion-enable')).to_have_attribute('aria-pressed', 'false')
     sample(page, gamma=80)
     assert xy(page) == [0, 0]
@@ -220,19 +225,19 @@ with sync_playwright() as p:
                                          ({'orientation':'denied','motion':'throws'}, True, 'denied')]:
         fallback = context(permissions, secure=secure)
         test = fallback.new_page(); test.goto('https://app-lab.test/celphonica/')
-        if test.locator('#motion-enable').is_enabled(): test.click('#motion-enable')
+        toggle_motion(test)
         expect(test.locator('#motion-status')).to_contain_text(message)
         test.locator('.note').first.click()
         assert live(test) == 0
         assert test.evaluate('audioProbe.voices.length') > 0, 'Unavailable motion must not block notes'
         if message == 'denied':
             test.evaluate("sensorConfig.orientation='granted';sensorConfig.motion='granted'")
-            test.click('#motion-enable'); sample(test)
+            toggle_motion(test); sample(test)
             expect(test.locator('#motion-level')).to_be_enabled()
         fallback.close()
     fallback = context({'orientation':'denied','motion':'no-prompt'})
     test = fallback.new_page(); test.goto('https://app-lab.test/celphonica/')
-    test.click('#motion-enable'); gravity(test)
+    toggle_motion(test); gravity(test)
     expect(test.locator('#motion-status')).to_contain_text('Gravity fallback')
     test.wait_for_timeout(100); gravity(test, x=-3)
     assert xy(test)[0] > 0
@@ -242,7 +247,7 @@ with sync_playwright() as p:
     # No permission-method Android path; switch from fallback to preferred orientation.
     fallback = context({'orientation':'no-prompt','motion':'no-prompt'})
     test = fallback.new_page(); test.goto('https://app-lab.test/celphonica/')
-    test.click('#motion-enable'); gravity(test)
+    toggle_motion(test); gravity(test)
     sample(test, gamma=15)
     expect(test.locator('#motion-status')).to_contain_text('Orientation')
     assert xy(test) == [0, 0]
@@ -250,7 +255,7 @@ with sync_playwright() as p:
     assert xy(test) == [0, 0]
     fallback.close()
     # Notes are landscape-only. Portrait shows a rotate message.
-    page.click('#motion-enable'); sample(page)
+    toggle_motion(page); sample(page)
     for width, height in [(1280,800),(844,390),(844,320),(740,360),(667,375),(375,812),(320,568)]:
         page.set_viewport_size({'width':width,'height':height})
         if height >= width:
@@ -262,7 +267,7 @@ with sync_playwright() as p:
             page.select_option('#scale',scale)
             page.click('#settings-close')
             assert page.evaluate('document.documentElement.scrollWidth<=innerWidth && document.documentElement.scrollHeight<=innerHeight')
-            for element in page.locator('.note, #motion-enable, #motion-level').all():
+            for element in page.locator('.note, #motion-level').all():
                 assert element.evaluate('''el => {const r=el.getBoundingClientRect();return r.width>15&&r.height>15&&r.y>=0&&r.bottom<=innerHeight&&el.contains(document.elementFromPoint(r.x+r.width/2,r.y+r.height/2));}'''), (width,height,scale)
         if (width,height) == (844,390):
             sample(page); page.click('#motion-level')

@@ -14,8 +14,8 @@
   <main id="instrument">
     <header>
       <a href="../#apps" aria-label="App Lab collection">a_</a>
-      <h1>Celphonica<span> / 0.3</span></h1>
-      <output id="notes" aria-label="Active notes">Ready to play</output>
+      <h1>Celphonica<span> / 0.4</span></h1>
+      <output id="notes" aria-label="Key and last played notes">Key: C maj | Note: —</output>
       <button id="fullscreen" type="button">Full screen</button>
       <button id="settings-open" class="gear" type="button" aria-label="Open settings" aria-haspopup="dialog" aria-controls="settings" aria-expanded="false">⚙</button>
     </header>
@@ -31,12 +31,11 @@
           <span class="level-crosshair" aria-hidden="true"></span><span id="motion-bubble" aria-hidden="true"></span>
           <span class="level-caption" aria-hidden="true">TAP TO RECENTER</span>
         </button>
-        <button id="motion-enable" type="button" aria-pressed="false">Enable motion</button>
-        <p id="motion-status" role="status">Visual only · Sensors off</p>
+        <p id="motion-status" role="status">Enable motion in Settings</p>
       </section>
       <div id="keyboard" aria-label="Three octaves of notes"></div>
     </section>
-    <footer><span id="audio-status" role="status">Touch a note to start audio</span><span id="view-status">Two thumbs · Motion is visual only</span></footer>
+    <footer><span id="audio-status" role="status">Touch a note to start audio</span><span id="view-status">Landscape performance</span></footer>
   </main>
   <section id="rotate-message" aria-labelledby="rotate-title">
     <span class="rotate-icon" aria-hidden="true">↻</span>
@@ -48,7 +47,7 @@
   </section>
   <dialog id="settings" aria-labelledby="settings-title">
     <div class="settings-drawer">
-      <div class="settings-heading"><h2 id="settings-title">Settings</h2><button id="settings-close" type="button" aria-label="Close settings" autofocus>✕</button></div>
+      <div class="settings-heading"><button id="settings-close" type="button" aria-label="Close settings" autofocus>✕</button><h2 id="settings-title">Settings</h2></div>
       <div class="settings-fields">
         <label>Root<select id="root" aria-label="Root note"></select></label>
         <label>Scale<select id="scale"><option value="major">Major</option><option value="minor">Minor</option><option value="pentatonic">Major pentatonic</option><option value="chromatic">Chromatic</option></select></label>
@@ -57,6 +56,12 @@
         <label>Master volume<input id="volume" type="range" min="0" max="100" value="65"></label>
         <label for="motion-sensitivity">Motion sensitivity <span id="motion-sensitivity-value">1×</span><input id="motion-sensitivity" aria-label="Motion sensitivity" type="range" min="0.5" max="4" step="0.25" value="1"></label>
         <div class="range-controls"><button id="octave-down" aria-label="Octave down">−8ve</button><span id="range"></span><button id="octave-up" aria-label="Octave up">+8ve</button></div>
+        <section class="motion-settings" aria-label="Motion controls">
+          <button id="motion-enable" type="button" aria-pressed="false">Enable motion</button>
+          <label class="switch"><input id="motion-pitch" type="checkbox" autocomplete="off">Pitch bend <small>Side tilt · ±2 semitones</small></label>
+          <label class="switch"><input id="motion-volume" type="checkbox" autocomplete="off">Volume expression <small>Forward/back tilt · 85–115%</small></label>
+          <p>Both mappings start off. Manual expression remains independent.</p>
+        </section>
       </div>
     </div>
   </dialog>

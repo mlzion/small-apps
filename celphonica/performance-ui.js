@@ -78,7 +78,7 @@ export function initPerformanceUI(silence) {
       ownsOrientationLock = true;
       // An exit can occur while the lock request is pending.
       if (!document.fullscreenElement) releaseOrientation();
-      else viewStatus(portrait.matches ? 'Landscape requested. Rotate the phone if needed.' : 'Landscape view · Motion is visual only');
+      else viewStatus(portrait.matches ? 'Landscape requested. Rotate the phone if needed.' : 'Landscape view');
     } catch {
       viewStatus('Landscape lock unavailable. Rotate the phone if needed.');
     }
@@ -93,7 +93,7 @@ export function initPerformanceUI(silence) {
     $('portrait-fullscreen').textContent = document.fullscreenElement ? 'Exit full screen' : 'Try full screen';
     if (!document.fullscreenElement) {
       releaseOrientation();
-      $('view-status').textContent = 'Two thumbs · Motion is visual only';
+      $('view-status').textContent = 'Landscape performance';
       $('rotate-status').textContent = 'Full screen can rotate the view where supported.';
     }
   });

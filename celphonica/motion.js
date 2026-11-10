@@ -1,7 +1,7 @@
 import { MotionModel, orientationQuaternion } from './motion-math.js';
 
-// Visual-only module: no synth import, audio nodes, or expression callbacks.
-export function initMotion() {
+// Sensor/model lifecycle only; consumers receive the same coordinates as the bubble.
+export function initMotion({ onCoordinates = () => {} } = {}) {
   const $ = id => document.getElementById(id);
   const model = new MotionModel();
   let enabled = false, requesting = false, generation = 0;
@@ -10,6 +10,7 @@ export function initMotion() {
   const listeners = [];
   const status = text => { $('motion-status').textContent = text; };
   const screenAngle = () => screen.orientation?.angle ?? window.orientation ?? 0;
+  const publish = () => onCoordinates({ x: model.x, y: model.y });
   function paint() {
     frame = null;
     // 50% - 10px leaves room for the complete 16px bubble plus border margin.
@@ -22,12 +23,14 @@ export function initMotion() {
   function reset() {
     model.reset(); source = null; lastReading = null; lastOrientation = -Infinity;
     $('motion-level').disabled = true;
+    publish();
     schedulePaint();
   }
   function recenter() {
     if (!enabled) return;
     // Capture the latest raw sample, not the lagging smoothed bubble position.
     model.recenter();
+    publish();
     schedulePaint();
   }
   function accept(quaternion, nextSource) {
@@ -36,8 +39,9 @@ export function initMotion() {
     if (source !== nextSource || (lastReading !== null && now - lastReading > 1500)) model.reset();
     source = nextSource; lastReading = now;
     model.sample(quaternion, now, screenAngle());
+    publish();
     $('motion-level').disabled = false;
-    const message = `${source === 'orientation' ? 'Orientation' : 'Gravity fallback'} · Visual only`;
+    const message = `${source === 'orientation' ? 'Orientation' : 'Gravity fallback'} · Ready`;
     if ($('motion-status').textContent !== message) status(message);
     schedulePaint();
   }
@@ -56,7 +60,7 @@ export function initMotion() {
     const gamma = Math.atan2(-g.x, Math.hypot(g.y, g.z)) * 180 / Math.PI;
     accept(orientationQuaternion(0, beta, gamma), 'gravity');
   }
-  function stop(message = 'Visual only · Sensors off') {
+  function stop(message = 'Sensors off · Enable in Settings') {
     enabled = false; generation++;
     for (const [type, listener] of listeners.splice(0)) window.removeEventListener(type, listener);
     clearInterval(timer); timer = null;
@@ -102,15 +106,18 @@ export function initMotion() {
     }, 500);
   }
   $('motion-enable').addEventListener('click', enable);
-  $('motion-level').addEventListener('click', recenter);
+  $('motion-level').addEventListener('pointerdown', event => {
+    if (event.button !== 0) return;
+    event.preventDefault();
+    recenter();
+  });
+  $('motion-level').addEventListener('click', event => { if (event.detail === 0) recenter(); });
   $('motion-sensitivity').addEventListener('input', event => {
     model.sensitivity = Number(event.target.value);
     $('motion-sensitivity-value').textContent = `${model.sensitivity}×`;
   });
-  // Registered after instrument input so sensor work never precedes note audio.
-  $('keyboard').addEventListener('pointerdown', event => {
-    if (event.button === 0 && event.target.closest('.note')) recenter();
-  });
+  // Instrument captures neutral before starting the new voice; existing voices
+  // smoothly return to neutral through the consumer rather than being restarted.
   function changedFrame() {
     if (!enabled) return;
     reset();
@@ -128,4 +135,6 @@ export function initMotion() {
     status('Sensors unavailable · Notes work');
   }
   paint();
+  publish();
+  return { recenter };
 }
