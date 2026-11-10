@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 360 204" fill="none">
+  <rect width="360" height="204" fill="#1b2533"/>
+  <rect x="28" y="48" width="304" height="134" rx="12" fill="#101620" stroke="#405373"/>
+  <text x="44" y="77" fill="#bacef8" font-family="system-ui,sans-serif" font-size="18">C4 · E4 · G4</text>
+  <rect x="42" y="92" width="56" height="74" rx="6" fill="#253d5b" stroke="#526e97"/>
+  <path d="M70 92v74M42 129h56" stroke="#526e97"/><circle cx="81" cy="114" r="5" fill="#bacef8"/>
+  <defs><pattern id="keys" width="30" height="25" patternUnits="userSpaceOnUse"><rect x="2" y="2" width="25" height="20" rx="3" fill="#2f405c" stroke="#526e97"/></pattern></defs>
+  <rect x="110" y="92" width="210" height="75" fill="url(#keys)"/>
+  <g fill="#bacef8"><rect x="122" y="127" width="25" height="20" rx="3"/><rect x="182" y="127" width="25" height="20" rx="3"/><rect x="242" y="127" width="25" height="20" rx="3"/></g>
+</svg>
