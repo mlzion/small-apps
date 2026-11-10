@@ -20,7 +20,7 @@ with sync_playwright() as p:
         page = c.new_page(); page.goto('http://app-lab.test/laserbreak/')
         button = page.locator('#fullscreen')
         expect(button).to_have_attribute('aria-label', 'Enter fullscreen')
-        page.evaluate('world.clear();world.settings.density=0;world.settings.mode="release";input.down(1,"left",100);input.down(2,"right",200);window.resizeCalls=0;const nativeResize=resize;resize=()=>{resizeCalls++;nativeResize();};void 0')
+        page.evaluate('world.clear();world.settings.density=0;input.down(1,"left",100);input.down(2,"right",200);window.resizeCalls=0;const nativeResize=resize;resize=()=>{resizeCalls++;nativeResize();};void 0')
         button.click(); page.wait_for_function('document.fullscreenElement!==null')
         expect(button).to_have_attribute('aria-label', 'Exit fullscreen'); expect(button).to_have_attribute('aria-pressed','true')
         assert page.evaluate('input.points.size===0 && world.effects.length===0 && resizeCalls>0 && !world.orientationBlocked')

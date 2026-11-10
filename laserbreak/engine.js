@@ -1,7 +1,7 @@
 /* Original LaserBreak simulation. Browser global + Node export; no dependencies. */
 (function (root) {
   'use strict';
-  const defaults = Object.freeze({ mode: 'touch', cooldown: .75, targetSize: 40, targetSpeed: 45,
+  const defaults = Object.freeze({ blastMultiplier: 3, sound: true, cooldown: .75, targetSize: 40, targetSpeed: 45,
     barLength: 100, barSpeed: 32, barRotation: 65, density: 20, debug: false });
   const W = 1000, H = 500, MAX_OBJECTS = 60, BAR_THICKNESS = 12, SPAWN_CLEARANCE = 5, MAX_EFFECTS = 160, MAX_PARTICLES = 128;
   const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
@@ -37,7 +37,7 @@
     return Math.hypot(p.x-clamp(p.x,-o.length/2,o.length/2),p.y-clamp(p.y,-o.thickness/2,o.thickness/2))<=r;
   }
   class Input {
-    constructor(fire,ready,mode) { this.fire=fire;this.ready=ready;this.mode=mode;this.points=new Map();this.locked=false;this.height=H; }
+    constructor(fire,ready) { this.fire=fire;this.ready=ready;this.points=new Map();this.locked=false;this.height=H; }
     pair() {
       let left, right;
       for (const point of this.points.values()) {
@@ -49,15 +49,12 @@
     down(id,side,y) {
       if(this.points.has(id)) return;
       this.points.set(id,{side,y:clamp(y,0,this.height)});
-      if(this.locked) return;
-      const [a,b]=this.pair();
-      if(a&&b && this.mode()==='touch') { this.locked=true;if(this.ready()) this.fire(a.y,b.y); }
     }
     move(id,y) { const p=this.points.get(id);if(p)p.y=clamp(y,0,this.height); }
     up(id,cancel=false) {
       if(!this.points.has(id))return;
       const [a,b]=this.pair();
-      if(!this.locked && a&&b && [a,b].includes(this.points.get(id)) && this.mode()==='release') {
+      if(!this.locked && a&&b && [a,b].includes(this.points.get(id))) {
         this.locked=true;if(!cancel&&this.ready())this.fire(a.y,b.y);
       }
       if(cancel)this.locked=true;
@@ -98,9 +95,12 @@
       this.paused = false;
       this.running = true;
       this.orientationBlocked = false;
+      this.settingsOpen = false;
+      this.bag = [];
+      this.lastShotSounds = null;
     }
     ready() {
-      return this.running && !this.paused && !this.orientationBlocked &&
+      return this.running && !this.paused && !this.orientationBlocked && !this.settingsOpen &&
         this.time - this.lastShot >= this.settings.cooldown;
     }
     configure(key, value) {
@@ -110,7 +110,14 @@
     }
     spawn(initialY) {
       if (!this.running || this.settings.density === 0 || this.objects.length >= MAX_OBJECTS) return false;
-      const target = this.random() < .65;
+      if (!this.bag.length) {
+        this.bag = ['target', 'target', 'target', 'target', 'target', 'target', 'bar', 'bar', 'bar', 'bar'];
+        for (let i = this.bag.length - 1; i > 0; i--) {
+          const j = Math.floor(this.random() * (i + 1));
+          [this.bag[i], this.bag[j]] = [this.bag[j], this.bag[i]];
+        }
+      }
+      const target = this.bag[this.bag.length - 1] === 'target';
       const o = target ? {
         id: this.nextId, type: 'target', radius: this.settings.targetSize / 2,
         speed: this.settings.targetSpeed, color: this.random() < .5 ? '#36fff3' : '#fff04b'
@@ -134,6 +141,7 @@
         if (!occupied) {
           this.nextId++;
           this.objects.push(o);
+          this.bag.pop();
           return true;
         }
       }
@@ -142,6 +150,8 @@
     fire(left, right) {
       if (!this.ready()) return false;
       this.lastShot = this.time;
+      const multiplier = this.settings.blastMultiplier;
+      const sounds = {single: 0, double: 0, bars: 0};
       const a = {x: 0, y: left}, b = {x: W, y: right};
       let leftStop = 1, rightStop = 1;
       // Both instantaneous beams cross the field, independently stopping at the first bar.
@@ -165,15 +175,17 @@
         destroyed.add(o);
         const double = l && r;
         this.effects.push({type: double ? 'explosion' : 'dissolve', x: o.x, y: o.y,
-          r: o.radius * (double ? 2 : 1), color: o.color, age: 0, life: double ? .35 : .22});
+          r: o.radius * (double ? multiplier : 1), color: o.color, age: 0, life: double ? .35 : .22});
+        sounds[double ? 'double' : 'single']++;
         this.fragments(o, double);
         if (double) blasts.push(o);
       }
       // Only direct double hits produce blasts; victims never propagate them.
       for (const center of blasts) {
         for (const o of this.objects) {
-          if (!destroyed.has(o) && blastHits(center, center.radius * 2, o)) {
+          if (!destroyed.has(o) && blastHits(center, center.radius * multiplier, o)) {
             destroyed.add(o);
+            sounds[o.type === 'bar' ? 'bars' : 'single']++;
             this.fragments(o, false);
             this.effects.push({type: 'dissolve', x: o.x, y: o.y, r: o.type === 'target' ? o.radius : 8,
               color: o.color || '#8da5b7', age: 0, life: .22});
@@ -184,6 +196,7 @@
       for (const o of this.objects) if (!destroyed.has(o)) this.objects[live++] = o;
       this.objects.length = live;
       if (this.effects.length > MAX_EFFECTS) this.effects.splice(0, this.effects.length - MAX_EFFECTS);
+      this.lastShotSounds = sounds;
       return true;
     }
     fragments(o, dramatic) {
@@ -222,10 +235,11 @@
       this.paused = false;
       this.time = 0;
       this.lastShot = -Infinity;
+      this.bag.length = 0;
       for (let n = 0; n < 3; n++) this.spawn(40);
     }
     step(dt) {
-      if (!this.running || this.paused || this.orientationBlocked || !(dt > 0)) return;
+      if (!this.running || this.paused || this.orientationBlocked || this.settingsOpen || !(dt > 0)) return;
       this.time += dt;
       let live = 0;
       // One movement/rotation update per object per frame. No collision scans here.
