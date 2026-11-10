@@ -159,35 +159,35 @@
     {
       "number": 7,
       "name": "Draft 7",
-      "timer": 89,
+      "timer": 70,
       "bombHealth": 3,
       "ammo": 60,
       "turretSpeed": 120,
-      "fireRate": 4,
+      "fireRate": 2,
       "ringCount": 3,
-      "seed": 4206,
+      "seed": 3284277893,
       "assembly": {
         "profileId": "gentle-drift",
-        "playbackSpeed": 1
+        "playbackSpeed": 1.6
       },
       "rings": [
         {
           "number": 1,
-          "gateWidth": 110,
-          "gateHealth": 2
+          "gateWidth": 50,
+          "gateHealth": 3
         },
         {
           "number": 2,
-          "gateWidth": 110,
-          "gateHealth": 2
+          "gateWidth": 60,
+          "gateHealth": 5
         },
         {
           "number": 3,
           "gateWidth": 100,
-          "gateHealth": 2
+          "gateHealth": 8
         }
       ],
-      "motionFamily": "easy"
+      "motionFamily": "medium"
     },
     {
       "number": 8,
@@ -382,19 +382,19 @@
         ],
         [
           5,
-          24
+          145
         ],
         [
           10,
-          12
+          210
         ],
         [
           16,
-          -18
+          25
         ],
         [
           21,
-          -8
+          -100
         ],
         [
           25,

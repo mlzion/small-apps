@@ -2,7 +2,11 @@
 const assert = require("node:assert/strict");
 const { Game, levelConfig } = require("./engine.js");
 const { sampleProfile, validateProfile, seededRandom } = require("./motion.js");
-const { PROFILES, eligible } = require("./experimental-motion.js");
+const motion = require("./experimental-motion.js");
+const published = require("./levels.js").publishedDocument();
+const gameplay = require("./test-helpers/gameplay.js");
+const PROFILES = published.ringProfiles.map(motion.compile);
+const eligible = family => PROFILES.filter(p=>p.difficulty===family);
 const selectProfile = (family, random, familyName) => {
   if (familyName) throw Error("Incompatible");
   const pool = eligible(family);
@@ -23,7 +27,7 @@ const fresh = (seed) => {
   return g;
 };
 const ray = (angle) => ({
-  origin: { x: 216 * Math.cos(angle), y: 216 * Math.sin(angle) },
+  origin: { x: GEOMETRY.muzzleRadius * Math.cos(angle), y: GEOMETRY.muzzleRadius * Math.sin(angle) },
   direction: { x: -Math.cos(angle), y: -Math.sin(angle) },
 });
 const settings = levelConfig(1).rings;
@@ -38,7 +42,7 @@ near(normalize(-0.1), Math.PI * 2 - 0.1);
   let hit = resolveShot(ray(r.displayAngle), world);
   assert.equal(hit.kind, "gate");
   assert.equal(hit.target, r.gate);
-  near(hit.distance, 216 - 112);
+  near(hit.distance, GEOMETRY.muzzleRadius - 112);
   assert.equal(
     resolveShot(ray(r.displayAngle + r.gateArc / 2), world).kind,
     "wall",
@@ -214,29 +218,23 @@ for (let i = 0; i < 100; i++)
   near(slow.g.rings[0].relativeAngle, fast.g.rings[0].relativeAngle);
   assert.equal(slow.g.ammo, fast.g.ammo);
 }
-// Conservative finite-library validation: wait at the shared reference angle,
-// shoot only when the geometry is zero. This is an available player strategy,
-// not a collision permission rule. All later settings plateau by level 15.
+// Exercise each published starting profile via a real reproducible seed. Direct
+// profile assignment would be overwritten by the production cycle scheduler.
 let validated = 0;
-for (let level = 1; level <= 3; level++)
-  for (const profile of PROFILES.filter(
-    (p) => p.difficulty === levelConfig(level).rings.difficulty,
-  )) {
-    const g = fresh(1);
-    g.level = level;
-    g.startLevel();
-    g.rings[0].profile = profile;
-    assert(g.config.ammo > g.config.minimumHits);
-    assert.equal(g.rings.length, 1);
-    while (g.state === "PLAYING") {
-      if (Math.abs(g.rings[0].relativeAngle) < 1e-9) g.fire();
-      g.update(0.05);
-    }
-    assert.equal(g.state, "DEFUSING", `Level ${level}, ${profile.name}`);
-    assert(g.ammo > 0);
-    assert(g.remaining > 10);
+for (const level of published.levels.filter(l=>l.ringCount===1))
+  for (const profile of eligible(level.motionFamily)) {
+    let seed=0;
+    while(seed<10000 && motion.assignProfiles(level,seed,published.ringProfiles)[0].id!==profile.id)seed++;
+    assert(seed<10000, `No starting seed found for ${profile.id}`);
+    const g=fresh(seed);g.level=level.number;g.startLevel();
+    assert.equal(g.rings[0].profile.id,profile.id);
+    const result=gameplay.finishLevel(g,{level,...published});
+    assert.equal(g.state,'LEVEL_COMPLETE');
+    assert.equal(result.sequence.filter(target=>target==='bomb').length,level.bombHealth);
+    assert.equal(result.sequence.filter(target=>target===1).length,level.rings[0].gateHealth);
+    assert.equal(g.ammo,level.ammo-result.sequence.length);
     validated++;
   }
 console.log(
-  `PASS: arc/ray wrap/edge/side geometry, wall/gate/first-hit order, gate parent/health/opacity/opening, motion after destruction, profiles/interpolation/reversals/holds/loops, seeded selection, exact-time hits, pause/retry/playback, frame invariance, ${validated} conservative level/profile wins`,
+  `PASS: arc/ray wrap/edge/side geometry, wall/gate/first-hit order, gate parent/health/opacity/opening, motion after destruction, profiles/interpolation/reversals/holds/loops, seeded selection, exact-time hits, pause/retry/playback, frame invariance, ${validated} published starting-profile mechanics wins`,
 );

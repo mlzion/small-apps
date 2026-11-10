@@ -47,8 +47,13 @@ with sync_playwright() as p:
     page.locator('#motion-play').tap();assert page.evaluate('assemblyEditor.time')==0
     page.locator('#motion-mode').select_option('assembly')
     angle=page.get_by_role('textbox',name='Motion key 2 angle',exact=True)
-    page.get_by_role('button',name='Reverse sign key 2',exact=True).tap();expect(angle).to_have_value('-24')
-    wrapped=page.evaluate("document.querySelector('#motion-play').click();assemblyEditor.tick(25.25);assemblyEditor.time")
+    selected_id=page.locator('#motion-profile').input_value()
+    profile_before=page.evaluate('(id)=>JSON.parse(JSON.stringify(doc.assemblyProfiles.find(p=>p.id===id)))',selected_id)
+    expected_angle=-profile_before['keyframes'][1][1]
+    assert float(angle.input_value())==profile_before['keyframes'][1][1]
+    page.get_by_role('button',name='Reverse sign key 2',exact=True).tap()
+    expect(angle).to_have_value(str(expected_angle))
+    wrapped=page.evaluate("duration=>{document.querySelector('#motion-play').click();assemblyEditor.tick(duration+.25);return assemblyEditor.time;}",profile_before['duration'])
     assert abs(wrapped-.25)<1e-8
     page.locator('#motion-play').tap();assert page.evaluate('assemblyEditor.time')==0
     page.locator('#preview-play').tap();page.wait_for_timeout(100);assert page.evaluate('previewTime')>0
@@ -56,7 +61,10 @@ with sync_playwright() as p:
     with page.expect_download() as event:page.locator('#publish').tap()
     exported=json.loads(Path(event.value.path()).read_text());assert exported['version']==4
     assert exported['ringProfiles'][0]['keyframes'][1][1]==-40
-    assert exported['assemblyProfiles'][0]['keyframes'][1][1]==-24
+    exported_profile=next(p for p in exported['assemblyProfiles'] if p['id']==selected_id)
+    expected_profile=json.loads(json.dumps(profile_before));expected_profile['keyframes'][1][1]=expected_angle
+    assert exported_profile==expected_profile
+    assert page.evaluate('DFuzeAssembly.validateProfile(doc.assemblyProfiles.find(p=>p.id===document.querySelector("#motion-profile").value))')==[]
     # Older widths are adjusted visibly; v3 invalid widths are rejected, never rounded.
     legacy=page.evaluate("const old=JSON.parse(JSON.stringify(doc));old.version=2;delete old.ringProfiles;old.levels.forEach(l=>{l.assembly.enabled=false;l.playbackSpeed=1;l.rings.forEach(r=>{r.family=l.motionFamily;r.profiles=DFuzeExperimentalMotion.eligible(r.family).slice(0,5).map(p=>p.id)});delete l.motionFamily;});old.levels[0].rings[0].gateWidth=91;old")
     page.locator('#import-json').set_input_files({'name':'legacy.json','mimeType':'application/json','buffer':json.dumps(legacy).encode()})

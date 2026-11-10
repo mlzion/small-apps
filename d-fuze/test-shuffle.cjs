@@ -6,14 +6,20 @@ const near=(a,b,e=1e-7)=>assert(Math.abs(a-b)<e,`${a} != ${b}`);
 const doc=require('./published-levels.json');
 const old={...S.clone(doc),version:3,ringProfiles:S.clone(doc.ringProfiles.filter(p=>!p.id.endsWith('-06'))),levels:require('./test-fixtures/levels-v3.json')};
 const migrated=S.importJSON(JSON.stringify(old));
-assert.equal(migrated.version,4);assert.deepEqual(migrated,doc);
+assert.equal(migrated.version,4);
+// The historical v3 fixture has its own authored levels. Migration must preserve
+// those values, independently of later edits to the currently published levels.
+const expectedMigration={...S.clone(old),version:4,levels:[],
+ ringProfiles:[...S.clone(old.ringProfiles),...M.defaults().filter(p=>p.id.endsWith('-06'))]};
 assert.equal(migrated.migrationNotes.length,15);
 old.levels.forEach((l,i)=>{
  const expected=S.clone(l);delete expected.playbackSpeed;
  expected.rings.forEach(r=>delete r.family);
  expected.motionFamily=['easy','medium','hard'][Math.max(...l.rings.map(r=>['easy','medium','hard'].indexOf(r.family)))];
  assert.deepEqual(migrated.levels[i],expected);
+ expectedMigration.levels.push(expected);
 });
+assert.deepEqual(migrated,expectedMigration);
 assert.deepEqual(S.importJSON(S.exportJSON(doc)),doc);
 for(const change of [d=>d.levels[0].motionFamily='unknown',d=>d.levels[0].playbackSpeed=1,
  d=>d.levels[0].rings[0].family='easy',d=>d.ringProfiles[0].keyframes[0][0]=.01,
@@ -61,7 +67,7 @@ for(const family of ['easy','medium','hard']) {
  const before=idsAt(9.999),at=idsAt(10),after=idsAt(10.001);
  assert(at.every((id,i)=>id!==before[i]));assert.deepEqual(at,after);
  assert.equal(g.animationTime,10.001);assert(!Object.hasOwn(g.config,'animationPlaybackSpeed'));
- near(g.assembly.angle,A.sampleProfile(doc.assemblyProfiles[0],10.001*1.7));
+ near(g.assembly.angle,A.sampleProfile(doc.assemblyProfiles.find(p=>p.id===level.assembly.profileId),10.001*level.assembly.playbackSpeed));
  for(const t of [0,9.999,10,10.001,19.999,20,20.001,99.999,100,100.001]) {
   idsAt(t);
   for(const r of g.rings){near(r.displayAngle,r.relativeAngle+g.assembly.angle+R.GEOMETRY.referenceOffset);assert(Math.abs(r.relativeAngle)<.0001);}
