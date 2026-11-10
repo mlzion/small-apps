@@ -2,7 +2,7 @@
 
 Small ideas. Working experiments.
 
-A static gallery for browser games, audio tools, MIDI applications, and creative projects. Calculator, Breakout, Falling Blocks, and D::FUZE are available; Space Shooter, Synth Lab, MIDI Lab, and Paint Studio are planned.
+A static gallery for browser games, audio tools, MIDI applications, and creative projects. Calculator, Breakout, Falling Blocks, D::FUZE, and Celphonica are available; Space Shooter, Synth Lab, MIDI Lab, and Paint Studio are planned.
 
 ## Running locally
 
@@ -29,3 +29,7 @@ See [d-fuze/README.md](d-fuze/README.md) for game architecture, controls, config
 ## Developer Tools
 
 The homepage footer has a **Developer Tools** button for the experimental [D::FUZE Level Builder](d-fuze/builder/README.md). Its disposable public code is `FUSE-LAB-3`, a casual-access deterrent rather than secure authentication. Published D::FUZE levels and legacy motion profiles are unchanged. See the builder documentation for editing, previews, Test Mode, JSON/CSV exports, browser drafts, and changing the code.
+
+## Celphonica
+
+See [celphonica/README.md](celphonica/README.md) for the touchscreen instrument, audio architecture, and verification.

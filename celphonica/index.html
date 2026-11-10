@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#101216">
+  <meta name="description" content="A pocket instrument for two thumbs. Play scales, chords, and sound with Celphonica.">
+  <title>Celphonica — App Lab</title>
+  <link rel="icon" href="../assets/favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="styles.css">
+  <script type="module" src="instrument.js"></script>
+</head>
+<body>
+  <main>
+    <header><a href="../#apps">a_ <span>App Lab</span></a><h1>Celphonica<span> / 0.1</span></h1><button id="fullscreen" type="button">Full screen</button></header>
+    <section class="settings" aria-label="Instrument settings">
+      <label>Root<select id="root" aria-label="Root note"></select></label>
+      <label>Scale<select id="scale"><option value="major">Major</option><option value="minor">Minor</option><option value="pentatonic">Major pentatonic</option><option value="chromatic">Chromatic</option></select></label>
+      <label>Sound<select id="waveform"><option value="sine">Sine</option><option value="triangle">Triangle</option><option value="sawtooth">Sawtooth</option></select></label>
+      <label class="volume">Volume <input id="volume" type="range" min="0" max="100" value="65"></label>
+    </section>
+    <section class="readout" aria-label="Played notes">
+      <div><p class="eyebrow">TOUCH · SLIDE · PLAY</p><output id="notes" aria-label="Active notes">Ready to play</output></div>
+      <div class="range-controls"><button id="octave-down" aria-label="Octave down">−8ve</button><span id="range"></span><button id="octave-up" aria-label="Octave up">+8ve</button></div>
+    </section>
+    <section class="performance" aria-label="Performance surface">
+      <aside class="expression">
+        <label>Expression<select id="expression-mode"><option value="xy">XY pad</option><option value="slider">Vertical slider</option></select></label>
+        <div id="xy-pad" role="group" aria-label="XY expression pad: horizontal brightness, vertical level"><span class="pad-label">BRIGHTNESS →<br>↑ LEVEL</span><i id="cursor"></i></div>
+        <label id="slider-control" hidden>Brightness<input id="filter-slider" aria-label="Filter cutoff" type="range" min="0" max="100" value="75" orient="vertical"></label>
+        <p id="expression-value">Bright 75% · Level 100%</p>
+      </aside>
+      <div id="keyboard" aria-label="Three octaves of notes"></div>
+    </section>
+    <footer><span id="audio-status" role="status">Touch a note to start audio</span><span class="orientation-hint">Best played in landscape · Hold with both hands</span></footer>
+    <noscript>Enable JavaScript to play Celphonica.</noscript>
+  </main>
+</body>
+</html>
