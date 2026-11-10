@@ -1,57 +1,90 @@
-# LaserBreak — Phase 1
+# LaserBreak — Phase 1 playtest revision
 
-A standalone mechanics playground. Open `laserbreak/` through any static server; relative URLs also work under GitHub Pages at `/small-apps/laserbreak/`. Original Canvas/SVG graphics and JavaScript, with no build step or runtime dependencies.
+A standalone, landscape-only gameplay sandbox. Serve the repository with any static HTTP server and open `laserbreak/`; relative paths also work at `/small-apps/laserbreak/`. Original Canvas/SVG graphics and JavaScript. No framework, build step, or runtime dependencies.
 
-## Play
+## Controls and orientation
 
-Use landscape orientation and place one thumb on each tall firing pad. Vertical positions on the pads determine the straight firing line across the field.
+Place one thumb on each tall firing pad. Their vertical positions determine the firing line.
 
-- **Fire on touch** (default): the second contact on the opposite pad fires immediately. No preview line. Release every contact before another shot.
-- **Fire on release**: hold both pads, slide vertically to aim along a faint line, then lift either thumb to fire. Release all contacts before re-arming.
-- A shot attempted during cooldown consumes that gesture. Holding until ready does not fire automatically; lift both thumbs and try again. Default cooldown is 0.75 seconds, measured in simulation time.
-- Pointer cancellation aborts the gesture. Leaving the tab/window pauses simulation and clears contacts; resume through Setup. Opening Setup or changing orientation also clears contacts.
-- Desktop fallback: hold the mouse on either pad and press Space for the opposite endpoint at the same height; release mouse and Space to re-arm. In release mode, releasing either fires. Full angled input is intended for multitouch.
+- **Fire on touch** (default): the second contact on the opposite pad fires immediately. No aiming line.
+- **Fire on release**: hold both pads, slide to aim along a faint line, then lift either thumb to fire.
+- Both modes require every contact to release before re-arming. A gesture attempted during cooldown is consumed; holding until ready never fires automatically. Cooldown defaults to 0.75 seconds of gameplay time.
+- Pointer cancellation, opening Setup, and orientation changes discard active gestures without firing. Leaving the window/tab pauses; use the main Resume button to continue.
+- Desktop fallback: hold the mouse on a pad and press Space for the opposite endpoint at the same height. Release mouse and Space before the next shot. In release mode, releasing either fires. Angled input is intended for multitouch.
 
-Setup overlays the field and can be closed while playing. Every requested control is live: firing mode, cooldown, target radius/speed, bar length/thickness/speed/rotation, density, collision overlay, pause/resume, clear, and reset. Sizes are logical world pixels; speeds are logical pixels/second and rotation is degrees/second. Negative rotation reverses direction. Clear removes objects, in-flight shots, and effects; ordinary random spawning continues. Reset restores defaults, seeds a fresh sparse field, resumes, and readies the laser. Settings are session-local.
+Two adjacent buttons remain available above the field: **Pause / Resume** freezes/continues objects, rotation, spawning, effects, and cooldown; **Stop / Start** ends and clears the current random-object session or begins a fresh one. This is not a level restart. Start retains the current settings and seeds up to three random objects, subject to density and entry clearance. At zero density it starts empty. Clear removes objects and effects while retaining the session state. Reset restores defaults and starts a fresh session. Settings are session-local.
 
-## Simulation and geometry
+Portrait replaces the gameplay interface with **“Rotate your phone to play LaserBreak.”** The underlying field, Setup, and controls are hidden and inert; gameplay time and firing are blocked. Returning to landscape restores the interface and preserves the explicit Pause/Stop state. The browser attempts `screen.orientation.lock('landscape')` on user gestures and fullscreen changes where the API exists. Browsers that require fullscreen or do not support locking fall back to the overlay; there is no forced fullscreen transition. Like the Rings orientation guard, this clears input, freezes gameplay, and restores focus, adapted for landscape-only play.
 
-`engine.js` separates the simulation and pointer state machine from `game.js`, the Canvas renderer and browser input adapter. The logical world is 1000 × 500 and fills the available rectangle between the pads. Scaling can stretch shapes on unusual aspect ratios; collision geometry follows the exact same transform. Safe-area insets and dynamic viewport height keep controls inside the viewport. Portrait provides a rotation hint and remains usable for setup.
+Pads are 130 CSS pixels wide (previously 72), or 97 pixels on small landscape screens (previously 54), approximately an 80% increase. Very narrow viewports reduce them to 18vw to preserve the central field. The world remains 1000 logical pixels wide; its logical height follows the field aspect ratio, keeping circles circular and bar geometry undistorted. Sizes are logical pixels, speeds are logical pixels/second, and rotation settings are degrees/second.
 
-Two pulses travel at 2800 logical pixels/second from opposite edges along the selected line, independently. Targets do not block pulses. Each pulse stops at the nearest intersecting bar or opposite edge. Ray segments use analytic circle entry tests for target collision radii and slab intersections in each bar's rotated coordinate system, including bar thickness, endpoints, and grazing hits. Circle versus circle and circle versus oriented rectangle tests handle explosions. The debug overlay shows target collision circles and actual bar rectangles; while an explosion animates it also shows its full blast radius.
+## Objects and settings
 
-Each shot records the sides that reached each target. Resolution waits for both pulses to stop or leave, up to about 0.4 seconds. A target stays present after the first hit so the other pulse can reach it. One side dissolves it; two sides produce an explosion with radius exactly twice the target collision radius. The blast destroys every target/bar whose collision shape intersects the blast circle, including partial overlaps. Blast victims do not explode. Simultaneous direct double hits can each create their own blast. Target centers at resolution time determine blast centers.
+Targets are bright cyan or yellow circles, diameter **24** by default, with a cached neon halo. They fall straight down without rotation. Bars are solid muted rectangles, **100 × 12** by default, falling and rotating vertically. Thickness is fixed; there is no thickness slider.
 
-Falling and rotation advance in slices of at most 1/240 second. Laser motion uses swept segments, so it cannot tunnel through a stationary shape; moving/rotating geometry is sampled per slice (maximum default-configurable rotation displacement: 1° per slice). Frame delays advance at most 50 ms of simulation, intentionally slowing play under load instead of skipping large distances. Pause freezes objects, pulses, effects, spawn timers, and cooldown.
+Setup overlays the field and can be hidden. It provides firing mode, cooldown, target diameter and falling speed, bar length/falling speed/rotation speed, density, collision overlay, performance diagnostics, Clear, and Reset.
 
-## Random objects
+**Object properties are snapshots at spawn time.** Changing size, speed, or rotation affects future objects only. Existing objects retain their dimensions, falling speed, and angular velocity, including when the new setting is zero or negative. Firing mode and cooldown update immediately. Negative bar rotation reverses future bars. Density changes reset the spawn timer immediately and never modify existing objects.
 
-The field begins with three random objects near the top and fills sparsely; no predetermined sequence or scenario exists. Spawned objects enter at random horizontal positions just above the field, with 65% targets and 35% bars. Cyan diamonds and yellow hexagons share circular collision radii. Bars use muted outlines, fall vertically, and rotate. Objects are removed after their full shape passes below the field.
+## Instant beams and accurate geometry
 
-Density ranges from 0 to 100%, defaults to 20%, and controls a continuous spawn-frequency function: `0.05 + 5.95 × density / 100` objects/second when positive. This is about 1.24/second at default density and 6/second at maximum. Zero immediately stops new spawning, leaving current objects active. Positions, types, colors, and initial angles remain random. Density never changes size or speed. A cap of 90 live objects bounds simulation/render work, including when falling speeds are zero. Lowering density resets the spawn timer without clearing current objects.
+`engine.js` owns simulation, geometry, and the pointer state machine. `game.js` owns the browser adapter, renderer, orientation guard, frame pacing, and diagnostics.
+
+Firing performs collision detection once, using the current object positions/angles. Each side casts an instantaneous segment toward the midpoint of the firing line, shortening it to the first intersecting bar on that half. Targets do not block beams. Neither beam passes the midpoint, even when the other half is blocked. An unobstructed pair meets exactly at the midpoint. A 140 ms fading flash shows the already-resolved beams; there is no traveling-pulse state or collision work during the flash.
+
+A target intersecting one segment dissolves immediately. A target intersecting both segments explodes immediately with radius exactly twice its collision radius. Since the beams occupy separate halves, double hits require a circle to intersect both half-segments near the midpoint. Blasts destroy any target or bar whose geometry intersects the blast circle, including partial overlaps. Blast victims never produce further blasts. Direct double hits each create their own blast.
+
+Target tests use analytic segment/circle entry, including tangencies. Bar tests transform the segment into the actual rotated rectangle and use slab intersections, accounting for thickness and endpoints. Blasts use circle/circle and circle/oriented-rectangle closest-point tests. Debug outlines show the actual collision shapes and full explosion radius while an explosion fades. No collision scans occur during ordinary object/effect animation.
+
+## Random spawning and bounds
+
+New objects enter just above the field at random horizontal positions: 65% targets, 35% bars, with random colors and initial bar angles. There is no fixed sequence or scenario. Objects disappear once their full shape leaves the bottom.
+
+Placement checks a five-logical-pixel clearance using circle bounds for targets and circumscribed rotation-safe circles for bars. It also reserves the short vertical entry corridor until the new object is fully inside, so it cannot spawn directly above an occupied entry slot. These bounds deliberately reject some positions that an exact rectangle test might accept; they protect rotating bar tips without planning a sequence. Each attempt tries up to 12 horizontal positions, then skips the spawn if none fits. Initial objects use the same rule. Objects do not collide physically while falling; different speeds can cause later overlaps after entry.
+
+Density ranges from 0–100%, default 20%. A positive setting requests `0.05 + 5.95 × density / 100` spawns/second (about 1.24/s at default, 6/s at maximum). Zero stops spawning immediately and leaves current objects active. Crowded entry slots can reduce accepted spawns. At most one bounded placement attempt occurs per frame, without delayed catch-up bursts. There are at most **60 active objects** and **160 transient effects**, including with zero falling speed or zero cooldown.
+
+## Performance and diagnostics
+
+- One elapsed-time update per rendered frame, normally 60 FPS; no 240 Hz subdivisions.
+- Sustained slow RAF delivery switches to a 30 FPS update/render budget. Stable fast delivery and low CPU cost restore 60 FPS. Long delays advance at most 100 ms of gameplay; background/portrait transitions reset the clock.
+- Array compaction avoids per-frame object/effect filter allocations. Collisions and explosions resolve only during firing; spawn occupancy is checked only on spawn attempts.
+- Canvas DPR is capped at 1.5, with an additional one-megapixel budget. Resizing/layout reads occur through resize notifications, not during drawing.
+- Target halos are two small pre-rasterized sprites. Bars use `fillRect`; beams use layered strokes. No per-frame Canvas shadows, full-field blur, or Setup backdrop filter. The grid is a static CSS background.
+- Sliders update only their own output. Pad DOM updates follow input events; the HUD checks at 10 Hz and changes text only when needed. Paused/stopped scenes draw only when dirty.
+
+**Performance diagnostics** in Setup reveals frame interval, CPU render time, CPU update time, active count, and 30/60 FPS budget. Its text refreshes twice per second and is hidden by default. Render time measures JavaScript Canvas submission, not GPU completion. See [PERFORMANCE.md](PERFORMANCE.md) for before/after measurements and reproducible guardrails.
 
 ## Automated verification
 
-Run from the repository root:
+From the repository root:
 
 ```sh
 node laserbreak/test-engine.cjs
 python laserbreak/test-browser.py
+python laserbreak/test-performance.py
 python tests/check_site.py
 ```
 
-Browser checks use Python Playwright and Chromium (`CHROMIUM_PATH` overrides `/usr/bin/chromium`), with local request routing and no server or external requests. These are development tools only.
+Python browser tests require Playwright and Chromium (`CHROMIUM_PATH` overrides `/usr/bin/chromium`). Tests route a local reserved origin without a server or external requests; test dependencies are not deployed.
 
-The 14 engine cases cover pointer order, same-side and extra contacts, duplicate IDs, vertical movement, both firing modes, cancellation, cooldown and re-arming, independent pulse stopping, target intersections, oriented bar intersections and rotation, single-hit dissolution, delayed double-hit explosions, partial blast intersections, no chain reactions, random positions/types, density zero/default/maximum, monotonic spawning frequency, the object cap, live sizes, bottom removal, and clear.
+The 23 engine cases cover both input modes, pointer order/cancellation and re-arming, cooldown, instant half-beams and midpoint limits, first-bar blocking, circle/rotated-bar geometry, immediate single/double-hit effects, partial blast intersections and no chains, default dimensions, spawn-time snapshots, one-update-per-frame motion, density, alternate/blocked/initial entry placement, caps, bottom removal, Pause/Resume, Stop/Start, orientation timing/firing gates, and an update performance guardrail.
 
-Desktop Chromium checks cover gallery navigation, every setting, pause/resume, reset, clear, desktop input, and layout at 568×320, 667×375, 844×390, 1024×600, and 1366×768. Mobile Chromium uses an 844×390 touchscreen viewport and actual multi-contact CDP touch events to exercise Pointer Events, both modes, capture outside pad boundaries, lift/re-touch re-arming, cooldown, cancellation, setup cancellation, scroll prevention, and portrait guidance. Screenshots go to `/tmp/laserbreak-desktop.png` and `/tmp/laserbreak-mobile.png`. Gallery regression checks cover both deployment roots, responsive cards/assets, JavaScript-disabled navigation, and the unchanged calculator.
+Desktop and mobile Chromium cover all setup controls, future-only settings, actual CDP multitouch, capture outside pads, both firing modes, cooldown/cancellation, immediate explosions, orientation-lock rejection fallback, portrait hiding/inert input/timing, rotation during held gestures, state restoration, and main session controls. Layout is checked at 568×320, 667×375, 844×390, 1024×600, and 1366×768. Screenshots: `/tmp/laserbreak-desktop.png` and `/tmp/laserbreak-mobile.png`.
 
-## Physical-phone checks still required
+Performance tests use a fixed 60-object fixture at 844×390, DPR 3 emulation, with 4× CPU throttling. They check update/render/frame and slider budgets, Canvas pixel bounds, absence of per-frame Canvas blur/layout reads/DOM mutations, and adaptive frame pacing. Gallery regression checks cover both deployment roots, assets, responsive cards, JavaScript-disabled navigation, and the original calculator blobs/behavior. The gallery card and all other apps remain unchanged.
 
-- Android Chrome and iPhone Safari: two-thumb reach, pad width, angled aiming, and repeated gestures at different cooldowns.
-- Browser toolbars, notches, safe-area insets, rotation, and OS edge/home gestures. Pointer Events and `touch-action: none` prevent browser pan/zoom in the field, but OS-reserved gestures need device checks.
-- Interruptions: notification shade, app switching, incoming calls, lost contacts, and resume with both fingers released.
-- Sustained maximum density on older phones, high-DPI sharpness, latency, thermal load, and battery use. Chromium mobile emulation does not establish Safari behavior or physical-device performance.
-- Tune the circular target hit radius and the short delay before hit resolution through actual play. Graphics, effects, and the desktop fallback are intentionally minimal.
+## Physical-phone acceptance checklist
 
-There are no levels, scenario files, generators, difficulty progression, quotas, lives, scoring, win/loss states, escape allowances, or level-analysis/validation tools.
+Emulation cannot establish that the Android lag is resolved. Retest on the phone that showed the problem:
+
+1. Use Android Chrome in landscape. Confirm normal play and rapid opening/closing of Setup remain responsive at default density. Drag each slider repeatedly while objects continue moving; check for missed input or sticking.
+2. Enable diagnostics. Record frame/render/update times, object count, and 30/60 budget at default density and 100% density after the field fills. Repeat with stationary objects, large targets, long bars, and both firing modes. Look for sustained intervals around 16.7 ms (60 FPS) or 33.3 ms (fallback) and responsive controls. Repeat for 5–10 minutes for thermal throttling/battery effects.
+3. Fire repeatedly. Confirm beams appear together and stop at bars or the midpoint, single hits disappear immediately, midpoint double hits blast intersecting shapes without chains, and two-thumb release re-arms reliably.
+4. Check the wider pads with both thumbs on the smallest supported landscape screen. Verify circle visibility/glow and central field usability; try browser toolbars expanded/collapsed and devices with cutouts.
+5. Rotate while holding two contacts in release mode. Portrait must show only the rotation message, never fire or advance time; landscape must restore the interface with no held contacts. Repeat while paused and stopped. Check orientation-lock behavior both in a normal tab and where fullscreen is already available.
+6. Pause during cooldown and while objects spin; nothing should advance until Resume. Stop must empty the field, and Start must create a fresh random session using current settings. Zero density must stay empty after Start. Property changes must leave existing objects unchanged.
+7. Check newly entering objects at high density for clearance, including long rotating bars. A crowded or stationary entry row may intentionally skip spawns. Later falling objects can pass through each other.
+8. Test notification shade, app switching, incoming calls, OS edge/home gestures, and return to play. Resume from a background pause with all fingers released. Test iPhone Safari separately; Chromium emulation does not establish Safari behavior.
+
+No levels, lives, quotas, scoring, scenarios, difficulty progression, or level-generation/analysis systems are included.
