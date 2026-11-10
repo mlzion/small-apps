@@ -1,6 +1,6 @@
 # v0.2 motion sensing prototype
 
-This experiment shows two independent axes of phone movement as a bubble in a circular level beside the note readout. It does not route sensors to the audio engine, pitch, gain, filter, XY pad, or slider. `synth.js` is unchanged. There are no dependencies, MIDI, recordings, sensor uploads, or persistence of sensor readings or permissions in application storage.
+The v0.2 sensor implementation is preserved in v0.3, whose larger level now sits between the left expression control and right keyboard. Sensitivity is in the gear settings drawer, and portrait shows a rotate message. This experiment shows two independent axes of phone movement. It does not route sensors to the audio engine, pitch, gain, filter, XY pad, or volume slider. `synth.js` is unchanged. There are no dependencies, MIDI, recordings, sensor uploads, or persistence of sensor readings or permissions in application storage.
 
 ## Playing and calibration
 
@@ -8,7 +8,7 @@ This experiment shows two independent axes of phone movement as a bubble in a ci
 2. Hold the phone comfortably, then press a note. The latest raw orientation becomes the neutral reference and the bubble centers immediately. Each new physical pointer press, including a second chord finger, captures a new reference. This happens after the existing audio input handler, so sensor work never delays the initial audio start.
 3. Tilt relative to that reference. Horizontal and vertical motion represent rotation about two axes in the neutral phone frame, mapped into the screen's current portrait/landscape coordinates. Motion remains visible after note release. Sliding to another note preserves the reference so movement can be explored while sliding.
 4. Tap the circle to **Recenter** without playing a note. If a note is pressed before a valid sensor sample arrives, the first valid sample establishes neutral. A stale stream is centered and marked unavailable rather than using an old pose.
-5. Adjust **Sensitivity** from 0.5× to 4×. At 1×, a combined tilt of about 25° reaches the circular boundary; higher sensitivity requires less movement. Scaling is applied before radial clamping, so diagonal movement stays inside the same boundary.
+5. Open the gear to adjust **Motion sensitivity** from 0.5× to 4×. At 1×, a combined tilt of about 25° reaches the circular boundary; higher sensitivity requires less movement. Scaling is applied before radial clamping, so diagonal movement stays inside the same boundary.
 6. Tap **Disable motion** to remove sensor listeners and stop the stale-stream timer. Notes, XY expression, vertical slider, and fullscreen continue to work in either state.
 
 ## Sensor and display design
@@ -29,7 +29,7 @@ Run `python celphonica/test-motion.py` from the repository root with development
 - Independent axes, quaternion angle wrapping, all four screen rotation angles, rate-independent smoothing, alternating jitter attenuation, adjustable sensitivity, and circular limits.
 - First reading, raw note/manual recenter, subsequent chord press, reference preservation during sliding, source fallback/preference, rotation, background, recovery, and disabling.
 - Actual bubble pixel movement and containment, real CDP touch notes/XY expression with concurrent sensor input, unchanged audio frequency/gain/filter during motion, note release, and continued notes when sensors are denied/unavailable.
-- Both hosting roots, all four scales, all note centers and motion controls, and seven desktop/portrait/landscape viewports (1280×800, 844×390, 844×320, 740×360, 667×375, 375×812, 320×568), including a short landscape viewport with browser chrome taking space.
+- Both hosting roots, all four scales, landscape note centers and motion controls, and seven desktop/portrait/landscape viewports (1280×800, 844×390, 844×320, 740×360, 667×375, 375×812, 320×568), including a short landscape viewport with browser chrome taking space. Portrait checks intentionally require the rotate message and hidden keyboard in v0.3.
 
 The existing `test-browser.py`, `test-latency.py`, and gallery/calculator suite remain applicable. These validate software behavior and simulated inputs, not the accuracy, latency, or availability of real sensors.
 
@@ -38,9 +38,9 @@ The existing `test-browser.py`, `test-latency.py`, and gallery/calculator suite 
 On the Samsung phone and at least one other phone if available:
 
 - Confirm browser/site sensor permissions, HTTPS delivery, the initial sample, and recovery after changing denied permission in browser settings.
-- Try both landscape directions and portrait. Verify axis direction and independence at the actual playing grip; check angle-wrap/extreme-tilt behavior, recenter repeatability, and whether source switching causes disruptive resets.
+- Try both landscape directions; portrait should show the rotate message and stop notes. Verify axis direction and independence at the actual playing grip; check angle-wrap/extreme-tilt behavior, recenter repeatability, and whether source switching causes disruptive resets.
 - Compare sensitivity settings and the smoothing feel during slow tilt, fast gestures, natural hand tremor, and walking. Confirm the bubble follows responsively and stays inside the circle.
-- Play two-thumb notes, chords, and slides while moving the phone and using XY/slider controls. Assess the intended recenter-on-each-new-finger behavior, note target sizes, visibility, fatigue, and whether the upper bubble distracts from playing.
+- Play two-thumb notes, chords, and slides while moving the phone and using XY/volume-slider controls. Assess the intended recenter-on-each-new-finger behavior, note target sizes, visibility, fatigue, and whether the central bubble distracts from playing.
 - Test fullscreen/browser chrome, screen rotation, background/return, screen lock/unlock, interruption during permission prompts, and readings that pause or stop. Notes must release correctly throughout.
 - Confirm that motion has no audible effect and that the existing low-latency response, envelopes, and speaker sound remain unchanged.
 

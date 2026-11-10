@@ -4,48 +4,62 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="theme-color" content="#101216">
-  <meta name="description" content="A pocket instrument for two thumbs. Play scales, chords, and sound with Celphonica.">
+  <meta name="description" content="A landscape pocket instrument for two thumbs, with a visual motion preview.">
   <title>Celphonica — App Lab</title>
   <link rel="icon" href="../assets/favicon.svg" type="image/svg+xml">
   <link rel="stylesheet" href="styles.css">
   <script type="module" src="instrument.js"></script>
 </head>
 <body>
-  <main>
-    <header><a href="../#apps">a_ <span>App Lab</span></a><h1>Celphonica<span> / 0.2</span></h1><button id="fullscreen" type="button">Full screen</button></header>
-    <section class="settings" aria-label="Instrument settings">
-      <label>Root<select id="root" aria-label="Root note"></select></label>
-      <label>Scale<select id="scale"><option value="major">Major</option><option value="minor">Minor</option><option value="pentatonic">Major pentatonic</option><option value="chromatic">Chromatic</option></select></label>
-      <label>Sound<select id="waveform"><option value="sine">Sine</option><option value="triangle">Triangle</option><option value="sawtooth">Sawtooth</option></select></label>
-      <label class="volume">Volume <input id="volume" type="range" min="0" max="100" value="65"></label>
-    </section>
-    <section class="readout" aria-label="Played notes">
-      <div><p class="eyebrow">TOUCH · SLIDE · PLAY</p><output id="notes" aria-label="Active notes">Ready to play</output></div>
+  <main id="instrument">
+    <header>
+      <a href="../#apps" aria-label="App Lab collection">a_</a>
+      <h1>Celphonica<span> / 0.3</span></h1>
+      <output id="notes" aria-label="Active notes">Ready to play</output>
+      <button id="fullscreen" type="button">Full screen</button>
+      <button id="settings-open" class="gear" type="button" aria-label="Open settings" aria-haspopup="dialog" aria-controls="settings" aria-expanded="false">⚙</button>
+    </header>
+    <section class="performance" aria-label="Performance surface">
+      <aside class="expression" aria-label="Left thumb expression">
+        <p id="expression-type" class="eyebrow">XY pad</p>
+        <div id="xy-pad" role="group" aria-label="XY expression pad: horizontal brightness, vertical level"><span class="pad-label">BRIGHTNESS →<br>↑ VOLUME</span><i id="cursor"></i></div>
+        <label id="slider-control" hidden>Volume<input id="volume-slider" aria-label="Expression volume" type="range" min="0" max="100" value="100" orient="vertical"></label>
+        <p id="expression-value">Bright 75% · Level 100%</p>
+      </aside>
       <section class="motion-panel" aria-label="Motion expression preview">
         <button id="motion-level" type="button" aria-label="Recenter motion bubble" title="Recenter motion bubble" disabled>
           <span class="level-crosshair" aria-hidden="true"></span><span id="motion-bubble" aria-hidden="true"></span>
-          <span class="level-caption" aria-hidden="true">RECENTER</span>
+          <span class="level-caption" aria-hidden="true">TAP TO RECENTER</span>
         </button>
-        <div class="motion-controls">
-          <button id="motion-enable" type="button" aria-pressed="false">Enable motion</button>
-          <label for="motion-sensitivity">Sensitivity <span id="motion-sensitivity-value">1×</span></label>
-          <input id="motion-sensitivity" aria-label="Motion sensitivity" type="range" min="0.5" max="4" step="0.25" value="1">
-          <p id="motion-status" role="status">Visual only · Sensors off</p>
-        </div>
+        <button id="motion-enable" type="button" aria-pressed="false">Enable motion</button>
+        <p id="motion-status" role="status">Visual only · Sensors off</p>
       </section>
-      <div class="range-controls"><button id="octave-down" aria-label="Octave down">−8ve</button><span id="range"></span><button id="octave-up" aria-label="Octave up">+8ve</button></div>
-    </section>
-    <section class="performance" aria-label="Performance surface">
-      <aside class="expression">
-        <label>Expression<select id="expression-mode"><option value="xy">XY pad</option><option value="slider">Vertical slider</option></select></label>
-        <div id="xy-pad" role="group" aria-label="XY expression pad: horizontal brightness, vertical level"><span class="pad-label">BRIGHTNESS →<br>↑ LEVEL</span><i id="cursor"></i></div>
-        <label id="slider-control" hidden>Brightness<input id="filter-slider" aria-label="Filter cutoff" type="range" min="0" max="100" value="75" orient="vertical"></label>
-        <p id="expression-value">Bright 75% · Level 100%</p>
-      </aside>
       <div id="keyboard" aria-label="Three octaves of notes"></div>
     </section>
-    <footer><span id="audio-status" role="status">Touch a note to start audio</span><span class="orientation-hint">Best played in landscape · Hold with both hands</span></footer>
-    <noscript>Enable JavaScript to play Celphonica.</noscript>
+    <footer><span id="audio-status" role="status">Touch a note to start audio</span><span id="view-status">Two thumbs · Motion is visual only</span></footer>
   </main>
+  <section id="rotate-message" aria-labelledby="rotate-title">
+    <span class="rotate-icon" aria-hidden="true">↻</span>
+    <h2 id="rotate-title">Rotate your phone to play</h2>
+    <p>Celphonica is made for landscape.</p>
+    <button id="portrait-fullscreen" type="button">Try full screen</button>
+    <p id="rotate-status" role="status">Full screen can rotate the view where supported.</p>
+    <a href="../#apps">← App Lab</a>
+  </section>
+  <dialog id="settings" aria-labelledby="settings-title">
+    <div class="settings-drawer">
+      <div class="settings-heading"><h2 id="settings-title">Settings</h2><button id="settings-close" type="button" aria-label="Close settings" autofocus>✕</button></div>
+      <div class="settings-fields">
+        <label>Root<select id="root" aria-label="Root note"></select></label>
+        <label>Scale<select id="scale"><option value="major">Major</option><option value="minor">Minor</option><option value="pentatonic">Major pentatonic</option><option value="chromatic">Chromatic</option></select></label>
+        <label>Sound<select id="waveform"><option value="sine">Sine</option><option value="triangle">Triangle</option><option value="sawtooth">Sawtooth</option></select></label>
+        <label>Expression<select id="expression-mode"><option value="xy">XY pad</option><option value="slider">Volume slider</option></select></label>
+        <label>Master volume<input id="volume" type="range" min="0" max="100" value="65"></label>
+        <label for="motion-sensitivity">Motion sensitivity <span id="motion-sensitivity-value">1×</span><input id="motion-sensitivity" aria-label="Motion sensitivity" type="range" min="0.5" max="4" step="0.25" value="1"></label>
+        <div class="range-controls"><button id="octave-down" aria-label="Octave down">−8ve</button><span id="range"></span><button id="octave-up" aria-label="Octave up">+8ve</button></div>
+      </div>
+    </div>
+  </dialog>
+  <noscript>Enable JavaScript to play Celphonica.</noscript>
 </body>
 </html>

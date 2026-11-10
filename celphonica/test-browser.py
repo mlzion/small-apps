@@ -86,6 +86,7 @@ with sync_playwright() as p:
         expect(page.locator('.pressed')).to_have_count(0)
         page.wait_for_function('audioProbe.oscillators.every(o => o.ended)')
 
+    page.click('#settings-open')
     for scale, count in [('chromatic', 36), ('minor', 21), ('pentatonic', 15), ('major', 21)]:
         page.select_option('#scale', scale)
         expect(page.locator('.note')).to_have_count(count)
@@ -103,21 +104,30 @@ with sync_playwright() as p:
         if page.locator('#octave-up').is_enabled(): page.click('#octave-up')
     expect(page.locator('#octave-up')).to_be_disabled()
     for _ in range(3): page.click('#octave-down')
+    page.click('#settings-close')
     for waveform in ('sine', 'triangle', 'sawtooth'):
+        page.click('#settings-open')
         page.select_option('#waveform', waveform)
+        page.click('#settings-close')
         mouse_down(page)
         assert page.evaluate('audioProbe.oscillators.at(-1).node.type') == waveform
         page.mouse.up()
-    mouse_down(page)
+    page.click('#settings-open')
     page.locator('#volume').fill('20')
+    page.click('#settings-close')
+    mouse_down(page)
     page.wait_for_function('Math.abs(audioProbe.gains[0].gain.value - .2) < .01')
     page.evaluate("window.dispatchEvent(new Event('blur'))")
     assert live(page) == 0
     page.mouse.up()
     mouse_down(page)
+    page.locator('#settings-open').focus()
+    page.keyboard.press('Enter')  # A mouse cannot click a second control while held.
+    assert live(page) == 0
     page.select_option('#scale', 'minor')
     assert live(page) == 0
     page.mouse.up()
+    page.click('#settings-close')
     # Resume may resolve after a short tap: it must not resurrect that voice.
     page.evaluate('''() => {
       const c = audioProbe.contexts[0];
@@ -169,17 +179,25 @@ with sync_playwright() as p:
     send('touchCancel', [])
     expect(touch.locator('.pressed')).to_have_count(0)
     assert live(touch) == 0
+    touch.click('#settings-open')
     touch.select_option('#expression-mode', 'slider')
+    touch.click('#settings-close')
     expect(touch.locator('#xy-pad')).to_be_hidden()
-    expect(touch.locator('#filter-slider')).to_be_visible()
-    touch.locator('#filter-slider').fill('35')
-    expect(touch.locator('#expression-value')).to_have_text('Bright 35% · Level 100%')
+    expect(touch.locator('#volume-slider')).to_be_visible()
+    touch.locator('#volume-slider').fill('35')
+    expect(touch.locator('#expression-value')).to_have_text('Bright 90% · Level 35%')
     touch.screenshot(path='/tmp/celphonica-landscape.png')
-    # Desktop, Android landscape, small landscape, and portrait fallback in every scale.
+    # Landscape performance; portrait intentionally shows only the rotate message.
     for width, height in [(1440, 900), (844, 390), (740, 360), (667, 375), (375, 812), (320, 568)]:
         touch.set_viewport_size({'width': width, 'height': height})
+        if height >= width:
+            expect(touch.locator('#rotate-message')).to_be_visible()
+            expect(touch.locator('#keyboard')).to_be_hidden()
+            continue
         for scale in ('major', 'minor', 'chromatic', 'pentatonic'):
+            touch.click('#settings-open')
             touch.select_option('#scale', scale)
+            touch.click('#settings-close')
             assert touch.evaluate('document.documentElement.scrollWidth <= innerWidth')
             assert touch.evaluate('document.documentElement.scrollHeight <= innerHeight')
             assert touch.evaluate('scrollX === 0 && scrollY === 0')
@@ -188,7 +206,7 @@ with sync_playwright() as p:
                 assert box['width'] > 15 and box['height'] > 15, (width, height, box)
                 assert box['y'] >= 0 and box['y'] + box['height'] <= height
                 # Every note can actually be hit, without another surface covering it.
-                assert button.evaluate('(el) => { const r=el.getBoundingClientRect(); return document.elementFromPoint(r.x+r.width/2,r.y+r.height/2) === el; }')
+                assert button.evaluate('(el) => { const r=el.getBoundingClientRect(); return document.elementFromPoint(r.x+r.width/2,r.y+r.height/2)?.closest(".note") === el; }')
     touch.set_viewport_size({'width': 375, 'height': 812})
     touch.screenshot(path='/tmp/celphonica-portrait.png')
     assert not missing, missing
