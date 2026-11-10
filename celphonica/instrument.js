@@ -8,12 +8,23 @@ const synth = new Synth();
 const pointers = new Map();
 let octave = 3;
 let padPointer = null;
+let sliderPointer = null;
+let motionControl = null;
+let motionCoordinates = { x: 0, y: 0 };
+let lastPlayed = [];
+const scaleLabels = { major: 'maj', minor: 'min', pentatonic: 'maj pent', chromatic: 'chrom' };
 const view = initPerformanceUI(silence);
 NOTE_NAMES.forEach((name, value) => $('root').add(new Option(name, value)));
 
-function updateReadout() {
+function updateReadout(remember = false) {
   const held = [...new Set([...pointers.values()].filter(p => p.midi !== null).map(p => p.midi))].sort((a, b) => a - b);
-  $('notes').textContent = held.length ? held.map(noteName).join(' · ') : 'Ready to play';
+  if (remember && held.length) lastPlayed = held;
+  const key = `${NOTE_NAMES[Number($('root').value)]} ${scaleLabels[$('scale').value]}`;
+  const names = lastPlayed.map(noteName);
+  const compact = names.slice(0, 3).join('·') + (names.length > 3 ? ` +${names.length - 3}` : '');
+  $('notes').textContent = `Key: ${key} | Note: ${compact || '—'}`;
+  $('notes').title = `Key: ${key} | Note: ${names.join(' · ') || '—'}`;
+  $('notes').setAttribute('aria-label', $('notes').title);
   $('notes').classList.toggle('playing', held.length > 0);
   document.querySelectorAll('.note').forEach(button => {
     const pressed = held.includes(Number(button.dataset.midi));
@@ -30,6 +41,7 @@ function silence() {
   synth.stopAll();
   pointers.clear();
   padPointer = null;
+  sliderPointer = null;
   updateReadout();
 }
 function renderKeyboard() {
@@ -71,7 +83,7 @@ function moveNote(id, midi) {
   synth.stop(id);
   pointer.midi = midi;
   if (midi !== null && pointer.ready) synth.start(id, midi);
-  updateReadout();
+  updateReadout(midi !== null);
 }
 $('keyboard').addEventListener('pointerdown', event => {
   const button = event.target.closest('.note');
@@ -84,16 +96,17 @@ $('keyboard').addEventListener('pointerdown', event => {
   // Resume is invoked synchronously inside the gesture; late promises cannot revive released notes.
   try {
     const unlocked = synth.unlock();
+    motionControl?.recenter();
     const start = () => {
       if (pointers.get(event.pointerId) !== pointer) return;
       pointer.ready = true;
       if (pointer.midi !== null) synth.start(event.pointerId, pointer.midi);
-      updateReadout();
+      updateReadout(true);
       $('audio-status').textContent = 'Audio ready · Release to stop';
     };
     if (synth.context.state === 'running') start();
     else {
-      updateReadout();
+      updateReadout(true);
       unlocked.then(start).catch(() => {
         release(event.pointerId);
         $('audio-status').textContent = 'Audio could not start. Touch a note to retry.';
@@ -135,8 +148,8 @@ $('volume').addEventListener('input', event => synth.setVolume(Number(event.targ
 function updateExpression(values) {
   synth.setExpression(values);
   const { brightness, level } = synth.expression;
-  $('cursor').style.left = `${brightness * 100}%`;
-  $('cursor').style.top = `${(1 - level) * 100}%`;
+  $('cursor').style.left = `calc(14px + (100% - 28px) * ${brightness})`;
+  $('cursor').style.top = `calc(14px + (100% - 28px) * ${1 - level})`;
   $('volume-slider').value = Math.round(level * 100);
   $('expression-value').textContent = `Bright ${Math.round(brightness * 100)}% · Level ${Math.round(level * 100)}%`;
 }
@@ -144,8 +157,11 @@ function movePad(event) {
   const box = $('xy-pad').getBoundingClientRect();
   updateExpression({ brightness: (event.clientX - box.left) / box.width, level: 1 - (event.clientY - box.top) / box.height });
 }
-$('xy-pad').addEventListener('pointerdown', event => {
-  if (event.button !== 0 || padPointer !== null || !view.isPlayable()) return;
+$('xy-pad').parentElement.addEventListener('pointerdown', event => {
+  if (event.button !== 0 || padPointer !== null || !view.isPlayable() || $('xy-pad').hidden) return;
+  const box = $('xy-pad').getBoundingClientRect();
+  // Include the full square hit area, even the visually rounded corner pixels.
+  if (event.clientX < box.left || event.clientX > box.right || event.clientY < box.top || event.clientY > box.bottom) return;
   event.preventDefault();
   padPointer = event.pointerId;
   $('xy-pad').setPointerCapture(padPointer);
@@ -157,6 +173,7 @@ for (const type of ['pointerup', 'pointercancel', 'lostpointercapture']) {
 }
 $('expression-mode').addEventListener('change', event => {
   padPointer = null;
+  sliderPointer = null;
   const slider = event.target.value === 'slider';
   $('xy-pad').hidden = slider;
   $('slider-control').hidden = !slider;
@@ -164,6 +181,36 @@ $('expression-mode').addEventListener('change', event => {
   updateExpression({});
 });
 $('volume-slider').addEventListener('input', event => updateExpression({ level: Number(event.target.value) / 100 }));
+function moveSlider(event) {
+  const box = $('volume-slider').getBoundingClientRect();
+  const level = Math.max(0, Math.min(1, 1 - (event.clientY - box.top - 17) / Math.max(1, box.height - 34)));
+  $('volume-slider').value = Math.round(level * 100);
+  $('volume-slider').dispatchEvent(new Event('input', { bubbles: true }));
+}
+$('volume-slider').addEventListener('pointerdown', event => {
+  event.preventDefault(); // Prevent native secondary-touch track jumps as well.
+  if (event.button !== 0 || sliderPointer !== null || !view.isPlayable()) return;
+  sliderPointer = event.pointerId;
+  $('volume-slider').focus({ preventScroll: true });
+  $('volume-slider').setPointerCapture(sliderPointer);
+  moveSlider(event);
+});
+$('volume-slider').addEventListener('pointermove', event => {
+  if (event.pointerId === sliderPointer) moveSlider(event);
+});
+for (const type of ['pointerup', 'pointercancel', 'lostpointercapture']) {
+  $('volume-slider').addEventListener(type, event => { if (event.pointerId === sliderPointer) sliderPointer = null; });
+}
+function applyMotion() {
+  synth.setMotion({
+    bendCents: $('motion-pitch').checked ? motionCoordinates.x * 200 : 0,
+    volume: $('motion-volume').checked ? 1 - motionCoordinates.y * .15 : 1
+  });
+}
+for (const id of ['motion-pitch', 'motion-volume']) {
+  $(id).checked = false; // Each fresh page starts with audio mappings off.
+  $(id).addEventListener('change', applyMotion);
+}
 renderKeyboard();
 updateExpression({});
-initMotion();
+motionControl = initMotion({ onCoordinates: point => { motionCoordinates = point; applyMotion(); } });

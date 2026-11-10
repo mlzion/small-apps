@@ -34,7 +34,7 @@ with sync_playwright() as p:
           const node = super.createOscillator(), start = node.start.bind(node);
           node.start = when => {
             probe.starts.push({inPointer: probe.inPointer, when, now: this.currentTime,
-              readout: document.getElementById('notes').textContent,
+              readout: document.getElementById('notes').textContent, beforeReadout: probe.beforeReadout,
               pressed: document.querySelectorAll('.pressed').length});
             return start(when);
           };
@@ -42,7 +42,10 @@ with sync_playwright() as p:
         }
       };
       window.addEventListener('pointerdown', e => {
-        if (e.target.closest('.note')) { probe.inPointer = true; probe.before = probe.starts.length; }
+        if (e.target.closest('.note')) {
+          probe.inPointer = true; probe.before = probe.starts.length;
+          probe.beforeReadout = document.getElementById('notes').textContent;
+        }
       }, true);
       window.addEventListener('pointerdown', () => {
         if (probe.inPointer) probe.turns.push(probe.starts.length - probe.before);
@@ -69,7 +72,7 @@ with sync_playwright() as p:
     assert page.evaluate('probe.turns') == [1, 1, 1, 1], 'Running notes must start within pointerdown, before microtasks'
     starts = page.evaluate('probe.starts')
     assert all(s['inPointer'] and s['when'] <= s['now'] for s in starts), starts
-    assert all(s['readout'] == 'Ready to play' and s['pressed'] == 0 for s in starts), starts
+    assert all(s['readout'] == s['beforeReadout'] and s['pressed'] == 0 for s in starts), starts
     assert page.evaluate('probe.compressors') == 0
     print('PASS: settings/fullscreen warmup is silent; fullscreen entry/exit; interactive context; repeated notes start synchronously before UI writes with no scheduling offset or compressor')
 
@@ -102,7 +105,8 @@ with sync_playwright() as p:
                   destination: offline.destination, addEventListener() {},
                   createOscillator: offline.createOscillator.bind(offline),
                   createGain: offline.createGain.bind(offline),
-                  createBiquadFilter: offline.createBiquadFilter.bind(offline)};
+                  createBiquadFilter: offline.createBiquadFilter.bind(offline),
+                  createWaveShaper: offline.createWaveShaper.bind(offline)};
               };
               const synth = new Synth();
               await synth.unlock();

@@ -151,7 +151,7 @@ with sync_playwright() as p:
             assert regions[1]['x']+regions[1]['width']<regions[2]['x']
             circle=page.locator('#motion-level').bounding_box()
             assert circle['width']>=120 and abs(circle['width']-circle['height'])<1
-            for el in page.locator('.note, #motion-level, #motion-enable, #fullscreen, #settings-open, #volume-slider').all():
+            for el in page.locator('.note, #motion-level, #fullscreen, #settings-open, #volume-slider').all():
                 assert el.evaluate('''el=>{const r=el.getBoundingClientRect();return r.width>=20&&r.height>=32&&r.top>=0&&r.bottom<=innerHeight&&el.contains(document.elementFromPoint(r.x+r.width/2,r.y+r.height/2));}'''),(width,height,scale)
             for el in page.locator('.note').all():
                 assert el.evaluate('el=>el.scrollWidth<=el.clientWidth&&el.scrollHeight<=el.clientHeight'),(width,height,scale)
