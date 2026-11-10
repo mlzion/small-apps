@@ -6,13 +6,32 @@ const assert = require("node:assert/strict"),
   M = require("./experimental-motion.js"),
   A = require("./assembly.js"),
   R = require("./rings.js"),
-  { Game } = require("./engine.js");
+  { Game } = require("./engine.js"),
+  gameplay = require("./test-helpers/gameplay.js");
 const near = (a,b) => assert(Math.abs(a-b)<1e-7, `${a} != ${b}`);
 const original = L.publishedDocument();
-// Published library/template regressions; v3→v4 balance checks live in test-shuffle.
-assert.deepEqual(original.ringProfiles, M.defaults());
-assert.deepEqual(original.assemblyProfiles, A.defaults());
-assert.deepEqual(original.levels.slice(6), S.defaults().levels.slice(6));
+// Validate published data and its runtime mapping, not equality to draft defaults.
+assert.deepEqual(S.validateDocument(original), []);
+for (const level of original.levels) {
+  const game = new Game();game.level=level.number;game.startLevel();
+  gameplay.expectLevel(game, {level, ...original});
+  for(const t of [0, 2.7, 10.001, 25.2]) {
+    game.update(t-game.elapsed);gameplay.expectMotion(game, {level, ...original});
+  }
+}
+// Exact key values and loop offsets are checked against each published track.
+for (const profile of original.assemblyProfiles) {
+  for (const [t,angle] of profile.keyframes) near(A.sampleProfile(profile,t),angle*Math.PI/180);
+  for(let i=0;i<profile.keyframes.length-1;i++) {
+    const [a,x]=profile.keyframes[i], [b,y]=profile.keyframes[i+1];
+    for(const fraction of [.25,.5,.75]) {
+      const angle=A.sampleProfile(profile,a+(b-a)*fraction)*180/Math.PI;
+      assert(angle>=Math.min(x,y)-1e-7 && angle<=Math.max(x,y)+1e-7);
+    }
+  }
+  const net=(profile.keyframes.at(-1)[1]-profile.keyframes[0][1])*Math.PI/180;
+  for(const t of [.1,4.7,17.3]) near(A.sampleProfile(profile,t+profile.duration)-A.sampleProfile(profile,t),net);
+}
 const make = (level) => {
   const g = new Game(undefined,undefined,{testLevel:level,assemblyProfiles:original.assemblyProfiles,ringProfiles:original.ringProfiles});
   g.newGame();return g;
@@ -92,7 +111,7 @@ for (let combination=0;combination<3;combination++) {
   assert.deepEqual(g.rings.map(r=>r.profile.id),repeat.rings.map(r=>r.profile.id));
   for(const localTime of [4.5,4.75,9.5,9.75,54.75,109.75]) {
     g.update(localTime-g.elapsed);
-    near(g.assemblyAngle,A.sampleProfile(original.assemblyProfiles[0],g.elapsed*.7));
+    near(g.assemblyAngle,A.sampleProfile(original.assemblyProfiles.find(p=>p.id===level.assembly.profileId),g.elapsed*level.assembly.playbackSpeed));
     for(const ring of g.rings) {
       near(ring.relativeAngle,0);near(ring.displayAngle,g.assemblyAngle+R.GEOMETRY.referenceOffset);
     }
@@ -100,18 +119,13 @@ for (let combination=0;combination<3;combination++) {
   g.pause();const frozen=JSON.stringify(g);g.update(200);assert.equal(JSON.stringify(g),frozen);
   g.resume();g.fail();g.update(2);g.retry();assert.equal(g.elapsed,0);
 }
-// A bounded-speed turret strategy provides concrete (not universal balance)
-// evidence of completion with existing geometry, cooldown and assembly motion.
-for(let number=7;number<=12;number++) for(const seed of [1,42,4200,90000]) {
-  const g=new Game(undefined,undefined,{seed});g.level=number;g.startLevel();
-  while(g.state==="PLAYING") {
-    const desired=g.assemblyAngle+R.GEOMETRY.referenceOffset;
-    const delta=Math.atan2(Math.sin(desired-g.angle),Math.cos(desired-g.angle));
-    if(Math.abs(delta)<.025 && g.rings.every(r=>Math.abs(r.relativeAngle)<1e-8)) g.fire();
-    g.update(.02,{cw:delta>.02,ccw:delta<-.02});
-  }
-  assert.equal(g.state,"DEFUSING",`Level ${number}, seed ${seed}`);
-  assert(g.ammo>0);assert(g.remaining>0);
+// Exercise every published level against actual geometry with configured shots.
+for(const level of original.levels) for(const seed of [1,42,4200,90000]) {
+  const g=new Game(undefined,undefined,{seed});g.level=level.number;g.startLevel();
+  const lives=g.lives;
+  const result=gameplay.finishLevel(g, {level, ...original});
+  assert.equal(result.sequence.length,level.bombHealth+level.rings.reduce((n,r)=>n+r.gateHealth,0));
+  assert.equal(g.lives,lives);assert(result.remaining>0);
 }
 (async()=>{
   for(const count of [1,12,13,20,200]) {
@@ -147,5 +161,5 @@ for(let number=7;number<=12;number++) for(const seed of [1,42,4200,90000]) {
   level.rings[3].gateHealth=49;assert.equal(test.rings[3].gate.health,original.levels[11].rings[3].gateHealth);
   test.fail();test.update(2);test.retry();assert.equal(test.level,20);assert.equal(test.elapsed,0);
   assert.deepEqual(JSON.parse(fs.readFileSync(`${__dirname}/published-levels.json`)),original);
-  console.log("PASS: 1–4 rings/outside-in health, widths, walls, beam endpoints, retry, three level-family holds and independent world clocks, 24 bounded-turret published wins, 1/12/13/20/200-level progression, config session snapshots, numbering rejection, standalone Level 20 Test Mode and export-loader isolation; published source unmodified by runtime tests");
+  console.log("PASS: 1–4 rings/outside-in health, widths, walls, beam endpoints, retry, three level-family holds and independent world clocks, 48 published level/seed mechanics wins, 1/12/13/20/200-level progression, config session snapshots, numbering rejection, standalone Level 20 Test Mode and export-loader isolation; published source unmodified by runtime tests");
 })().catch(e=>{console.error(e);process.exitCode=1;});

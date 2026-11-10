@@ -9,28 +9,9 @@ ROOT=Path(__file__).resolve().parents[1]
 SOURCE=json.loads((ROOT/'d-fuze/published-levels.json').read_text())
 # Actual ray shots through shared geometric holds. Only aim/time are driven by
 # the test; damage, ammo, target selection and effects use the production engine.
-WIN="""() => {
-  let index=0, sequence=[], beams=[];
-  while(game.state==='PLAYING') {
-    const local=4.6+Math.floor(index/2)*5+(index%2)*.3;
-    game.update(local-game.elapsed);
-    game.angle=game.rings.at(-1).displayAngle;
-    const before=game.rings.map(r=>r.gate.health), health=game.health;
-    const ammo=game.ammo;
-    if(!game.fire())throw Error('Shot was not ready');
-    const changed=game.rings.findIndex((r,i)=>r.gate.health!==before[i]);
-    if(game.ammo!==ammo-1)throw Error('Wrong shot consumption');
-    if(changed>=0 && game.health!==health)throw Error('Two targets damaged');
-    if(changed>=0 && before.some((h,i)=>i>changed && h>0))throw Error('Inner damage through intact outer gate');
-    const radius=Math.hypot(game.lastShot.point.x,game.lastShot.point.y);
-    const expected=changed>=0?game.rings[changed].radius+4:75;
-    if(Math.abs(radius-expected)>1e-7)throw Error('Incorrect beam endpoint');
-    sequence.push(changed>=0?changed+1:'bomb');beams.push(radius);index++;
-    if(index>200)throw Error('No completion');
-  }
-  if(game.state!=='DEFUSING')throw Error('Level failed');
-  game.update(1);return {sequence,beams};
-}"""
+# Injected test-only support uses actual profile holds and the configured cooldown.
+WIN="options => DFuzeTestGameplay.finishLevel(game, options ?? {})"
+
 
 with sync_playwright() as p:
     browser=p.chromium.launch(executable_path='/usr/bin/chromium')
@@ -49,7 +30,8 @@ with sync_playwright() as p:
         ctx.route('http://app-lab.test/**',serve);ctx.on('weberror',lambda e:errors.append(str(e)))
         normal=ctx.new_page();normal.goto('http://app-lab.test'+prefix+'d-fuze/')
         normal.get_by_role('button',name='PLAY',exact=True).click()
-        assert normal.evaluate('game.levelCount')==12
+        normal.add_script_tag(url='http://app-lab.test'+prefix+'d-fuze/test-helpers/gameplay.js')
+        assert normal.evaluate('game.levelCount')==len(SOURCE['levels'])
         for number in [7,10,12]:
             normal.evaluate('(n)=>{game.level=n;game.startLevel()}',number)
             count=3 if number==7 else 4
@@ -63,11 +45,14 @@ with sync_playwright() as p:
             normal.evaluate('game.startLevel();game.angle=game.rings.at(-1).displayAngle+Math.PI;game.fire()')
             assert normal.evaluate('game.lastShot.kind')=='wall'
             assert math.isclose(normal.evaluate('Math.hypot(game.lastShot.point.x,game.lastShot.point.y)'),108+(count-1)*30+4,abs_tol=1e-6)
-            result=normal.evaluate(WIN)
+            result=normal.evaluate(WIN, {'ammoSpent':1})
             expected=[]
             for ring in reversed(SOURCE['levels'][number-1]['rings']):expected += [ring['number']]*ring['gateHealth']
             expected += ['bomb']*SOURCE['levels'][number-1]['bombHealth']
             assert result['sequence']==expected
+            assert math.isclose(result['cooldown'],1/SOURCE['levels'][number-1]['fireRate'])
+            assert all(b-a>=result['cooldown']-1e-8 for a,b in zip(result['firedAt'],result['firedAt'][1:]))
+            assert result['ammo']==SOURCE['levels'][number-1]['ammo']-1-len(expected)
             expect(normal.locator('#message')).to_have_text('BOMB D::FUZED!')
             if number<12:expect(normal.get_by_role('button',name='PLAY NEXT LEVEL',exact=True)).to_be_visible()
             else:
@@ -75,7 +60,7 @@ with sync_playwright() as p:
                 expect(normal.get_by_role('button',name='PLAY NEXT LEVEL',exact=True)).to_have_count(0)
         normal.evaluate('game.level=10;game.startLevel();game.fail();game.update(1.3)')
         normal.get_by_role('button',name='RETRY LEVEL',exact=True).click()
-        assert normal.evaluate('game.rings.map(r=>r.gate.health)')==[2]*4
+        assert normal.evaluate('game.rings.map(r=>r.gate.health)')==[r['gateHealth'] for r in SOURCE['levels'][9]['rings']]
         assert normal.evaluate('game.lives')==2
         # Four rings keep the existing portrait controls, geometry and orientation pause.
         if viewport['width']<500:
@@ -121,6 +106,7 @@ with sync_playwright() as p:
         test.get_by_role('button',name='RETRY LEVEL',exact=True).click()
         assert test.evaluate('game.config.time')==111
         assert test.evaluate('game.rings.map(r=>r.profile.id)')==snapshot
+        test.add_script_tag(url='http://app-lab.test'+prefix+'d-fuze/test-helpers/gameplay.js')
         test.evaluate(WIN)
         expect(test.get_by_role('button',name='PLAY NEXT LEVEL',exact=True)).to_have_count(0)
         test.evaluate('game.nextLevel()');assert test.evaluate('game.level')==13
