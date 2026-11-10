@@ -22,6 +22,7 @@ with sync_playwright() as p:
     expect(page).to_have_url('http://app-lab.test/small-apps/laserbreak/')
     expect(page.locator('#setup')).to_be_hidden()
     expect(page.locator('#performance')).to_be_hidden()
+    assert page.evaluate('world.settings.targetSize===40 && world.objects.filter(o=>o.type==="target").every(o=>o.radius===20)')
     expect(page.locator('#pause')).to_be_visible(); expect(page.locator('#session')).to_have_text('Stop')
     # Pausing freezes objects, rotation, spawning, cooldown and effect ages.
     page.locator('#pause').click()
@@ -51,16 +52,19 @@ with sync_playwright() as p:
     page.locator('#close-setup').click()
     page.evaluate('world.clear();world.settings.density=0;world.settings.cooldown=0')
     # Desktop input resolves collision effects immediately, with no traveling state.
-    page.evaluate('world.objects=[{id:101,type:"target",x:500,y:200,radius:12,speed:0,extent:12,color:"#36fff3"}]')
+    page.evaluate('world.objects=[{id:101,type:"target",x:150,y:200,radius:20,speed:0,extent:20,color:"#36fff3"}]')
     box = page.locator('#left-pad').bounding_box()
     y = page.locator('canvas').bounding_box()['y'] + page.locator('canvas').bounding_box()['height'] * 200 / page.evaluate('world.height')
     page.mouse.move(box['x']+20, y); page.mouse.down(); page.keyboard.down('Space')
     assert page.evaluate('world.objects.length') == 0
     assert page.evaluate('world.effects.some(e=>e.type==="explosion")')
-    assert page.evaluate('world.effects.find(e=>e.type==="flash").beams.every(b=>b.to.x===500)')
+    assert page.evaluate('world.effects.find(e=>e.type==="flash").beams[0].to.x===1000 && world.effects.find(e=>e.type==="flash").beams[1].to.x===0')
     page.keyboard.up('Space'); page.mouse.up()
-    page.evaluate('world.objects=[{id:101,type:"target",x:200,y:160,radius:12,speed:0,extent:12,color:"#36fff3"},{id:102,type:"target",x:650,y:320,radius:12,speed:0,extent:12,color:"#fff04b"},{id:103,type:"bar",x:460,y:210,length:100,thickness:12,angle:.6,speed:0,rotation:1,extent:51}];world.effects=[];world.paused=true;syncSession()')
+    page.evaluate('world.objects=[{id:101,type:"target",x:200,y:160,radius:20,speed:0,extent:20,color:"#36fff3"},{id:102,type:"target",x:650,y:320,radius:20,speed:0,extent:20,color:"#fff04b"},{id:103,type:"bar",x:460,y:210,length:100,thickness:12,angle:.6,speed:0,rotation:1,extent:51}];world.effects=[];world.particles=[];world.paused=true;syncSession()')
     page.screenshot(path='/tmp/laserbreak-desktop.png')
+    # Freeze one representative frame for visual review of target and bar shards.
+    page.evaluate('world.clear();world.paused=false;world.lastShot=-Infinity;world.objects=[{id:201,type:"target",x:220,y:200,radius:20,extent:20,speed:0,color:"#36fff3"},{id:202,type:"bar",x:245,y:230,length:35,thickness:12,angle:.5,speed:0,rotation:0,extent:19},{id:203,type:"target",x:800,y:350,radius:20,extent:20,speed:0,color:"#fff04b"},{id:204,type:"bar",x:650,y:350,length:100,thickness:12,angle:Math.PI/2,speed:0,rotation:0,extent:51}];world.fire(200,200);world.fire(350,350);world.step(.1);world.paused=true;syncSession();draw();hud(performance.now())')
+    page.screenshot(path='/tmp/laserbreak-particles.png')
     for width, height in [(568,320),(667,375),(844,390),(1024,600),(1366,768)]:
         page.set_viewport_size({'width':width,'height':height})
         assert page.evaluate('document.documentElement.scrollWidth<=innerWidth && document.documentElement.scrollHeight<=innerHeight')
@@ -71,7 +75,7 @@ with sync_playwright() as p:
         assert abs(left['width']-expected) < 1 and abs(right['width']-expected) < 1
         assert abs(left['height']-field['height']) < 1 and abs(right['height']-field['height']) < 1
         assert left['x']+left['width'] <= field['x']+1 and field['x']+field['width'] <= right['x']+1
-        expect(page.locator('#pause')).to_be_in_viewport(); expect(page.locator('#session')).to_be_in_viewport()
+        expect(page.locator('#pause')).to_be_in_viewport(); expect(page.locator('#session')).to_be_in_viewport(); expect(page.locator('#fullscreen')).to_be_in_viewport()
     mobile = context(viewport={'width':844,'height':390},is_mobile=True,has_touch=True,device_scale_factor=3)
     mobile.add_init_script('window.lockAttempts=0;if(screen.orientation)screen.orientation.lock=()=>{lockAttempts++;return Promise.reject(new Error("Fullscreen unavailable in test"));};')
     touch = mobile.new_page(); touch.goto('http://app-lab.test/small-apps/laserbreak/')

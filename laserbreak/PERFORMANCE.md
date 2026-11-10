@@ -56,3 +56,21 @@ The test uses local request routing, Chromium, a 60-object fixture, mobile lands
 - The 30 FPS fallback and 60 FPS recovery logic, without depending on host load to trigger them.
 
 The engine suite additionally verifies a single motion/rotation write per frame and no collision-geometry reads during ordinary updates. Timings are observational guardrails, not a promise that a given phone sustains 60 FPS. Use the physical Android acceptance checklist in [README.md](README.md), with the hidden diagnostics enabled, to validate the actual success criterion.
+
+
+## Visual polish verification
+
+The visual-polish revision retains the same DPR/pixel budgets, one-pass update, render pacing, input handling, and no-blur policy. Default target diameter increases to 40 logical pixels; beams still resolve only when firing, now across the full field. Destruction adds at most 128 short-lived fragments, drawn as layered small squares, with no particle collision work.
+
+`python laserbreak/test-performance.py --baseline-ref 01cc5ff` compares against PR #25. The fixture now uses radius-20 targets in both builds. In one 844×390 / DPR 3 / 4× CPU-throttled run:
+
+| Metric | PR #25 | Visual polish |
+| --- | ---: | ---: |
+| Mean animation interval, 60 objects | 16.4 ms | 16.5 ms |
+| 95th percentile CPU render, 60 objects | 3.1 ms | 2.2 ms |
+| Mean slider event → next frame | 16.4 ms | 16.1 ms |
+| Mean animation interval, 60 objects + sustained 128 particles | — | 16.5 ms |
+| 95th percentile CPU render with particles | — | 4.2 ms |
+| Canvas backing pixels | 407,169 | 407,169 |
+
+The additional particle stress case maintains all 60 objects, replenishes to the cap during 90 animation opportunities, checks the existing 16 ms render / 5 ms update / 75 ms frame p95 budgets, then verifies all particles expire. The stable HUD test still reports zero per-frame DOM mutations, Canvas layout reads, or positive shadow-blur assignments. These desktop-emulation measurements vary with host load; use the README's phone checklist for fullscreen, touch comfort, and sustained real-device performance.

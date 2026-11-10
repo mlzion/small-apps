@@ -1,9 +1,9 @@
 /* Original LaserBreak simulation. Browser global + Node export; no dependencies. */
 (function (root) {
   'use strict';
-  const defaults = Object.freeze({ mode: 'touch', cooldown: .75, targetSize: 24, targetSpeed: 45,
+  const defaults = Object.freeze({ mode: 'touch', cooldown: .75, targetSize: 40, targetSpeed: 45,
     barLength: 100, barSpeed: 32, barRotation: 65, density: 20, debug: false });
-  const W = 1000, H = 500, MAX_OBJECTS = 60, BAR_THICKNESS = 12, SPAWN_CLEARANCE = 5, MAX_EFFECTS = 160;
+  const W = 1000, H = 500, MAX_OBJECTS = 60, BAR_THICKNESS = 12, SPAWN_CLEARANCE = 5, MAX_EFFECTS = 160, MAX_PARTICLES = 128;
   const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
   // Return first segment parameter inside a circle, including tangencies and starts inside.
   function circleHit(a, b, c, r) {
@@ -90,6 +90,7 @@
       this.random = random;
       this.objects = [];
       this.effects = [];
+      this.particles = [];
       this.time = 0;
       this.lastShot = -Infinity;
       this.spawnClock = 0;
@@ -142,17 +143,16 @@
       if (!this.ready()) return false;
       this.lastShot = this.time;
       const a = {x: 0, y: left}, b = {x: W, y: right};
-      const mid = {x: W / 2, y: (left + right) / 2};
       let leftStop = 1, rightStop = 1;
-      // Both beams are bounded by their own half of the line.
+      // Both instantaneous beams cross the field, independently stopping at the first bar.
       for (const o of this.objects) {
         if (o.type !== 'bar') continue;
-        const l = barHit(a, mid, o), r = barHit(b, mid, o);
+        const l = barHit(a, b, o), r = barHit(b, a, o);
         if (l !== null && l < leftStop) leftStop = l;
         if (r !== null && r < rightStop) rightStop = r;
       }
-      const endA = {x: mid.x * leftStop, y: a.y + (mid.y - a.y) * leftStop};
-      const endB = {x: W + (mid.x - W) * rightStop, y: b.y + (mid.y - b.y) * rightStop};
+      const endA = {x: W * leftStop, y: a.y + (b.y - a.y) * leftStop};
+      const endB = {x: W * (1 - rightStop), y: b.y + (a.y - b.y) * rightStop};
       this.effects.push({type: 'flash', beams: [{from: a, to: endA}, {from: b, to: endB}], age: 0, life: .14});
       if (leftStop < 1) this.effects.push({type: 'spark', x: endA.x, y: endA.y, r: 10, age: 0, life: .18});
       if (rightStop < 1) this.effects.push({type: 'spark', x: endB.x, y: endB.y, r: 10, age: 0, life: .18});
@@ -166,6 +166,7 @@
         const double = l && r;
         this.effects.push({type: double ? 'explosion' : 'dissolve', x: o.x, y: o.y,
           r: o.radius * (double ? 2 : 1), color: o.color, age: 0, life: double ? .35 : .22});
+        this.fragments(o, double);
         if (double) blasts.push(o);
       }
       // Only direct double hits produce blasts; victims never propagate them.
@@ -173,6 +174,7 @@
         for (const o of this.objects) {
           if (!destroyed.has(o) && blastHits(center, center.radius * 2, o)) {
             destroyed.add(o);
+            this.fragments(o, false);
             this.effects.push({type: 'dissolve', x: o.x, y: o.y, r: o.type === 'target' ? o.radius : 8,
               color: o.color || '#8da5b7', age: 0, life: .22});
           }
@@ -184,9 +186,29 @@
       if (this.effects.length > MAX_EFFECTS) this.effects.splice(0, this.effects.length - MAX_EFFECTS);
       return true;
     }
+    fragments(o, dramatic) {
+      // D::FUZE-style outward shards: bounded creation, no particle collisions or runtime blur.
+      const bar = o.type === 'bar';
+      const count = dramatic ? 14 : bar ? 8 : 6;
+      const life = dramatic ? .42 : bar ? .32 : .26;
+      const speed = dramatic ? 220 : 110;
+      const bx = bar ? Math.cos(o.angle) : 0, by = bar ? Math.sin(o.angle) : 0;
+      for (let i = 0; i < count && this.particles.length < MAX_PARTICLES; i++) {
+        const angle = i * 2.399 + o.id * .71;
+        const dx = Math.cos(angle), dy = Math.sin(angle);
+        const offset = bar ? ((i + .5) / count - .5) * o.length : o.radius * .65;
+        const velocity = speed * (.7 + (i % 4) * .15);
+        this.particles.push({
+          x: o.x + (bar ? bx : dx) * offset, y: o.y + (bar ? by : dy) * offset,
+          vx: dx * velocity, vy: dy * velocity, size: dramatic ? 4 : bar ? 4.5 : 3,
+          color: o.color || '#9bb9cd', age: 0, life
+        });
+      }
+    }
     clear() {
       this.objects.length = 0;
       this.effects.length = 0;
+      this.particles.length = 0;
       this.spawnClock = 0;
     }
     stop() {
@@ -227,9 +249,18 @@
         if (e.age < e.life) this.effects[live++] = e;
       }
       this.effects.length = live;
+      live = 0;
+      for (const p of this.particles) {
+        p.age += dt;
+        if (p.age >= p.life) continue;
+        p.x += p.vx * dt;
+        p.y += p.vy * dt;
+        this.particles[live++] = p;
+      }
+      this.particles.length = live;
     }
   }
-  const api = {defaults, W, H, MAX_OBJECTS, BAR_THICKNESS, SPAWN_CLEARANCE, Input, World,
+  const api = {defaults, W, H, MAX_OBJECTS, MAX_PARTICLES, BAR_THICKNESS, SPAWN_CLEARANCE, Input, World,
     circleHit, barHit, blastHits, spawnOverlaps, entryOverlaps};
   if (typeof module !== 'undefined') module.exports = api;
   else root.LaserBreak = api;
