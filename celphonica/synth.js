@@ -17,10 +17,10 @@ export class Synth {
       this.filter.type = 'lowpass';
       this.filter.Q.value = 0.7;
       this.master = this.context.createGain();
-      // Gentle limiting protects the output when several thumbs/fingers play together.
-      this.limiter = this.context.createDynamicsCompressor();
-      this.filter.connect(this.master).connect(this.limiter).connect(this.context.destination);
-      this.applyExpression();
+      // No compressor: its look-ahead delays every note. Fixed voice headroom
+      // keeps the playing path to oscillator → envelope → filter → volume.
+      this.filter.connect(this.master).connect(this.context.destination);
+      this.applyExpression(true);
       this.context.addEventListener('statechange', () => {
         if (this.context.state !== 'running') this.stopAll();
       });
@@ -37,7 +37,8 @@ export class Synth {
     oscillator.type = this.waveform;
     oscillator.frequency.value = 440 * 2 ** ((midi - 69) / 12);
     gain.gain.setValueAtTime(0, now);
-    gain.gain.linearRampToValueAtTime(0.14, now + 0.008);
+    // A 1 ms attack keeps a tiny click-prevention ramp without a soft onset.
+    gain.gain.linearRampToValueAtTime(0.08, now + 0.001);
     oscillator.connect(gain).connect(this.filter);
     oscillator.onended = () => { oscillator.disconnect(); gain.disconnect(); };
     oscillator.start(now);
@@ -67,10 +68,18 @@ export class Synth {
     }
     this.applyExpression();
   }
-  applyExpression() {
+  applyExpression(initial = false) {
     if (!this.context) return;
     const now = this.context.currentTime;
-    this.filter.frequency.setTargetAtTime(150 * (120 ** this.expression.brightness), now, 0.015);
-    this.master.gain.setTargetAtTime(this.volume * this.expression.level, now, 0.015);
+    const cutoff = 150 * (120 ** this.expression.brightness);
+    const volume = this.volume * this.expression.level;
+    if (initial) {
+      // Initialize immediately; smoothing is only for later control changes.
+      this.filter.frequency.setValueAtTime(cutoff, now);
+      this.master.gain.setValueAtTime(volume, now);
+    } else {
+      this.filter.frequency.setTargetAtTime(cutoff, now, 0.015);
+      this.master.gain.setTargetAtTime(volume, now, 0.015);
+    }
   }
 }

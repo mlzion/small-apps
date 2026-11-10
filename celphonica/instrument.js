@@ -65,31 +65,44 @@ function moveNote(id, midi) {
   updateReadout();
 }
 $('keyboard').addEventListener('pointerdown', event => {
-  if (event.button !== 0 || !event.target.closest('.note')) return;
+  const button = event.target.closest('.note');
+  if (event.button !== 0 || !button) return;
   event.preventDefault();
   $('keyboard').setPointerCapture(event.pointerId);
-  const pointer = { midi: null, ready: false };
+  // The event already identifies the initial key: no layout hit test is needed.
+  const pointer = { midi: Number(button.dataset.midi), ready: false };
   pointers.set(event.pointerId, pointer);
   // Resume is invoked synchronously inside the gesture; late promises cannot revive released notes.
   try {
     const unlocked = synth.unlock();
-    moveNote(event.pointerId, targetNote(event.clientX, event.clientY));
     const start = () => {
       if (pointers.get(event.pointerId) !== pointer) return;
       pointer.ready = true;
       if (pointer.midi !== null) synth.start(event.pointerId, pointer.midi);
+      updateReadout();
       $('audio-status').textContent = 'Audio ready · Release to stop';
     };
     if (synth.context.state === 'running') start();
-    else unlocked.then(start).catch(() => {
-      release(event.pointerId);
-      $('audio-status').textContent = 'Audio could not start. Touch a note to retry.';
-    });
+    else {
+      updateReadout();
+      unlocked.then(start).catch(() => {
+        release(event.pointerId);
+        $('audio-status').textContent = 'Audio could not start. Touch a note to retry.';
+      });
+    }
   } catch (error) {
     release(event.pointerId);
     $('audio-status').textContent = error.message;
   }
 });
+// Settings/expression/fullscreen gestures can pay the cold audio startup cost
+// before the first note, like D::FUZE's Start gesture. Never start a silent voice
+// or a keep-alive source, and leave normal note gestures to the handler above.
+document.addEventListener('pointerdown', event => {
+  if (event.button !== 0 || event.target.closest('#keyboard') ||
+      !event.target.closest('button, select, input, #xy-pad')) return;
+  try { synth.unlock().catch(() => {}); } catch { /* A note gesture reports errors. */ }
+}, { capture: true });
 $('keyboard').addEventListener('pointermove', event => {
   if (pointers.has(event.pointerId)) {
     event.preventDefault();
