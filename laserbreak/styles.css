@@ -5,6 +5,7 @@
   color: #d4e4ed;
   font-size: 13px;
   --pad-width: 130px;
+  --setup-scroll-strip: 40px;
 }
 * { box-sizing: border-box; }
 body {
@@ -64,8 +65,14 @@ canvas { position: absolute; left: var(--pad-width); top: 0; width: calc(100% - 
 .bottom-label { bottom: 13px; text-align: center; letter-spacing: .5px; }
 #setup {
   position: fixed; z-index: 6; inset: 0; overflow-y: scroll;
+  padding-right: calc(var(--setup-scroll-strip) + env(safe-area-inset-right));
   overscroll-behavior: contain; touch-action: pan-y; background: #0c1725;
   scrollbar-gutter: stable; scrollbar-width: auto; scrollbar-color: #628895 #152532;
+}
+.setup-scroll-strip {
+  position: fixed; z-index: 2; top: 0; bottom: 0; right: env(safe-area-inset-right);
+  width: var(--setup-scroll-strip); background: #11232e; border-left: 1px solid #294552;
+  pointer-events: none; /* Swipes reach Setup's native scrolling padding underneath. */
 }
 #setup::-webkit-scrollbar { width: 10px; }
 #setup::-webkit-scrollbar-track { background: #152532; }

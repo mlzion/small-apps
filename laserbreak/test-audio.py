@@ -18,8 +18,7 @@ with sync_playwright() as p:
     page.locator('#left-pad').click()
     page.wait_for_function('audio.context && audio.context.state==="running"')
     assert page.evaluate('audio.voices.size')==0
-    page.evaluate('audio.playShot({double:50,bars:50,single:50})')
-    assert page.evaluate('audio.voices.size')==6
+    assert page.evaluate('audio.playShot({double:50,bars:50,single:50})')==4
     page.evaluate('for(let i=0;i<50;i++)audio.playShot({double:50,bars:50,single:50})')
     assert page.evaluate('audio.voices.size<=8')
     page.wait_for_timeout(600);assert page.evaluate('audio.voices.size')==0
@@ -36,20 +35,22 @@ with sync_playwright() as p:
         const synth=new LaserSound.LaserAudio();
         // Schedule into an offline graph through a running-state facade, with native nodes.
         synth.context={state:'running',currentTime:0};
-        for(const name of ['createGain','createOscillator','createBufferSource','createBiquadFilter'])synth.context[name]=offline[name].bind(offline);
+        for(const name of ['createGain','createOscillator'])synth.context[name]=offline[name].bind(offline);
         synth.master=offline.createGain();synth.master.gain.value=LaserSound.MASTER_GAIN;synth.master.connect(offline.destination);
-        synth.noise=offline.createBuffer(1,12000,24000);const noise=synth.noise.getChannelData(0);
-        let seed=1729;for(let i=0;i<noise.length;i++){seed=(seed*1664525+1013904223)>>>0;noise[i]=seed/2147483648-1;}
         const voices=synth.playShot(hits);const buffer=await offline.startRendering(),data=buffer.getChannelData(0);
-        let energy=0,tail=0,peak=0;
-        for(let i=0;i<data.length;i++){energy+=data[i]*data[i];peak=Math.max(peak,Math.abs(data[i]));if(i>24000*.15)tail+=data[i]*data[i];}
-        return {voices,energy,tail,peak};
+        const peak=(from,to)=>{let max=0;for(let i=Math.ceil(from*24000);i<Math.floor(to*24000);i++)max=Math.max(max,Math.abs(data[i]));return max;};
+        const frequency=(from,to)=>{let crossings=0;const begin=Math.ceil(from*24000),end=Math.floor(to*24000);for(let i=begin+1;i<end;i++)if(data[i-1]<=0&&data[i]>0)crossings++;return crossings/(to-from);};
+        let energy=0;for(const v of data)energy+=v*v;
+        return {voices,energy,peak:peak(0,.7),first:peak(.08,.11),gap:peak(.128,.155),second:peak(.175,.205),tail:peak(.24,.7),firstHz:frequency(.08,.11),secondHz:frequency(.175,.205)};
       }
-      return {zap:await render({}),single:await render({single:1}),double:await render({double:1}),bars:await render({bars:1}),mass:await render({single:60,double:60,bars:60})};
+      return {zap:await render({}),single:await render({single:1}),double:await render({double:1}),bars:await render({bars:1}),mass:await render({single:60,double:60,bars:60}),mixed:await render({single:1,double:1,bars:1})};
     }''')
-    assert measured['double']['energy']>measured['single']['energy']*8,measured
-    assert measured['double']['tail']>.01 and measured['single']['tail']<.000001,measured
-    assert measured['bars']['voices']==3 and measured['double']['voices']==4 and measured['mass']['voices']==6
+    assert measured['single']['first']>.015 and measured['single']['second']<.000001,measured
+    assert measured['double']['first']>.015 and measured['double']['second']>.015,measured
+    assert measured['double']['gap']<.000001 and measured['double']['tail']<.000001,measured
+    assert abs(measured['double']['firstHz']-1100)<40 and abs(measured['double']['secondHz']-1320)<40,measured
+    assert measured['bars']['voices']==3 and measured['double']['voices']==2 and measured['mass']['voices']==4
+    assert abs(measured['mass']['energy']-measured['mixed']['energy'])<.00001,measured
     assert all(0<v['peak']<.51 for v in measured.values()),measured
     page.screenshot(path='/tmp/laserbreak-audio-test.png')
     fallback=browser.new_context(viewport={'width':844,'height':390})
@@ -62,4 +63,4 @@ with sync_playwright() as p:
     assert silent.evaluate('world.clear();input.down(1,"left",200);input.down(2,"right",200);input.up(1);world.effects.some(e=>e.type==="flash")')
     assert not errors,errors
     browser.close()
-    print('PASS: real user-gesture audio unlock, silent initialization, mute/unmute, voice cleanup/caps, no frame audio work, unsupported fallback; offline distinct synthesis, explosion energy/rumbling tail and peak headroom',measured)
+    print('PASS: real user-gesture audio unlock, silent initialization, mute/unmute, voice cleanup/caps, no frame audio work, unsupported fallback; offline distinct single/double beeps with silent gap and higher second pitch, aggregated hits and peak headroom',measured)

@@ -41,6 +41,17 @@ with sync_playwright() as p:
             assert page.evaluate('[world.running,world.paused]')==previous
         page.evaluate('world.start()');page.locator('#setup-toggle').tap()
         initial=values();slider=page.locator('#cooldown').bounding_box()
+        strip=page.locator('.setup-scroll-strip').bounding_box()
+        assert 35<=strip['width']<=45 and abs(strip['x']+strip['width']-width)<1
+        assert page.locator('.setup-scroll-strip input, .setup-scroll-strip button, .setup-scroll-strip a, .setup-scroll-strip [tabindex]').count()==0
+        # Every control stays out of the strip, including at its former slider endpoint.
+        assert page.evaluate("Array.from(setup.querySelectorAll('input,button')).every(el=>el.getBoundingClientRect().right<=document.querySelector('.setup-scroll-strip').getBoundingClientRect().left)")
+        for start_y in [slider['y']+22,slider['y']+slider['height']+16]:
+            page.evaluate('setup.scrollTop=0');page.wait_for_timeout(80)
+            swipe(strip['x']+20,start_y,strip['x']+20,85)
+            assert page.evaluate('setup.scrollTop')>20
+            assert values()==initial
+        page.evaluate('setup.scrollTop=0');page.wait_for_timeout(80)
         # Begin in the empty row space below the actual slider, then swipe vertically.
         x=slider['x']+slider['width']/2;y=slider['y']+slider['height']+16
         swipe(x,y,x,max(85,y-120))
@@ -76,6 +87,9 @@ with sync_playwright() as p:
         page.locator('#setup-toggle').tap()
         assert page.evaluate('setup.getBoundingClientRect().height===innerHeight && Math.abs(setup.getBoundingClientRect().width-innerWidth)<=12 && world.settingsOpen')
         page.screenshot(path=f'/tmp/laserbreak-setup-{width}.png')
+        before=values();strip=page.locator('.setup-scroll-strip').bounding_box()
+        swipe(strip['x']+20,250,strip['x']+20,100)
+        assert page.evaluate('setup.scrollTop')>20 and values()==before
         page.locator('#close-setup').tap();assert page.evaluate('document.fullscreenElement!==null && !world.settingsOpen')
         page.locator('#setup-toggle').tap();page.set_viewport_size({'width':390,'height':844})
         expect(page.locator('#orientation-overlay')).to_be_visible();expect(page.locator('#setup')).to_be_hidden()
@@ -86,4 +100,4 @@ with sync_playwright() as p:
         context.close()
     assert not errors,errors
     browser.close()
-    print('PASS: 568x320/844x390 real touch scroll between/on controls, no accidental range edits, deliberate slider drag, sticky X, active/paused/stopped restoration, full-screen Setup, fullscreen and portrait lifecycle')
+    print('PASS: 568x320/844x390 40px control-free strip scrolling, touch scroll between/on controls, no accidental range edits, deliberate slider drag, sticky X, active/paused/stopped restoration, full-screen Setup, fullscreen and portrait lifecycle')
