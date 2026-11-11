@@ -1,0 +1,166 @@
+{
+  "sourceCommit": "2027a4400870ac149c43315c7000ca2c2b062efc",
+  "purpose": "Regression fixture only; never loaded by the game.",
+  "levels": [
+    {
+      "number": 1,
+      "settings": {
+        "blastMultiplier": 3,
+        "sound": true,
+        "cooldown": 0.75,
+        "targetSize": 40,
+        "targetSpeed": 50,
+        "barPercentage": 20,
+        "barLength": 100,
+        "barSpeed": 35,
+        "barRotation": 45,
+        "density": 20,
+        "debug": false
+      }
+    },
+    {
+      "number": 2,
+      "settings": {
+        "blastMultiplier": 3,
+        "sound": true,
+        "cooldown": 0.75,
+        "targetSize": 40,
+        "targetSpeed": 51,
+        "barPercentage": 20,
+        "barLength": 100,
+        "barSpeed": 35.7,
+        "barRotation": 45,
+        "density": 23,
+        "debug": false
+      }
+    },
+    {
+      "number": 3,
+      "settings": {
+        "blastMultiplier": 3,
+        "sound": true,
+        "cooldown": 0.75,
+        "targetSize": 40,
+        "targetSpeed": 52.019999999999996,
+        "barPercentage": 30,
+        "barLength": 100,
+        "barSpeed": 36.414,
+        "barRotation": 45,
+        "density": 23,
+        "debug": false
+      }
+    },
+    {
+      "number": 4,
+      "settings": {
+        "blastMultiplier": 3,
+        "sound": true,
+        "cooldown": 0.75,
+        "targetSize": 38,
+        "targetSpeed": 53.06040000000001,
+        "barPercentage": 30,
+        "barLength": 100,
+        "barSpeed": 37.14228000000001,
+        "barRotation": 45,
+        "density": 23,
+        "debug": false
+      }
+    },
+    {
+      "number": 5,
+      "settings": {
+        "blastMultiplier": 3,
+        "sound": true,
+        "cooldown": 0.75,
+        "targetSize": 38,
+        "targetSpeed": 54.121608,
+        "barPercentage": 30,
+        "barLength": 100,
+        "barSpeed": 37.8851256,
+        "barRotation": 45,
+        "density": 23,
+        "debug": false
+      }
+    },
+    {
+      "number": 6,
+      "settings": {
+        "blastMultiplier": 3,
+        "sound": true,
+        "cooldown": 0.75,
+        "targetSize": 38,
+        "targetSpeed": 55.20404016,
+        "barPercentage": 30,
+        "barLength": 100,
+        "barSpeed": 38.642828112000004,
+        "barRotation": 53,
+        "density": 23,
+        "debug": false
+      }
+    },
+    {
+      "number": 7,
+      "settings": {
+        "blastMultiplier": 3,
+        "sound": true,
+        "cooldown": 0.75,
+        "targetSize": 38,
+        "targetSpeed": 56.308120963200004,
+        "barPercentage": 30,
+        "barLength": 100,
+        "barSpeed": 39.415684674240005,
+        "barRotation": 53,
+        "density": 26,
+        "debug": false
+      }
+    },
+    {
+      "number": 8,
+      "settings": {
+        "blastMultiplier": 3,
+        "sound": true,
+        "cooldown": 0.75,
+        "targetSize": 38,
+        "targetSpeed": 57.434283382464,
+        "barPercentage": 40,
+        "barLength": 100,
+        "barSpeed": 40.2039983677248,
+        "barRotation": 53,
+        "density": 26,
+        "debug": false
+      }
+    },
+    {
+      "number": 9,
+      "settings": {
+        "blastMultiplier": 3,
+        "sound": true,
+        "cooldown": 0.75,
+        "targetSize": 38,
+        "targetSpeed": 58.582969050113284,
+        "barPercentage": 40,
+        "barLength": 100,
+        "barSpeed": 41.008078335079304,
+        "barRotation": 53,
+        "density": 26,
+        "debug": false
+      }
+    },
+    {
+      "number": 10,
+      "settings": {
+        "blastMultiplier": 3,
+        "sound": true,
+        "cooldown": 0.75,
+        "targetSize": 36,
+        "targetSpeed": 59.754628431115556,
+        "barPercentage": 40,
+        "barLength": 100,
+        "barSpeed": 41.82823990178089,
+        "barRotation": 53,
+        "density": 26,
+        "debug": false
+      }
+    }
+  ]
+}

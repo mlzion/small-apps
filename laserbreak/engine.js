@@ -97,7 +97,8 @@
       this.orientationBlocked = false;
       this.settingsOpen = false;
       this.arcadeBlocked = false;
-      this.stats = {targets: 0, shots: 0, blockedShots: 0};
+      this.trackEscapes = false;
+      this.stats = {targets: 0, escaped: 0, shots: 0, blockedShots: 0};
       this.bag = [];
       this.lastShotSounds = null;
     }
@@ -246,7 +247,7 @@
       this.time = 0;
       this.lastShot = -Infinity;
       this.bag.length = 0;
-      this.stats = {targets: 0, shots: 0, blockedShots: 0};
+      this.stats = {targets: 0, escaped: 0, shots: 0, blockedShots: 0};
       for (let n = 0; n < 3; n++) this.spawn(40);
     }
     step(dt) {
@@ -258,6 +259,11 @@
         o.y += dt * o.speed;
         if (o.type === 'bar') o.angle = (o.angle + dt * o.rotation) % (Math.PI * 2);
         if (o.y - o.extent <= this.height) this.objects[live++] = o;
+        else if (this.trackEscapes && o.type === 'target') {
+          // Keep the original interception window: resolve after the whole circle exits.
+          this.stats.escaped++;
+          if (this.effects.length < MAX_EFFECTS) this.effects.push({type:'escape',x:o.x,y:this.height,r:o.radius,age:0,life:.24});
+        }
       }
       this.objects.length = live;
       if (this.settings.density > 0) {

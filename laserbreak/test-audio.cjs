@@ -41,7 +41,14 @@ class Context {
  for(const v of [...s.voices])v.source.onended();assert.equal(s.voices.size,0);
  s.playShot({double:1});s.setEnabled(false);assert.equal(s.voices.size,0);assert.equal(s.playShot({double:1}),0);
  s.setEnabled(true);assert.ok(s.playShot({double:1})>0);s.stop();
- s.context.state='suspended';s.context.reject=true;s.unlock();await new Promise(resolve=>setImmediate(resolve));
+ assert.equal(s.playEscape(),true);assert.equal(s.playEscape(),false);
+ assert.deepEqual([...s.voices][0].source.frequency.events,[[880,0],[330,.12]]);
+ s.stop();s.context.currentTime=.17;assert.equal(s.playEscape(),false);
+ s.context.currentTime=.18;assert.equal(s.playEscape(),true);s.stop();
+ s.setEnabled(false);s.context.currentTime=1;assert.equal(s.playEscape(),false);s.setEnabled(true);
+ for(let i=0;i<MAX_VOICES;i++)s.voice(400,400,.2,'sine',.01);
+ assert.equal(s.playEscape(),false);s.stop();assert.equal(s.playEscape(),true);s.stop();
+ s.context.state='suspended';assert.equal(s.playEscape(),false);s.context.reject=true;s.unlock();await new Promise(resolve=>setImmediate(resolve));
  assert.equal(s.playShot({single:1}),0);assert.equal(s.resuming,false);
  s.context.resume=()=>{throw Error('synchronous rejection');};s.unlock();assert.equal(s.resuming,false);
  s.context.resume=Context.prototype.resume;s.context.reject=false;s.context.state='interrupted';s.unlock();await new Promise(resolve=>setImmediate(resolve));assert.equal(s.context.state,'running');
