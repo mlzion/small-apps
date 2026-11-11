@@ -112,8 +112,32 @@ with sync_playwright() as p:
               for(let i=0;i<240;i++)updatePacing(16.7);
               return slow===30 && diagnostics.fps===60;
             }''')
+            # The Arcade clock/HUD must stay within the same budgets at maximum scene load.
+            page.evaluate('arcadeChange(()=>{session.setMode("arcade");session.begin(1);})')
+            page.evaluate(fixture)
+            result['arcade'] = page.evaluate('''async()=>{
+              const renders=[],updates=[],frames=[];
+              const originalDraw=draw,originalStep=world.step.bind(world);
+              draw=()=>{const t=performance.now();originalDraw();renders.push(performance.now()-t);};
+              world.step=dt=>{const t=performance.now();originalStep(dt);updates.push(performance.now()-t);};
+              let previous=performance.now(),peak=0;
+              for(let n=0;n<90;n++){
+                for(let i=0;i<10;i++)world.fragments({id:i,type:'target',x:200+i*60,y:250,radius:20,color:'#36fff3'},true);
+                peak=Math.max(peak,world.particles.length);
+                await new Promise(requestAnimationFrame);const now=performance.now();frames.push(now-previous);previous=now;
+              }
+              draw=originalDraw;world.step=originalStep;
+              const stats=a=>({meanMs:a.reduce((x,y)=>x+y,0)/a.length,p95Ms:a.sort((a,b)=>a-b)[Math.floor(a.length*.95)]});
+              return {render:stats(renders),update:stats(updates),raf:stats(frames),objects:world.objects.length,peak,elapsed:session.elapsed,state:session.state,pixels:diagnostics.pixels};
+            }''')
+            assert result['arcade']['objects'] == 60 and result['arcade']['peak'] == 128
+            assert result['arcade']['state'] == 'playing' and result['arcade']['elapsed'] > 1
+            assert result['arcade']['pixels'] <= 1000000
+            assert result['arcade']['render']['p95Ms'] < 16, result
+            assert result['arcade']['update']['p95Ms'] < 5, result
+            assert result['arcade']['raf']['p95Ms'] < 75, result
         results[label] = result
         c.close()
     browser.close()
     print(json.dumps(results,indent=2))
-    print('PASS: 60-object CPU/render and slider budgets, bounded Canvas pixels, no per-frame blur/layout/DOM churn, adaptive 30/60 FPS pacing, capped-particle stress and cleanup')
+    print('PASS: 60-object CPU/render and slider budgets, bounded Canvas pixels, no per-frame blur/layout/DOM churn, adaptive 30/60 FPS pacing, capped-particle stress and cleanup, Arcade HUD/clock under load')

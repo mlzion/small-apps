@@ -1,6 +1,29 @@
-# LaserBreak — Phase 1 gameplay refinement
+# LaserBreak — Free Play and 10-level Arcade
 
-A standalone, landscape-only gameplay sandbox. Serve the repository with any static HTTP server and open `laserbreak/`; relative paths also work at `/small-apps/laserbreak/`. Original Canvas/SVG graphics and JavaScript. No framework, build step, external audio files, or runtime dependencies.
+A standalone, landscape-only arcade game and Free Play gameplay sandbox. Serve the repository with any static HTTP server and open `laserbreak/`; relative paths also work at `/small-apps/laserbreak/`. Original Canvas/SVG graphics and JavaScript. No framework, build step, external audio files, or runtime dependencies.
+
+## Choose a mode
+
+Open Setup and choose **Game mode**:
+
+- **Free Play** is the existing endless random sandbox and remains the default. All Setup sliders are editable. Its timing, spawning, input, sounds, and rendering behavior are preserved.
+- **Arcade** has ten automatically generated levels. Start Level 1 from its introduction card. Each level lasts **45 seconds of active gameplay** and requires a generated number of destroyed targets. The compact field HUD shows level, remaining seconds, and targets/requirement. Both direct and blast-destroyed targets count once; bars and targets falling out of the field do not count.
+
+Reaching the requirement early does not end the level. At the deadline, meeting it advances to a clear/next-level card; tap **Start Level N** to continue. Otherwise use **Retry**. Clearing Level 10 shows victory. Result cards and Setup provide **Restart from Level 1**. Transitions freeze play and discard held contacts so a release cannot carry into a new level. No lives, escape penalties, or additional scoring system are added.
+
+Generated Arcade sliders are visible but read-only to keep the attempt/report reproducible. Sound, debug, and diagnostics remain available. Switch to Free Play to edit gameplay parameters; its previous settings are restored. Changing modes starts a fresh session, rather than preserving objects between modes. Sound/debug preferences follow you across modes.
+
+Arcade time and cooldown freeze during Setup, explicit pause, backgrounding, portrait, stopped sessions, and transition/result cards. A long **active** frame still counts toward 45 seconds, but falling/spawning advance at most 100 ms to avoid catch-up bursts. Free Play retains its previous clamped timing behavior. Stop clears the current attempt; Start retries the current Arcade level (or begins a fresh endless Free Play session).
+
+### Level Select for testing
+
+In Arcade Setup, **Level Select · testing feature** can start any Level 1–10. Select a number, then tap **Start selected level**. Timer, destroyed count, shots, objects/effects, cooldown, and shuffle bag reset. It stays frozen until Setup closes. Disable `LaserArcade.CONFIG.testingLevelSelect` in `arcade.js` to hide/disable this temporary tool before release. It does not introduce scenario files or scripted spawn sequences.
+
+### Generation and difficulty estimates
+
+`generateLevel(levelNumber)` and `CONFIG` live in [arcade.js](arcade.js). Speeds increase about 2% per level. A rotating budget changes only one additional axis (density, bar share, size, rotation) per point, with extra-parameter plateaus at Levels 5 and 9. Bounds keep settings reasonable; bar length, cooldown, and blast multiplier remain constant initially. Requirements use estimated target supply, capture fraction, and a precision allowance, rather than simply increasing every parameter. The pure function is tested through Level 50; extending the playable count requires changing `CONFIG.levelCount` and rerunning balance tests, not authoring more levels.
+
+See [ARCADE-REPORT.md](ARCADE-REPORT.md) for all settings, exact formulas, the exportable difficulty graph, **3,000 attempts** (100 per level for each of three models), means/ranges, quota tuning, confidence limits, and balance concerns. Raw results are in [arcade-simulation.json](arcade-simulation.json). These estimates use the production engine and session rules; they are not a substitute for physical-phone playtesting. The Learning model drops from 94% to 44% completion; Level 4 warrants phone checks, and the accurate models show a ceiling effect.
 
 ## Release-only controls
 
@@ -10,7 +33,7 @@ Pointer cancellation, opening Setup, fullscreen changes, and orientation changes
 
 Desktop fallback: hold the mouse on a pad and press Space for the opposite endpoint at the same height. Release either to fire, then release mouse and Space before another shot. Angled input is intended for multitouch.
 
-Two adjacent main buttons remain available: **Pause / Resume** freezes/continues falling, rotation, spawning, visual effects, and cooldown; **Stop / Start** ends and clears the random session or starts a fresh one using current settings. Start resets the shuffle bag and seeds up to three objects subject to density/clearance. At zero density it starts empty. Settings are session-local.
+Two adjacent main buttons remain available: **Pause / Resume** freezes/continues falling, rotation, spawning, visual effects, and cooldown; **Stop / Start** ends and clears the random session or starts a fresh one using current settings. In either mode, Start resets the shuffle bag and seeds up to three objects subject to density/clearance. At zero density it starts empty. Settings are session-local.
 
 Pads remain 130 CSS pixels wide, or 97 on small landscape screens; very narrow viewports use 18vw. The world is 1000 logical pixels wide, with logical height following the field aspect ratio so circles remain circular. Sizes are logical pixels, falling speeds are logical pixels/second, and rotation is degrees/second.
 
@@ -20,7 +43,7 @@ Setup fills the available screen in a browser tab or browser fullscreen. A stick
 
 Opening Setup cancels held firing contacts, stops current sounds, and freezes gameplay through a separate settings-open gate. It does **not** modify the explicit running/paused/stopped state, reset the session, or alter current object properties. Closing restores active play, an existing pause, or a stopped session as appropriate. Backgrounding still applies the normal background pause. Clear and Reset remain explicit actions: Clear removes objects/effects while retaining session state and bag position; Reset restores defaults and starts a fresh session, held frozen until Setup closes.
 
-Rows provide cooldown, **Blast diameter multiplier**, target diameter/falling speed, bar length/falling speed/rotation speed, density, Bar Percentage, Sound on, collision debug, performance diagnostics, Clear, and Reset. There is no firing-mode selector.
+Free Play rows provide cooldown, **Blast diameter multiplier**, target diameter/falling speed, bar length/falling speed/rotation speed, density, Bar Percentage, Sound on, collision debug, performance diagnostics, Clear, and Reset. There is no firing-mode selector.
 
 Vertical swipes in the right-side strip or the space between controls scroll natively without editing values. Direct slider touches suppress the native eager range edit: a tap or horizontal movement beyond eight CSS pixels adjusts the value, while a vertical gesture scrolls the panel without editing. Horizontal control geometry is cached at gesture start. Mouse and keyboard range behavior remains native. Only the input's actual control area handles these gestures; a swipe starting outside it cannot activate a slider simply by crossing over it.
 
@@ -51,7 +74,7 @@ Hit feedback is aggregated once per shot rather than once per object. If a shot 
 
 ## Balanced random spawning
 
-The **Bar Percentage** slider ranges from **0% to 100% in 10% steps**, default **40% bars / 60% targets**. Each ten-object shuffle bag uses that ratio: for example, 70% creates seven bars and three targets. Entries are randomized with Fisher–Yates. Changing the slider immediately discards the remaining entries and builds a new shuffled bag, without modifying live objects or gameplay timing. Repeated input at the same value leaves the current bag alone. Successful placement consumes the last entry. Empty bags refill and reshuffle. Failed placement retains the pending type; Start resets the bag. Clear does not. This balances each ten successful spawns without predetermined waves or scenarios. Horizontal positions, colors, and bar angles remain random.
+The **Bar Percentage** slider ranges from **0% to 100% in 10% steps**, default **40% bars / 60% targets**. Each ten-object shuffle bag uses the Free Play selection (or the generated Arcade ratio): for example, 70% creates seven bars and three targets. Entries are randomized with Fisher–Yates. Changing the slider immediately discards the remaining entries and builds a new shuffled bag, without modifying live objects or gameplay timing. Repeated input at the same value leaves the current bag alone. Successful placement consumes the last entry. Empty bags refill and reshuffle. Failed placement retains the pending type; Start resets the bag. Clear does not. This balances each ten successful spawns without predetermined waves or scenarios. Horizontal positions, colors, and bar angles remain random.
 
 New objects enter just above the field. Placement checks five logical pixels of clearance with circular target bounds, rotation-safe bar bounds, and the short entry corridor until a new shape is fully inside. Each spawn tries up to 12 positions and then skips if crowded, retaining its bag entry. Initial objects use the same rule. Objects can pass through each other later while falling at different speeds; this is not physical object collision.
 
@@ -73,8 +96,10 @@ From the repository root:
 
 ```sh
 node laserbreak/test-engine.cjs
+node laserbreak/test-arcade.cjs
 node laserbreak/test-audio.cjs
 python laserbreak/test-browser.py
+python laserbreak/test-arcade-browser.py
 python laserbreak/test-setup.py
 python laserbreak/test-audio.py
 python laserbreak/test-fullscreen.py
@@ -82,9 +107,19 @@ python laserbreak/test-performance.py
 python tests/check_site.py
 ```
 
+To reproduce the difficulty study and its standalone SVG graph:
+
+```sh
+node laserbreak/simulate-arcade.cjs 100
+python laserbreak/report-arcade.py
+```
+
+Simulation requires Node only. Report/chart generation uses Python/matplotlib as development tools; there are no new deployed dependencies.
+
 Python browser tests need Playwright and Chromium (`CHROMIUM_PATH` overrides `/usr/bin/chromium`). They route local reserved origins without external requests or a server. Test dependencies are not deployed. Run the throttled performance test separately from other browser suites to avoid host contention.
 
 - **32 engine cases:** release-only input/cancellation/cooldown/re-arm, full-width beams, exact geometry, selected blast radius/ring snapshot and no chains, future-only properties, 0/40/70/100% bags, immediate ratio changes, unchanged live objects, and failed-entry retention, clearance, density/caps, motion, particles, session/orientation/Setup timing, sound summaries, and update guardrails.
+- **11 Arcade cases and desktop/mobile integration:** deterministic bounded generation and plateaus, 45-second deadlines and gates, exact target counting, retry/advance/victory/restart, Level Select resets, slow-frame timing, report freshness/histograms, real touch input, small HUD layouts, fullscreen, and saved Free Play settings.
 - **Audio unit + real browser/offline checks:** lazy silent unlock, denial/missing/interrupted fallback, mute, source limits/cleanup, no animation audio work, distinct synthesized effects, a measured silent gap and higher second-beep frequency, pair reservation under voice pressure, unchanged laser/bar profiles, aggregation, and peak headroom.
 - **Gameplay browser checks:** real CDP multitouch with release aiming/indicators, off-center blasts, third-contact Setup cancellation, five landscape sizes, properties/controls and portrait/session restoration.
 - **Setup browser checks:** actual touch swipes in the 40 px control-free strip and between/on ranges without edits, intentional horizontal adjustments, outside-control gestures, sticky X, full-screen panel geometry at 568×320 and 844×390, active/paused/stopped preservation, fullscreen and portrait lifecycle. Screenshots: `/tmp/laserbreak-setup-568.png`, `/tmp/laserbreak-setup-844.png`, plus desktop/mobile gameplay screenshots.
@@ -99,6 +134,7 @@ Python browser tests need Playwright and Chromium (`CHROMIUM_PATH` overrides `/u
 5. Listen on the phone speaker and headphones: unchanged crisp zap and metallic bar break, one clear single-hit beep, and two distinct double-hit beeps with a slightly higher second tone and an audible gap, at comfortable volume without harshness. Test Sound off/on, a fresh reload's unlock, rapid shots, and large multi-target destruction. Voice caps may intentionally suppress excess sounds.
 6. Try Bar Percentage at 0%, 40%, 70%, and 100%. Confirm existing objects keep their properties when it changes. Check long-run target/bar mixture and entry clearance at high density and stationary speeds. Crowded placement may delay the pending bag type; no complicated spawn planning occurs.
 7. Enable diagnostics and close Setup. Check default/max density, large objects, large blasts, rapid firing, and bursts for 5–10 minutes, observing thermal/battery behavior and 60/30 pacing. Setup should remain responsive.
-8. Rotate with held contacts or Setup open; portrait must block play, landscape restore the session with no contacts. Check fullscreen entry/exit, OS edge gestures, notification shade, app switching/calls, and resuming from background with no stale sound. Test iPhone Safari separately; emulation cannot establish speaker quality, physical latency, or device performance.
+8. In Arcade, phone-test Levels 1, 4, 7, 8, and 10 with several players. Confirm timer freezes in Setup/background/portrait, only targets count, early quota completion waits until 45 seconds, retry/next/victory cards cancel contacts, and Level Select/Restart reset attempts. Use real results to tune shared formulas before adding levels.
+9. Rotate with held contacts or Setup open; portrait must block play, landscape restore the session with no contacts. Check fullscreen entry/exit, OS edge gestures, notification shade, app switching/calls, and resuming from background with no stale sound. Test iPhone Safari separately; emulation cannot establish speaker quality, physical latency, or device performance.
 
-No levels, lives, quotas, scoring, scenarios, difficulty progression, or level-generation/analysis systems are included.
+Free Play remains an endless sandbox. Arcade adds only generated level requirements and progression; neither mode uses scripted waves or predetermined target positions.

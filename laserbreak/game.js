@@ -3,6 +3,7 @@
 const {World, Input, W, H, defaults} = LaserBreak;
 const world = new World();
 world.start();
+const session = new LaserArcade.ArcadeSession(world);
 const audio = new LaserSound.LaserAudio();
 const canvas = document.querySelector('canvas'), ctx = canvas.getContext('2d');
 const arena = document.querySelector('#arena'), status = document.querySelector('#status');
@@ -44,6 +45,7 @@ for (const [key, label, min, max, step, unit] of controls) {
   sliders.set(key, {slider, output, unit});
   installTouchSlider(slider);
   slider.addEventListener('input', () => {
+    if (session.mode === 'arcade') return;
     world.configure(key, Number(slider.value));
     output.value = `${slider.value}${unit}`; // Only the changed slider; never rewrite the others mid-drag.
   });
@@ -61,7 +63,7 @@ function installTouchSlider(slider) {
   // Disable the range's eager native touch edit; pointer intent below owns touch input.
   slider.addEventListener('touchstart', e => e.preventDefault(), {passive: false});
   slider.addEventListener('pointerdown', e => {
-    if (e.pointerType !== 'touch') return;
+    if (e.pointerType !== 'touch' || slider.disabled) return;
     e.preventDefault();
     gesture = {id: e.pointerId, x: e.clientX, y: e.clientY, scrollTop: setup.scrollTop, box: slider.getBoundingClientRect(), intent: null};
     slider.setPointerCapture(e.pointerId);
@@ -85,17 +87,19 @@ function installTouchSlider(slider) {
 function sync() {
   for (const [key, {slider, output, unit}] of sliders) {
     slider.value = world.settings[key];
-    output.value = `${world.settings[key]}${unit}`;
+    slider.disabled = session.mode === 'arcade';
+    output.value = `${Number(world.settings[key].toFixed(2))}${unit}`;
   }
   document.querySelector('#sound').checked = world.settings.sound;
   audio.setEnabled(world.settings.sound);
   document.querySelector('#debug').checked = world.settings.debug;
   syncSession();
+  syncArcade();
   document.querySelector('#hint').textContent = 'Hold both pads · slide to aim · release to fire';
 }
 function syncSession() {
   pauseButton.textContent = world.paused ? 'Resume' : 'Pause';
-  pauseButton.disabled = !world.running;
+  pauseButton.disabled = !world.running || world.arcadeBlocked;
   sessionButton.textContent = world.running ? 'Stop' : 'Start';
   lastHUD = -Infinity;
   needsDraw = true;
@@ -105,6 +109,7 @@ function syncSurface() {
   arena.inert = blocked;
   document.querySelector('header').inert = blocked;
   setup.inert = world.orientationBlocked;
+  pads.left.inert = pads.right.inert = world.arcadeBlocked;
 }
 function panel(open) {
   if (open === world.settingsOpen) return;
@@ -128,7 +133,7 @@ document.addEventListener('keydown', e => {
 });
 setup.addEventListener('keydown', e => {
   if (e.key !== 'Tab') return;
-  const controls = Array.from(setup.querySelectorAll('button, input'));
+  const controls = Array.from(setup.querySelectorAll('button:not(:disabled), input:not(:disabled), select'));
   const first = controls[0], last = controls[controls.length - 1];
   if (e.shiftKey && document.activeElement === first) {e.preventDefault(); last.focus();}
   else if (!e.shiftKey && document.activeElement === last) {e.preventDefault(); first.focus();}
@@ -145,17 +150,76 @@ document.querySelector('#diagnostics').onchange = e => {
   lastDiagnostics = -Infinity;
 };
 pauseButton.onclick = () => {
-  if (world.orientationBlocked || !world.running) return;
+  if (world.orientationBlocked || !world.running || world.arcadeBlocked) return;
   world.paused = !world.paused; audio.stop(); cancelInput(); syncSession(); resetClock();
 };
 sessionButton.onclick = () => {
   if (world.orientationBlocked) return;
-  world.running ? world.stop() : world.start(); audio.stop(); cancelInput(); syncSession(); resetClock();
+  world.running ? session.stop() : session.start(); audio.stop(); cancelInput(); sync(); resetClock();
 };
-document.querySelector('#clear').onclick = () => {world.clear(); audio.stop(); cancelInput(); needsDraw = true;};
+document.querySelector('#clear').onclick = () => {if (session.mode === 'arcade') return; world.clear(); audio.stop(); cancelInput(); needsDraw = true;};
 document.querySelector('#reset').onclick = () => {
-  world.settings = {...defaults}; world.start(); audio.stop(); cancelInput(); sync(); resetClock();
+  if (session.mode === 'arcade') session.begin(1);
+  else {world.settings = {...defaults}; world.start();}
+  audio.stop(); cancelInput(); sync(); resetClock();
 };
+function textIfChanged(element, value) {if (element.textContent !== value) element.textContent = value;}
+const gameMode = document.querySelector('#game-mode');
+const arcadeMenu = document.querySelector('#arcade-menu');
+const arcadeHUD = document.querySelector('#arcade-hud');
+const arcadeLevel = document.querySelector('#arcade-level');
+const arcadeTime = document.querySelector('#arcade-time');
+const arcadeTargets = document.querySelector('#arcade-targets');
+const levelSelect = document.querySelector('#level-select');
+document.querySelector('#game-mode option[value=arcade]').textContent = `Arcade · ${LaserArcade.CONFIG.levelCount} levels`;
+for (let n = 1; n <= LaserArcade.CONFIG.levelCount; n++) {
+  const option = document.createElement('option'); option.value = n; option.textContent = `Level ${n}`; levelSelect.append(option);
+}
+function syncArcade() {
+  const arcade = session.mode === 'arcade';
+  gameMode.value = session.mode;
+  arcadeHUD.hidden = !arcade;
+  arena.classList.toggle('arcade', arcade);
+  document.querySelector('#arcade-tools').hidden = !arcade || !LaserArcade.CONFIG.testingLevelSelect;
+  document.querySelector('#arcade-settings-note').hidden = !arcade;
+  document.querySelector('#clear').disabled = arcade;
+  document.querySelector('#reset').textContent = arcade ? 'Restart Level 1' : 'Reset to defaults';
+  arcadeMenu.hidden = !arcade || session.state === 'playing';
+  syncSurface();
+  if (!arcade) return;
+  levelSelect.value = session.level.number;
+  const title = document.querySelector('#arcade-title'), detail = document.querySelector('#arcade-detail');
+  const action = document.querySelector('#arcade-action'), secondary = document.querySelector('#arcade-secondary');
+  secondary.hidden = session.state === 'victory';
+  secondary.textContent = session.state === 'ready' ? 'Free Play' : 'Restart from Level 1';
+  if (session.state === 'ready') {
+    title.textContent = 'Level 1'; detail.textContent = `${session.level.duration} seconds · Destroy ${session.level.required} targets. Lift either thumb to fire.`; action.textContent = 'Start Level 1';
+  } else if (session.state === 'between') {
+    title.textContent = `Level ${session.level.number} cleared`;
+    detail.textContent = `${session.lastResult.targets}/${session.level.required} targets · Next: ${LaserArcade.generateLevel(session.level.number + 1).required} targets in ${session.level.duration} seconds.`;
+    action.textContent = `Start Level ${session.level.number + 1}`;
+  } else if (session.state === 'retry') {
+    title.textContent = 'Try again'; detail.textContent = `Level ${session.level.number} · ${session.lastResult.targets}/${session.level.required} targets destroyed.`; action.textContent = `Retry Level ${session.level.number}`;
+  } else if (session.state === 'victory') {
+    title.textContent = `All ${LaserArcade.CONFIG.levelCount} levels cleared`; detail.textContent = `Level ${session.level.number}: ${session.lastResult.targets}/${session.level.required} targets. Nice shooting.`; action.textContent = 'Restart from Level 1';
+  } else if (session.state === 'stopped') {
+    title.textContent = 'Arcade stopped'; detail.textContent = `Start a fresh attempt at Level ${session.level.number}.`; action.textContent = `Start Level ${session.level.number}`;
+  }
+  lastHUD = -Infinity;
+}
+function arcadeChange(change) {
+  cancelInput(); audio.stop(); change(); sync(); resetClock();
+}
+gameMode.onchange = () => arcadeChange(() => session.setMode(gameMode.value));
+document.querySelector('#arcade-action').onclick = () => arcadeChange(() => session.begin(
+  session.state === 'between' ? session.level.number + 1 : session.state === 'victory' ? 1 : session.level.number));
+document.querySelector('#arcade-secondary').onclick = () => arcadeChange(() => {
+  if (session.state === 'ready') session.setMode('free'); else session.begin(1);
+});
+document.querySelector('#load-level').onclick = () => {
+  if (LaserArcade.CONFIG.testingLevelSelect && session.mode === 'arcade') arcadeChange(() => session.begin(Number(levelSelect.value)));
+};
+document.querySelector('#restart-arcade').onclick = () => arcadeChange(() => session.begin(1));
 function refreshPads() {
   const [left, right] = input.pair();
   for (const [side, point] of [['left', left], ['right', right]]) {
@@ -176,7 +240,7 @@ function cancelInput() {
 function pointerY(e) {return (e.clientY - fieldBox.top) / fieldBox.height * world.height;}
 function interactive() {
   syncOrientation();
-  return world.running && !world.paused && !world.orientationBlocked && setup.hidden;
+  return world.running && !world.paused && !world.arcadeBlocked && !world.orientationBlocked && setup.hidden;
 }
 // Celphonica-style fullscreen lifecycle: request first, then try landscape lock.
 // Own and release successful locks, including a promise that finishes after exit.
@@ -380,9 +444,14 @@ function draw() {
 function hud(now) {
   if (now - lastHUD >= 100) {
     const cooldown = Math.max(0, world.settings.cooldown - (world.time - world.lastShot));
-    const text = !world.running ? 'STOPPED' : world.paused ? 'PAUSED' : cooldown > 0
+    const text = !world.running ? 'STOPPED' : world.paused ? 'PAUSED' : world.arcadeBlocked ? 'ARCADE' : cooldown > 0
       ? `COOLDOWN ${cooldown.toFixed(1)}s` : input.locked ? 'RELEASE BOTH' : 'READY';
     if (status.value !== text) status.value = text;
+    if (session.mode === 'arcade') {
+      textIfChanged(arcadeLevel, `${session.level.number}/${LaserArcade.CONFIG.levelCount}`);
+      textIfChanged(arcadeTime, String(Math.ceil(session.remaining)));
+      textIfChanged(arcadeTargets, `${world.stats.targets}/${session.level.required}`);
+    }
     lastHUD = now;
   }
   if (!perfOutput.hidden && now - lastDiagnostics >= 500) {
@@ -408,13 +477,16 @@ function frame(now) {
   if (world.orientationBlocked || document.hidden) {lastRender = undefined; return;}
   updatePacing(gap);
   if (lastRender !== undefined && now - lastRender < 1000 / diagnostics.fps - 1) return;
-  const elapsed = lastRender === undefined ? 0 : Math.min((now - lastRender) / 1000, .1);
+  const rawElapsed = lastRender === undefined ? 0 : (now - lastRender) / 1000;
+  const elapsed = session.mode === 'arcade' ? rawElapsed : Math.min(rawElapsed, .1);
   diagnostics.frameMs += ((lastRender === undefined ? 1000 / diagnostics.fps : now - lastRender) - diagnostics.frameMs) * .1;
   lastRender = now;
   let t = performance.now();
-  world.step(elapsed);
+  const beforeState = session.state;
+  session.step(elapsed);
+  if (beforeState !== session.state) {cancelInput(); audio.stop(); resetClock(); sync();}
   diagnostics.updateMs += (performance.now() - t - diagnostics.updateMs) * .1;
-  if ((world.running && !world.paused && !world.settingsOpen) || needsDraw) {
+  if ((world.running && !world.paused && !world.settingsOpen && !world.arcadeBlocked) || needsDraw) {
     t = performance.now(); draw();
     diagnostics.renderMs += (performance.now() - t - diagnostics.renderMs) * .1;
     needsDraw = false;
