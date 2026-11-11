@@ -96,11 +96,13 @@
       this.running = true;
       this.orientationBlocked = false;
       this.settingsOpen = false;
+      this.arcadeBlocked = false;
+      this.stats = {targets: 0, shots: 0, blockedShots: 0};
       this.bag = [];
       this.lastShotSounds = null;
     }
     ready() {
-      return this.running && !this.paused && !this.orientationBlocked && !this.settingsOpen &&
+      return this.running && !this.paused && !this.orientationBlocked && !this.settingsOpen && !this.arcadeBlocked &&
         this.time - this.lastShot >= this.settings.cooldown;
     }
     configure(key, value) {
@@ -199,6 +201,9 @@
       }
       let live = 0;
       for (const o of this.objects) if (!destroyed.has(o)) this.objects[live++] = o;
+      this.stats.shots++;
+      if (leftStop < 1 || rightStop < 1) this.stats.blockedShots++;
+      for (const o of destroyed) if (o.type === 'target') this.stats.targets++;
       this.objects.length = live;
       if (this.effects.length > MAX_EFFECTS) this.effects.splice(0, this.effects.length - MAX_EFFECTS);
       this.lastShotSounds = sounds;
@@ -241,10 +246,11 @@
       this.time = 0;
       this.lastShot = -Infinity;
       this.bag.length = 0;
+      this.stats = {targets: 0, shots: 0, blockedShots: 0};
       for (let n = 0; n < 3; n++) this.spawn(40);
     }
     step(dt) {
-      if (!this.running || this.paused || this.orientationBlocked || this.settingsOpen || !(dt > 0)) return;
+      if (!this.running || this.paused || this.orientationBlocked || this.settingsOpen || this.arcadeBlocked || !(dt > 0)) return;
       this.time += dt;
       let live = 0;
       // One movement/rotation update per object per frame. No collision scans here.

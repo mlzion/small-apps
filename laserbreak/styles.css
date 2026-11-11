@@ -125,3 +125,22 @@ input[type=checkbox] { width: 24px; height: 24px; accent-color: #65f5ef; }
 @media (max-width: 600px) { :root { --pad-width: 97px; } }
 @media (max-width: 520px) { :root { --pad-width: 18vw; } .bottom-label { display: none; } }
 @media (orientation: portrait) { header, #arena, #setup, #performance, #view-status { display: none !important; } }
+/* Arcade additions stay inside the central field; the firing pads are unchanged. */
+select { font: inherit; color: #d4e4ed; background: #111f2b; border: 1px solid #304757; border-radius: 5px; padding: 9px; min-height: 40px; }
+.mode-row { min-height: 48px; display: flex; justify-content: space-between; align-items: center; gap: 16px; }
+#arcade-tools { padding: 20px 0; border-bottom: 1px solid #304757; }
+.level-select-row { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; margin-top: 12px; }
+#arcade-settings-note { color: #96b4c2; font-size: 12px; line-height: 1.6; }
+input:disabled { opacity: .4; cursor: default; }
+#arcade-hud { position: absolute; left: calc(var(--pad-width) + 12px); right: calc(var(--pad-width) + 12px); top: 12px; display: flex; justify-content: space-between; gap: 8px; font-size: 10px; color: #9eb9c8; pointer-events: none; background: #0a121ce8; padding: 3px 5px; border-radius: 3px; }
+#arcade-hud output { color: #65f5ef; }
+.arcade .top-label { display: none; }
+#arcade-menu { position: absolute; z-index: 2; inset: 0 var(--pad-width); background: #0a1420f5; display: flex; align-items: center; justify-content: center; text-align: center; padding: 16px; }
+.arcade-card { width: min(420px, 100%); }
+.arcade-eyebrow { color: #65f5ef; letter-spacing: 3px; font-size: 9px; margin: 0 0 12px; }
+#arcade-title { font-size: 24px; }
+#arcade-detail { font-size: 12px; line-height: 1.6; color: #9eb9c8; margin: 12px 0 18px; }
+.arcade-actions { display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; }
+.arcade-actions button { min-height: 44px; font-size: 12px; }
+#arcade-action { border-color: #65b7b6; }
+@media (max-height: 400px) { .arcade-eyebrow { margin-bottom: 6px; } #arcade-title { font-size: 20px; } #arcade-detail { margin: 8px 0 12px; } .arcade-actions button { font-size: 10px; } #arcade-hud { top: 9px; font-size: 9px; } }
