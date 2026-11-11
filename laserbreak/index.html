@@ -16,6 +16,7 @@
     <div class="pad right" id="right-pad" aria-label="Right firing pad"><span>RIGHT<br><b>＋</b><br>FIRE PAD</span><i></i></div>
   </main>
   <aside id="setup" hidden role="dialog" aria-modal="true" aria-labelledby="setup-title" tabindex="-1">
+    <div class="setup-scroll-strip" aria-hidden="true"></div>
     <div class="panel-heading"><button id="close-setup" aria-label="Close setup">✕</button><div><p>EXPERIMENT PARAMETERS</p><h2 id="setup-title">Setup</h2></div><span class="setup-paused">Gameplay paused</span></div>
     <div class="settings-content">
     <div id="sliders"></div>
@@ -23,7 +24,7 @@
     <label class="debug"><input type="checkbox" id="debug"> Collision debug overlay</label>
     <label class="debug"><input type="checkbox" id="diagnostics"> Performance diagnostics</label>
     <div class="actions"><button id="clear">Clear objects</button><button id="reset">Reset to defaults</button></div>
-    <p class="panel-note">Endless random objects. Try two thumbs in landscape. On desktop, hold a pad with the mouse and press Space to place the opposite endpoint at the same height. Lift either to fire. Scroll in the space between sliders.</p>
+    <p class="panel-note">Endless random objects. Try two thumbs in landscape. On desktop, hold a pad with the mouse and press Space to place the opposite endpoint at the same height. Lift either to fire. Scroll between sliders or in the strip on the right.</p>
     </div>
   </aside>
   <output id="view-status" role="status" hidden></output>
