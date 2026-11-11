@@ -59,18 +59,18 @@ function attempt(level, model, seed, dt=1/60, height=573) {
     }
     session.step(dt);
   }
-  return {passed:session.lastResult.passed,targets:world.stats.targets,shots:world.stats.shots,blocked:world.stats.blockedShots};
+  return {passed:session.lastResult.passed,targets:world.stats.targets,escaped:world.stats.escaped,percent:session.lastResult.percent??0,shots:world.stats.shots,blocked:world.stats.blockedShots};
 }
 function simulate(attempts=100, height=573) {
   const results=[];
   for(let level=1;level<=CONFIG.levelCount;level++)for(let m=0;m<MODELS.length;m++){
-    let wins=0,targets=0,shots=0,blocked=0,min=Infinity,max=0;const histogram={};
+    let wins=0,targets=0,escaped=0,percent=0,shots=0,blocked=0,min=Infinity,max=0,unresolved=0;const histogram={};
     for(let trial=0;trial<attempts;trial++){
       const r=attempt(level,MODELS[m],(level*1000003+trial*9176+71)>>>0,1/60,height);
-      histogram[r.targets]=(histogram[r.targets]||0)+1;
-      wins+=Number(r.passed);targets+=r.targets;shots+=r.shots;blocked+=r.blocked;min=Math.min(min,r.targets);max=Math.max(max,r.targets);
+      const key=`${r.targets}:${r.escaped}`;histogram[key]=(histogram[key]||0)+1;
+      wins+=Number(r.passed);targets+=r.targets;escaped+=r.escaped;percent+=r.percent;unresolved+=Number(r.targets+r.escaped===0);shots+=r.shots;blocked+=r.blocked;min=Math.min(min,r.targets);max=Math.max(max,r.targets);
     }
-    results.push({level,model:MODELS[m].name,attempts,completion:wins/attempts,targets:targets/attempts,shots:shots/attempts,blocked:blocked/attempts,min,max,histogram});
+    results.push({level,model:MODELS[m].name,attempts,completion:wins/attempts,targets:targets/attempts,escaped:escaped/attempts,percent:percent/attempts,unresolved,shots:shots/attempts,blocked:blocked/attempts,min,max,histogram});
   }
   return {simulation:{attemptsPerLevelModel:attempts,seedFormula:'(level * 1000003 + trial * 9176 + 71) >>> 0',playerSeedXor:'0xa5366b4d',cosmeticWorkOmitted:true},geometry:{width:W,height,dt:1/60},config:CONFIG,models:MODELS,levels:Array.from({length:CONFIG.levelCount},(_,i)=>generateLevel(i+1)),results};
 }
@@ -80,6 +80,6 @@ if(require.main===module){
   const report=simulate(attempts,Number(process.argv[4]||573));
   const output=process.argv[3]||path.join(__dirname,'arcade-simulation.json');
   fs.writeFileSync(output,JSON.stringify(report,null,2)+'\n');
-  for(const r of report.results)console.log(`L${r.level} ${r.model.padEnd(9)} ${(r.completion*100).toFixed(0)}% targets=${r.targets.toFixed(1)} required=${report.levels[r.level-1].required} shots=${r.shots.toFixed(1)} blocked=${r.blocked.toFixed(1)}`);
+  for(const r of report.results)console.log(`L${r.level} ${r.model.padEnd(9)} ${(r.completion*100).toFixed(0)}% targets=${r.targets.toFixed(1)} escaped=${r.escaped.toFixed(1)} defense=${r.percent.toFixed(1)}% required=${report.levels[r.level-1].requiredDestructionPercent}% shots=${r.shots.toFixed(1)} blocked=${r.blocked.toFixed(1)}`);
 }
 module.exports={MODELS,random,choose,attempt,simulate};

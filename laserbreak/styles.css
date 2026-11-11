@@ -144,3 +144,10 @@ input:disabled { opacity: .4; cursor: default; }
 .arcade-actions button { min-height: 44px; font-size: 12px; }
 #arcade-action { border-color: #65b7b6; }
 @media (max-height: 400px) { .arcade-eyebrow { margin-bottom: 6px; } #arcade-title { font-size: 20px; } #arcade-detail { margin: 8px 0 12px; } .arcade-actions button { font-size: 10px; } #arcade-hud { top: 9px; font-size: 9px; } }
+#defense-bar { position: absolute; z-index: 1; top: 0; left: var(--pad-width); right: var(--pad-width); height: 7px; background: #31424d; pointer-events: none; display: flex; }
+#defense-destroyed { width: 0; background: #47dc8d; }
+#defense-escaped { width: 0; background: #ed5664; }
+#defense-marker { position: absolute; top: -1px; bottom: -2px; width: 2px; background: #fff; transform: translateX(-1px); }
+#defense-escaped.warning { animation: defense-warning 360ms ease-out 1; }
+@keyframes defense-warning { 0% { background: #ffb6ba; } 45% { background: #ff293f; } 100% { background: #ed5664; } }
+@media (prefers-reduced-motion: reduce) { #defense-escaped.warning { animation-duration: 140ms; } }

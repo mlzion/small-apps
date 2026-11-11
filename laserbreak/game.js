@@ -169,7 +169,11 @@ const arcadeMenu = document.querySelector('#arcade-menu');
 const arcadeHUD = document.querySelector('#arcade-hud');
 const arcadeLevel = document.querySelector('#arcade-level');
 const arcadeTime = document.querySelector('#arcade-time');
-const arcadeTargets = document.querySelector('#arcade-targets');
+const defenseBar = document.querySelector('#defense-bar');
+const destroyedBar = document.querySelector('#defense-destroyed');
+const escapedBar = document.querySelector('#defense-escaped');
+const defenseMarker = document.querySelector('#defense-marker');
+let defenseKey = '', shownWarnings = 0;
 const levelSelect = document.querySelector('#level-select');
 document.querySelector('#game-mode option[value=arcade]').textContent = `Arcade · ${LaserArcade.CONFIG.levelCount} levels`;
 for (let n = 1; n <= LaserArcade.CONFIG.levelCount; n++) {
@@ -179,6 +183,10 @@ function syncArcade() {
   const arcade = session.mode === 'arcade';
   gameMode.value = session.mode;
   arcadeHUD.hidden = !arcade;
+  defenseBar.hidden = !arcade;
+  defenseKey = '';
+  shownWarnings = session.warningCount;
+  escapedBar.classList.remove('warning');
   arena.classList.toggle('arcade', arcade);
   document.querySelector('#arcade-tools').hidden = !arcade || !LaserArcade.CONFIG.testingLevelSelect;
   document.querySelector('#arcade-settings-note').hidden = !arcade;
@@ -188,24 +196,47 @@ function syncArcade() {
   syncSurface();
   if (!arcade) return;
   levelSelect.value = session.level.number;
+  defenseMarker.style.left = `${session.level.requiredDestructionPercent}%`;
   const title = document.querySelector('#arcade-title'), detail = document.querySelector('#arcade-detail');
   const action = document.querySelector('#arcade-action'), secondary = document.querySelector('#arcade-secondary');
   secondary.hidden = session.state === 'victory';
   secondary.textContent = session.state === 'ready' ? 'Free Play' : 'Restart from Level 1';
   if (session.state === 'ready') {
-    title.textContent = 'Level 1'; detail.textContent = `${session.level.duration} seconds · Destroy ${session.level.required} targets. Lift either thumb to fire.`; action.textContent = 'Start Level 1';
+    title.textContent = 'Level 1'; detail.textContent = `${session.level.duration} seconds · Defend the field. Lift either thumb to fire.`; action.textContent = 'Start Level 1';
   } else if (session.state === 'between') {
     title.textContent = `Level ${session.level.number} cleared`;
-    detail.textContent = `${session.lastResult.targets}/${session.level.required} targets · Next: ${LaserArcade.generateLevel(session.level.number + 1).required} targets in ${session.level.duration} seconds.`;
+    detail.textContent = resultDescription(session.lastResult);
     action.textContent = `Start Level ${session.level.number + 1}`;
   } else if (session.state === 'retry') {
-    title.textContent = 'Try again'; detail.textContent = `Level ${session.level.number} · ${session.lastResult.targets}/${session.level.required} targets destroyed.`; action.textContent = `Retry Level ${session.level.number}`;
+    title.textContent = 'Try again'; detail.textContent = resultDescription(session.lastResult); action.textContent = `Retry Level ${session.level.number}`;
   } else if (session.state === 'victory') {
-    title.textContent = `All ${LaserArcade.CONFIG.levelCount} levels cleared`; detail.textContent = `Level ${session.level.number}: ${session.lastResult.targets}/${session.level.required} targets. Nice shooting.`; action.textContent = 'Restart from Level 1';
+    title.textContent = `All ${LaserArcade.CONFIG.levelCount} levels cleared`; detail.textContent = resultDescription(session.lastResult); action.textContent = 'Restart from Level 1';
   } else if (session.state === 'stopped') {
     title.textContent = 'Arcade stopped'; detail.textContent = `Start a fresh attempt at Level ${session.level.number}.`; action.textContent = `Start Level ${session.level.number}`;
   }
   lastHUD = -Infinity;
+}
+function resultDescription(result) {
+  const percent = result.percent === null ? 'No targets resolved' : `${result.percent.toFixed(1)}% destroyed`;
+  return `Level ${result.level} · ${result.passed ? 'PASS' : 'FAIL'} · Destroyed ${result.targets} · Escaped ${result.escaped} · ${percent} · Required ${result.requiredDestructionPercent}%.`;
+}
+function updateDefense() {
+  const key = `${world.stats.targets}:${world.stats.escaped}`;
+  if (key !== defenseKey) {
+    const defense = session.defense;
+    defenseBar.classList.toggle('neutral', defense.resolved === 0);
+    const percent = defense.percent ?? 0;
+    destroyedBar.style.width = `${percent}%`;
+    escapedBar.style.width = `${defense.resolved ? 100-percent : 0}%`;
+    defenseKey = key;
+  }
+  if (session.warningCount !== shownWarnings) {
+    escapedBar.classList.remove('warning');
+    // Restart only on a new downward crossing, not on ordinary HUD refreshes.
+    void escapedBar.offsetWidth;
+    escapedBar.classList.add('warning');
+    shownWarnings = session.warningCount;
+  }
 }
 function arcadeChange(change) {
   cancelInput(); audio.stop(); change(); sync(); resetClock();
@@ -414,6 +445,10 @@ function draw() {
         line(beam.from, beam.to, '#36fff340', 7);
         line(beam.from, beam.to, '#aafffa', 1.6);
       }
+    } else if (e.type === 'escape') {
+      ctx.fillStyle = '#ff4d60'; ctx.globalAlpha = (1-progress)*.35;
+      ctx.beginPath(); ctx.arc(e.x,e.y,e.r*(.5+progress*.5),Math.PI,Math.PI*2); ctx.fill();
+      ctx.globalAlpha = 1-progress; line({x:e.x-e.r,y:e.y-2},{x:e.x+e.r,y:e.y-2},'#ff5868',4);
     } else {
       ctx.lineWidth = e.type === 'explosion' ? 2 : 1;
       if (e.type === 'explosion') {
@@ -450,7 +485,7 @@ function hud(now) {
     if (session.mode === 'arcade') {
       textIfChanged(arcadeLevel, `${session.level.number}/${LaserArcade.CONFIG.levelCount}`);
       textIfChanged(arcadeTime, String(Math.ceil(session.remaining)));
-      textIfChanged(arcadeTargets, `${world.stats.targets}/${session.level.required}`);
+      updateDefense();
     }
     lastHUD = now;
   }
@@ -482,9 +517,10 @@ function frame(now) {
   diagnostics.frameMs += ((lastRender === undefined ? 1000 / diagnostics.fps : now - lastRender) - diagnostics.frameMs) * .1;
   lastRender = now;
   let t = performance.now();
-  const beforeState = session.state;
+  const beforeState = session.state, beforeEscaped = world.stats.escaped;
   session.step(elapsed);
   if (beforeState !== session.state) {cancelInput(); audio.stop(); resetClock(); sync();}
+  if (session.mode === 'arcade' && world.stats.escaped > beforeEscaped) {audio.playEscape(); lastHUD = -Infinity;}
   diagnostics.updateMs += (performance.now() - t - diagnostics.updateMs) * .1;
   if ((world.running && !world.paused && !world.settingsOpen && !world.arcadeBlocked) || needsDraw) {
     t = performance.now(); draw();

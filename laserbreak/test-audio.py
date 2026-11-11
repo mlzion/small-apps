@@ -37,14 +37,16 @@ with sync_playwright() as p:
         synth.context={state:'running',currentTime:0};
         for(const name of ['createGain','createOscillator'])synth.context[name]=offline[name].bind(offline);
         synth.master=offline.createGain();synth.master.gain.value=LaserSound.MASTER_GAIN;synth.master.connect(offline.destination);
-        const voices=synth.playShot(hits);const buffer=await offline.startRendering(),data=buffer.getChannelData(0);
+        const voices=hits.escape ? Number(synth.playEscape()) : synth.playShot(hits);const buffer=await offline.startRendering(),data=buffer.getChannelData(0);
         const peak=(from,to)=>{let max=0;for(let i=Math.ceil(from*24000);i<Math.floor(to*24000);i++)max=Math.max(max,Math.abs(data[i]));return max;};
         const frequency=(from,to)=>{let crossings=0;const begin=Math.ceil(from*24000),end=Math.floor(to*24000);for(let i=begin+1;i<end;i++)if(data[i-1]<=0&&data[i]>0)crossings++;return crossings/(to-from);};
         let energy=0;for(const v of data)energy+=v*v;
-        return {voices,energy,peak:peak(0,.7),first:peak(.08,.11),gap:peak(.128,.155),second:peak(.175,.205),tail:peak(.24,.7),firstHz:frequency(.08,.11),secondHz:frequency(.175,.205)};
+        return {voices,energy,peak:peak(0,.7),first:peak(.08,.11),gap:peak(.128,.155),second:peak(.175,.205),tail:peak(.24,.7),escapeEarlyHz:frequency(.01,.04),escapeLateHz:frequency(.07,.10),firstHz:frequency(.08,.11),secondHz:frequency(.175,.205)};
       }
-      return {zap:await render({}),single:await render({single:1}),double:await render({double:1}),bars:await render({bars:1}),mass:await render({single:60,double:60,bars:60}),mixed:await render({single:1,double:1,bars:1})};
+      return {escape:await render({escape:true}),zap:await render({}),single:await render({single:1}),double:await render({double:1}),bars:await render({bars:1}),mass:await render({single:60,double:60,bars:60}),mixed:await render({single:1,double:1,bars:1})};
     }''')
+    assert measured['escape']['voices']==1 and measured['escape']['tail']<.000001,measured
+    assert measured['escape']['escapeEarlyHz']>measured['escape']['escapeLateHz']+150,measured
     assert measured['single']['first']>.015 and measured['single']['second']<.000001,measured
     assert measured['double']['first']>.015 and measured['double']['second']>.015,measured
     assert measured['double']['gap']<.000001 and measured['double']['tail']<.000001,measured

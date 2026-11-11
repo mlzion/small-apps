@@ -136,6 +136,17 @@ with sync_playwright() as p:
             assert result['arcade']['render']['p95Ms'] < 16, result
             assert result['arcade']['update']['p95Ms'] < 5, result
             assert result['arcade']['raf']['p95Ms'] < 75, result
+            # A maximum simultaneous escape burst stays bounded, with one threshold crossing.
+            result['escapes'] = page.evaluate('''()=>{
+              world.clear();world.stats.targets=10;world.stats.escaped=0;
+              world.objects=Array.from({length:60},(_,i)=>({type:'target',x:20+i*16,y:world.height+21,radius:20,extent:20,speed:0}));
+              const start=performance.now();session.step(.016);const updateMs=performance.now()-start;
+              const drawStart=performance.now();draw();const renderMs=performance.now()-drawStart;
+              return {updateMs,renderMs,count:world.stats.escaped,effects:world.effects.length,objects:world.objects.length,warnings:session.warningCount};
+            }''')
+            assert result['escapes']['count']==60 and result['escapes']['objects']==0
+            assert result['escapes']['effects']<=160 and result['escapes']['warnings']==1
+            assert result['escapes']['updateMs']<5 and result['escapes']['renderMs']<16,result
         results[label] = result
         c.close()
     browser.close()

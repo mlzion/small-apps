@@ -10,6 +10,7 @@
       this.master = null;
       this.voices = new Set();
       this.resuming = false;
+      this.lastEscape = -Infinity;
     }
     unlock() {
       if (!this.enabled) return;
@@ -84,6 +85,13 @@
         else {source?.disconnect(); gain?.disconnect();}
         return false;
       }
+    }
+    playEscape() {
+      // One short warning at most every 180 ms; never queue late escape sounds.
+      if (!this.enabled || this.context?.state !== 'running' || this.context.currentTime-this.lastEscape < .18) return false;
+      if (!this.voice(880,330,.12,'triangle',.055)) return false;
+      this.lastEscape = this.context.currentTime;
+      return true;
     }
     playShot(hits) {
       if (!this.enabled || this.context?.state !== 'running') return 0;

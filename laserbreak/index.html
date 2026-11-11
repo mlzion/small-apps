@@ -11,7 +11,8 @@
   <main id="arena" aria-label="LaserBreak playing field">
     <canvas aria-label="Falling targets, spinning bars, and instantaneous laser beams"></canvas>
     <div class="field-label top-label" aria-hidden="true">RANDOM FIELD <span>∞</span></div>
-    <div id="arcade-hud" hidden aria-label="Arcade progress"><span>LEVEL <output id="arcade-level">1/10</output></span><span><output id="arcade-time">45</output>s</span><span>TARGETS <output id="arcade-targets">0/0</output></span></div>
+    <div id="arcade-hud" hidden aria-label="Arcade progress"><span>LEVEL <output id="arcade-level">1/25</output></span><span><output id="arcade-time">45</output>s</span></div>
+    <div id="defense-bar" hidden aria-label="Defense status" class="neutral"><div id="defense-destroyed"></div><div id="defense-escaped"></div><i id="defense-marker" aria-hidden="true"></i></div>
     <section id="arcade-menu" hidden role="dialog" aria-labelledby="arcade-title">
       <div class="arcade-card"><p class="arcade-eyebrow">ARCADE</p><h2 id="arcade-title">Level 1</h2><p id="arcade-detail"></p><div class="arcade-actions"><button id="arcade-action">Start Level 1</button><button id="arcade-secondary">Free Play</button></div></div>
     </section>
@@ -23,7 +24,7 @@
     <div class="setup-scroll-strip" aria-hidden="true"></div>
     <div class="panel-heading"><button id="close-setup" aria-label="Close setup">✕</button><div><p>EXPERIMENT PARAMETERS</p><h2 id="setup-title">Setup</h2></div><span class="setup-paused">Gameplay paused</span></div>
     <div class="settings-content">
-    <div class="mode-row"><label for="game-mode">Game mode</label><select id="game-mode"><option value="free">Free Play</option><option value="arcade">Arcade · 10 levels</option></select></div>
+    <div class="mode-row"><label for="game-mode">Game mode</label><select id="game-mode"><option value="free">Free Play</option><option value="arcade">Arcade · 25 levels</option></select></div>
     <div id="arcade-tools" hidden><label for="level-select">Level Select · testing feature</label><div class="level-select-row"><select id="level-select"></select><button id="load-level">Start selected level</button><button id="restart-arcade">Restart from Level 1</button></div></div>
     <p id="arcade-settings-note" hidden>Arcade uses generated settings. Switch to Free Play to adjust them. Changing modes starts a fresh session; Free Play settings are retained.</p>
     <div id="sliders"></div>
