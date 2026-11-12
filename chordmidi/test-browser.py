@@ -106,7 +106,7 @@ with sync_playwright() as pw:
  with page.expect_download() as dl:page.locator('#export-midi').tap()
  data=Path(dl.value.path()).read_bytes();assert data[:4]==b'MThd' and int.from_bytes(data[10:12],'big')==3
  page.once('dialog',lambda d:d.accept());page.locator('#new-project').tap();assert project()['events']==[]
- page.locator('#setup').tap();page.once('dialog',lambda d:d.accept());page.locator('#project-file').set_input_files(path);assert project()==saved
+ page.locator('#setup').tap();page.once('dialog',lambda d:d.accept());page.locator('#project-file').set_input_files(path);expect(page.locator('#setup-dialog')).to_be_hidden();assert project()==saved
  page.reload();assert project()==saved
  page.locator('#setup').tap();page.locator('#project-file').set_input_files({'name':'bad.json','mimeType':'application/json','buffer':b'{"format":"chordmidi","version":2}'})
  expect(page.locator('#storage-status')).to_contain_text('Could not load');assert project()==saved;page.locator('#close-setup').tap()

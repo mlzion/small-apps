@@ -14,8 +14,8 @@
     <title>ChordMidi — Chord Progression Composer</title>
     <link rel="icon" href="../assets/favicon.svg" type="image/svg+xml" />
     <link rel="stylesheet" href="styles.css" />
-    <script defer src="core.js"></script>
     <script defer src="presets.js"></script>
+    <script defer src="core.js"></script>
     <script defer src="audio.js"></script>
     <script defer src="app.js"></script>
   </head>
@@ -149,7 +149,7 @@
             >Instrument <span class="muted">(SF2)</span></label
           ><select id="instrument"></select>
           <p id="audio-status">
-            TimGM6mb · 128 General MIDI instruments · loads on first play
+            TimGM6mb · Customize your instrument library in Setup
           </p>
         </section>
         <p id="status" role="status" aria-live="polite">
@@ -205,6 +205,22 @@
         ><button id="load-project">Load Project</button
         ><button id="export-midi" class="accent">Export MIDI</button>
       </div>
+      <details id="instrument-settings" class="instrument-settings">
+        <summary>Instruments <small id="enabled-count"></small></summary>
+        <div class="library-toolbar">
+          <p>Choose the sounds shown in the main selector.</p>
+          <button id="restore-instruments" type="button">
+            Restore Defaults
+          </button>
+        </div>
+        <div
+          id="instrument-categories"
+          aria-label="General MIDI instrument categories"
+        ></div>
+        <p id="library-status" role="status" aria-live="polite">
+          Instrument choices apply across projects in this browser.
+        </p>
+      </details>
       <input
         hidden
         type="file"
@@ -215,7 +231,8 @@
         Projects autosave in this browser. Save Project downloads a JSON backup.
       </p>
       <p class="hint">
-        MIDI contains three tracks, instrument programs, tempo and meter.<br /><a
+        MIDI contains three tracks, preview instrument text, tempo and meter. No
+        program changes.<br /><a
           href="soundfont/ATTRIBUTION.txt"
           target="_blank"
           rel="noopener"

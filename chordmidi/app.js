@@ -1,6 +1,8 @@
 "use strict";
 (() => {
   const D = ChordMidi,
+    instruments = ChordInstruments,
+    LIBRARY_KEY = "app-lab-chordmidi-instruments-v1",
     $ = (id) => document.getElementById(id),
     KEY = "app-lab-chordmidi-v1",
     audio = new ChordAudio();
@@ -10,13 +12,31 @@
     clipboard = null,
     pasting = false,
     warning = "",
-    busy = false;
+    busy = false,
+    restoredProject = false;
   try {
     const raw = localStorage.getItem(KEY);
-    if (raw) project = D.validate(JSON.parse(raw));
+    if (raw) {
+      project = D.validate(JSON.parse(raw));
+      restoredProject = true;
+    }
   } catch (e) {
     warning =
       "Could not restore autosave: " + e.message + " Load a JSON backup.";
+  }
+  let enabledInstruments = instruments.defaults.slice(),
+    libraryWarning = "";
+  try {
+    const raw = localStorage.getItem(LIBRARY_KEY);
+    if (raw !== null)
+      enabledInstruments = instruments.validateEnabled(JSON.parse(raw));
+  } catch {
+    libraryWarning =
+      "Could not restore instrument choices. Using the 25 defaults for this session.";
+  }
+  if (!restoredProject && !enabledInstruments.includes(project.program)) {
+    project.program = enabledInstruments[0];
+    project.instrumentName = instruments.presets[project.program].name;
   }
   const say = (text) => {
     $("status").textContent = text;
@@ -588,17 +608,107 @@
   $("more-bars").onclick = () =>
     length(Math.min(8, project.bars + 1), project.meter);
   $("meter").onchange = () => length(project.bars, $("meter").value);
-  for (const p of ChordPresets)
-    $("instrument").append(
-      new Option(
-        `${String(p.program + 1).padStart(3, "0")} · ${p.name}`,
-        p.program,
+  function renderInstrument() {
+    const programs = enabledInstruments.slice();
+    if (!programs.includes(project.program)) programs.push(project.program);
+    programs.sort((a, b) => a - b);
+    $("instrument").replaceChildren(
+      ...programs.map(
+        (program) =>
+          new Option(
+            `${String(program + 1).padStart(3, "0")} · ${instruments.presets[program].name}${enabledInstruments.includes(program) ? "" : " · Project preview"}`,
+            String(program),
+          ),
       ),
     );
-  $("instrument").onchange = () => {
-    project.program = +$("instrument").value;
+    $("instrument").value = String(project.program);
+  }
+  function chooseInstrument(program) {
+    project.program = program;
+    project.instrumentName = instruments.presets[program].name;
     changed("Instrument updated for all lanes and Drop");
+    renderInstrument();
+  }
+  function saveInstrumentPreferences() {
+    try {
+      localStorage.setItem(LIBRARY_KEY, JSON.stringify(enabledInstruments));
+      libraryWarning = "";
+    } catch {
+      libraryWarning =
+        "Instrument choices apply for this session, but could not be saved in this browser.";
+    }
+  }
+  function renderInstrumentLibrary(
+    message = "Instrument choices apply across projects in this browser.",
+  ) {
+    $("enabled-count").textContent = `${enabledInstruments.length} enabled`;
+    document
+      .querySelectorAll(".instrument-choice input")
+      .forEach(
+        (input) => (input.checked = enabledInstruments.includes(+input.value)),
+      );
+    instruments.categories.forEach((category, i) => {
+      document.querySelectorAll(".category-count")[i].textContent =
+        `${category.programs.filter((p) => enabledInstruments.includes(p)).length}/8`;
+    });
+    $("library-status").textContent = libraryWarning || message;
+  }
+  for (const category of instruments.categories) {
+    const details = document.createElement("details");
+    details.className = "instrument-category";
+    const summary = document.createElement("summary"),
+      title = document.createElement("span"),
+      count = document.createElement("small");
+    title.className = "category-name";
+    title.textContent = category.name;
+    count.className = "category-count";
+    summary.append(title, count);
+    details.append(summary);
+    for (const program of category.programs) {
+      const label = document.createElement("label");
+      label.className = "instrument-choice";
+      const input = document.createElement("input");
+      input.type = "checkbox";
+      input.value = program;
+      input.id = "instrument-" + program;
+      const text = document.createElement("span");
+      text.textContent = `${program + 1}. ${instruments.presets[program].name}`;
+      label.append(input, text);
+      details.append(label);
+      input.onchange = () => {
+        if (!input.checked && enabledInstruments.length === 1) {
+          input.checked = true;
+          renderInstrumentLibrary(
+            "At least one instrument must remain enabled.",
+          );
+          return;
+        }
+        enabledInstruments = instruments.validateEnabled(
+          input.checked
+            ? [...enabledInstruments, program]
+            : enabledInstruments.filter((p) => p !== program),
+        );
+        saveInstrumentPreferences();
+        // A hidden instrument restored from a project stays available until the
+        // user explicitly disables it or chooses a different preview instrument.
+        if (!input.checked && project.program === program)
+          chooseInstrument(enabledInstruments[0]);
+        else renderInstrument();
+        renderInstrumentLibrary();
+      };
+    }
+    $("instrument-categories").append(details);
+  }
+  $("restore-instruments").onclick = () => {
+    enabledInstruments = instruments.defaults.slice();
+    saveInstrumentPreferences();
+    if (!enabledInstruments.includes(project.program))
+      chooseInstrument(enabledInstruments[0]);
+    else renderInstrument();
+    renderInstrumentLibrary("The original 25 instruments have been restored.");
   };
+  $("instrument").onchange = () => chooseInstrument(+$("instrument").value);
+  renderInstrumentLibrary();
   $("bpm").onchange = () => {
     const v = +$("bpm").value;
     if (Number.isInteger(v) && v >= 30 && v <= 300) {
@@ -629,7 +739,7 @@
     try {
       await audio.init();
       $("audio-status").textContent =
-        "TimGM6mb · SF2 ready · 128 General MIDI instruments";
+        "TimGM6mb · SF2 ready · Instrument library in Setup";
       if (token === audio.generation) action();
     } catch (e) {
       say("Could not start audio: " + e.message + ". Try again.");
@@ -759,7 +869,12 @@
         "Start a new project? Save Project first to keep a backup of this arrangement.",
       )
     ) {
-      replace(D.fresh());
+      const fresh = D.fresh();
+      if (!enabledInstruments.includes(fresh.program)) {
+        fresh.program = enabledInstruments[0];
+        fresh.instrumentName = instruments.presets[fresh.program].name;
+      }
+      replace(fresh);
       say("New project");
     }
   };
@@ -791,7 +906,7 @@
     renderBuilder();
     renderGrid();
     $("bpm").value = project.bpm;
-    $("instrument").value = project.program;
+    renderInstrument();
     transport();
   }
   render();

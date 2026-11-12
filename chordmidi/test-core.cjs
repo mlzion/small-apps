@@ -1,6 +1,7 @@
 "use strict";
 const assert = require("node:assert/strict"),
-  D = require("./core.js");
+  D = require("./core.js"),
+  I = require("./presets.js");
 let cases = 0;
 function eq(a, b) {
   assert.deepEqual(a, b);
@@ -103,6 +104,9 @@ for (const mutate of [
   (p) => (p.events[0].builder.inversion = 9),
   (p) => (p.events[0].label = "<x>".repeat(100)),
   (p) => (p.bpm = NaN),
+  (p) => (p.instrumentName = "Wrong GM name"),
+  (p) => delete p.instrumentName,
+  (p) => (p.program = 128),
   (p) => p.events.push(p.events[0]),
 ]) {
   const bad = structuredClone(p);
@@ -110,11 +114,12 @@ for (const mutate of [
   assert.throws(() => D.validate(bad));
   cases++;
 }
-// Independent SMF reader: verify metadata, channels, programs, exact note lengths and overlap union.
+// Independent SMF reader: verify metadata, channels, absence of programs, exact note lengths and overlap union.
 p.bpm = 137;
 p.meter = "6/8";
 p.bars = 2;
 p.program = 48;
+p.instrumentName = "String Ensemble 1";
 p.events = [
   { ...D.makeEvent(p, 0, 0, 4), pitches: [60, 64, 67] },
   { ...D.makeEvent(p, 0, 2, 4), pitches: [60, 65, 69] },
@@ -160,9 +165,22 @@ for (let lane = 0; lane < 3; lane++) {
     }
   }
   eq(tick, 2880);
-  eq(ev.find((e) => e.status === 192 + lane).data, [48]);
+  eq(
+    ev.filter((e) => (e.status & 240) === 192),
+    [],
+  );
+  eq(Buffer.from(ev.find((e) => e.type === 3).data).toString(), D.lanes[lane]);
   parsed.push(ev);
 }
+eq(parsed[0].find((e) => e.type === 1).tick, 0);
+eq(
+  Buffer.from(parsed[0].find((e) => e.type === 1).data).toString(),
+  "Preview instrument: String Ensemble 1",
+);
+eq(
+  parsed.slice(1).flatMap((track) => track.filter((e) => e.type === 1)),
+  [],
+);
 eq(parsed[0].find((e) => e.type === 88).data, [6, 3, 36, 8]);
 eq(parsed[0].find((e) => e.type === 81).data, [
   (Math.round(60000000 / 137) >> 16) & 255,
@@ -187,6 +205,15 @@ eq(
     [2880, 130, 72],
   ],
 );
+// Instrument names and zero-based programs round trip without app-wide preferences.
+for (const preset of I.presets) {
+  const project = {
+    ...D.fresh(),
+    program: preset.program,
+    instrumentName: preset.name,
+  };
+  eq(D.validate(JSON.parse(JSON.stringify(project))), project);
+}
 console.log(
   `PASS ${cases} model assertions: all keys, natural minor, qualities/inversions/registers, spelling, meter, frozen pitches, validation, JSON and parsed three-track MIDI.`,
 );

@@ -1,9 +1,13 @@
 /* ChordMidi's serializable music model. One step is an eighth note. */
 (function (root, factory) {
-  const api = factory();
+  const api = factory(
+    typeof module === "object" && module.exports
+      ? require("./presets.js")
+      : root.ChordInstruments,
+  );
   if (typeof module === "object" && module.exports) module.exports = api;
   else root.ChordMidi = api;
-})(globalThis, () => {
+})(globalThis, (instruments) => {
   "use strict";
   const keys = [
     "C",
@@ -230,6 +234,7 @@
     bars: 4,
     meter: "4/4",
     program: 0,
+    instrumentName: instruments.presets[0].name,
     loop: true,
     metronome: false,
     builders: [builder(4), builder(3)],
@@ -249,7 +254,7 @@
   function validate(p) {
     const fail = () => {
       throw Error(
-        "Invalid ChordMidi v1 project. Check settings, pitches and event bounds.",
+        "Invalid ChordMidi v1 project. Check settings, instrument name/program, pitches and event bounds.",
       );
     };
     if (
@@ -265,6 +270,7 @@
       !int(p.bars, 1, 8) ||
       !meters.includes(p.meter) ||
       !int(p.program, 0, 127) ||
+      p.instrumentName !== instruments.presets[p.program].name ||
       typeof p.loop !== "boolean" ||
       typeof p.metronome !== "boolean" ||
       !Array.isArray(p.builders) ||
@@ -408,7 +414,11 @@
       [num, den] = p.meter.split("/").map(Number);
     const tracks = lanes.map((name, lane) => {
       const text = ascii(name),
-        data = [0, 255, 3, text.length, ...text, 0, 192 + lane, p.program];
+        data = [0, 255, 3, text.length, ...text];
+      if (lane === 0) {
+        const preview = ascii("Preview instrument: " + p.instrumentName);
+        data.push(0, 255, 1, ...vlq(preview.length), ...preview);
+      }
       if (lane === 0)
         data.push(
           0,

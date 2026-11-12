@@ -853,3 +853,113 @@ button svg {
   height: 17px;
   margin-right: 4px;
 }
+
+/* The instrument library is an app-wide preference inside the existing Setup. */
+#setup-dialog {
+  max-height: calc(100dvh - 28px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+.instrument-settings {
+  margin-top: 18px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  overflow: hidden;
+}
+.instrument-settings > summary {
+  padding: 12px;
+  cursor: pointer;
+  font-weight: 650;
+  font-size: 14px;
+  min-height: 44px;
+}
+#enabled-count {
+  float: right;
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 400;
+  padding-top: 3px;
+}
+.library-toolbar {
+  padding: 0 10px 10px;
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+.library-toolbar p {
+  font-size: 11px;
+  color: var(--muted);
+  line-height: 1.5;
+  flex: 1;
+}
+.library-toolbar button {
+  font-size: 11px;
+  min-height: 44px;
+  padding: 6px 8px;
+  flex-shrink: 0;
+}
+#instrument-categories {
+  max-height: min(40dvh, 330px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  border-top: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+}
+.instrument-category {
+  border-bottom: 1px solid #44384f;
+}
+.instrument-category:last-child {
+  border-bottom: 0;
+}
+.instrument-category summary {
+  cursor: pointer;
+  min-height: 44px;
+  padding: 12px 10px;
+  font-size: 12px;
+  background: #2c2239;
+}
+.category-count {
+  float: right;
+  color: var(--muted);
+  font-size: 10px;
+}
+.instrument-choice {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 44px;
+  padding: 7px 10px;
+  font-size: 12px;
+  line-height: 1.4;
+  cursor: pointer;
+}
+.instrument-choice input {
+  appearance: auto;
+  width: 20px;
+  height: 20px;
+  min-height: 20px;
+  flex: 0 0 20px;
+  margin: 0;
+  accent-color: #b64af1;
+}
+.instrument-choice:focus-within {
+  outline: 1px solid #ce86fb;
+  outline-offset: -2px;
+}
+#library-status {
+  padding: 10px;
+  font-size: 11px;
+  line-height: 1.5;
+  color: var(--muted);
+}
+summary:focus-visible {
+  outline: 2px solid #ce86fb;
+  outline-offset: -3px;
+}
+#setup-dialog .dialog-heading {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  padding: 5px 0;
+  background: #211a30;
+}
