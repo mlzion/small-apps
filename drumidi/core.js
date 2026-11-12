@@ -59,19 +59,32 @@
     name,
     velocity: /hat|Ride/.test(name) ? 78 : /Kick|Snare/.test(name) ? 106 : 94,
   }));
+  const palette = [
+    { id: "blue", name: "Blue", hex: "#229bea" },
+    { id: "orange", name: "Orange", hex: "#e99a38" },
+    { id: "green", name: "Green", hex: "#46b96d" },
+    { id: "purple", name: "Purple", hex: "#ac83ed" },
+    { id: "yellow", name: "Yellow", hex: "#e5ca48" },
+    { id: "pink", name: "Pink", hex: "#e681b7" },
+    { id: "teal", name: "Teal", hex: "#39bdb8" },
+    { id: "red", name: "Red", hex: "#e97171" },
+  ];
+  const laneNames = ["Backbone", "Fills", "Cymbals/Percussion"];
   const fresh = () => ({
     format: "drumidi",
-    version: 1,
+    version: 2,
     bpm: 120,
     drums: [35, 38, 42, 46, 51, 50, 47, 43, 49].map((m) => ({
       ...catalog[m - 35],
+      muted: false,
     })),
-    patterns: Array.from({ length: 8 }, (_, i) => ({
+    patterns: Array.from({ length: 16 }, (_, i) => ({
       id: `P${i + 1}`,
       bars: 1,
+      color: palette[i % palette.length].id,
       notes: [],
     })),
-    arrangement: { bars: 8, lanes: [[], []] },
+    arrangement: { bars: 8, lanes: [[], [], []] },
   });
   const int = (v, min, max) => Number.isInteger(v) && v >= min && v <= max;
   const error = (message) => {
@@ -81,7 +94,7 @@
     const p = project.patterns.find((p) => p.id === pattern);
     return (
       !!p &&
-      int(lane, 0, 1) &&
+      int(lane, 0, 2) &&
       int(start, 0, 7) &&
       start + p.bars <= project.arrangement.bars &&
       project.arrangement.lanes[lane].every(
@@ -94,14 +107,15 @@
     );
   }
   function validate(raw) {
-    if (!raw || raw.format !== "drumidi" || raw.version !== 1)
+    if (!raw || raw.format !== "drumidi" || ![1, 2].includes(raw.version))
       error(
-        "Unsupported project format or version. Choose a DruMidi version 1 JSON project.",
+        "Unsupported project format or version. Choose a DruMidi version 1 or 2 JSON project.",
       );
     if (!int(raw.bpm, 30, 300))
       error("BPM must be a whole number from 30 to 300.");
     if (!Array.isArray(raw.drums) || !raw.drums.length || raw.drums.length > 47)
       error("Project must contain 1–47 drum instruments.");
+    const legacy = raw.version === 1;
     const used = new Set();
     const drums = raw.drums.map((d) => {
       if (
@@ -111,19 +125,31 @@
         typeof d.name !== "string" ||
         !d.name.trim() ||
         d.name.length > 40 ||
+        (!legacy && typeof d.muted !== "boolean") ||
         !int(d.velocity, 1, 127)
       )
         error("Invalid or duplicate GM drum assignment.");
       used.add(d.midi);
-      return { midi: d.midi, name: d.name, velocity: d.velocity };
+      return {
+        midi: d.midi,
+        name: d.name,
+        velocity: d.velocity,
+        muted: legacy ? false : d.muted,
+      };
     });
-    if (!Array.isArray(raw.patterns) || raw.patterns.length !== 8)
-      error("Project must contain exactly eight patterns.");
+    if (
+      !Array.isArray(raw.patterns) ||
+      raw.patterns.length !== (legacy ? 8 : 16)
+    )
+      error(
+        "Project must contain exactly 16 patterns (eight in a version 1 project).",
+      );
     const patterns = raw.patterns.map((p, i) => {
       if (
         !p ||
         p.id !== `P${i + 1}` ||
         !int(p.bars, 1, 4) ||
+        (!legacy && !palette.some((c) => c.id === p.color)) ||
         !Array.isArray(p.notes) ||
         p.notes.length > 12032
       )
@@ -142,23 +168,31 @@
         seen.add(key);
         return { drum: n.drum, step: n.step, velocity: n.velocity };
       });
-      return { id: p.id, bars: p.bars, notes };
+      return {
+        id: p.id,
+        bars: p.bars,
+        color: legacy ? palette[i % palette.length].id : p.color,
+        notes,
+      };
     });
+    if (legacy) patterns.push(...fresh().patterns.slice(8));
     const a = raw.arrangement;
     if (
       !a ||
       !int(a.bars, 1, 8) ||
       !Array.isArray(a.lanes) ||
-      a.lanes.length !== 2
+      a.lanes.length !== (legacy ? 2 : 3)
     )
-      error("Arrangement must have 1–8 bars and two lanes.");
+      error(
+        "Arrangement must have 1–8 bars and three lanes (two in a version 1 project).",
+      );
     const project = {
       format: "drumidi",
-      version: 1,
+      version: 2,
       bpm: raw.bpm,
       drums,
       patterns,
-      arrangement: { bars: a.bars, lanes: [[], []] },
+      arrangement: { bars: a.bars, lanes: [[], [], []] },
     };
     const ids = new Set();
     a.lanes.forEach((lane, i) => {
@@ -186,10 +220,15 @@
     });
     return project;
   }
-  function events(project, page, selected = 0) {
+  function events(project, page, selected = 0, includeMuted = false) {
+    const muted = new Set(
+      project.drums.filter((d) => d.muted).map((d) => d.midi),
+    );
     const expand = (p, offset, lane) =>
       p.notes
-        .filter((n) => n.step < p.bars * 64)
+        .filter(
+          (n) => n.step < p.bars * 64 && (includeMuted || !muted.has(n.drum)),
+        )
         .map((n) => ({ ...n, step: n.step + offset, lane }));
     if (page === "pattern")
       return expand(project.patterns[selected], 0, 0).sort(
@@ -271,18 +310,50 @@
     if (page === "pattern")
       tracks.push(track(project.patterns[selected].id, ev));
     else
-      ["Lane A - Backbone", "Lane B - Fills"].forEach((name, i) =>
-        tracks.push(
-          track(
-            name,
-            ev.filter((n) => n.lane === i),
+      laneNames
+        .map((name, i) => `Lane ${String.fromCharCode(65 + i)} - ${name}`)
+        .forEach((name, i) =>
+          tracks.push(
+            track(
+              name,
+              ev.filter((n) => n.lane === i),
+            ),
           ),
-        ),
-      );
+        );
     return new Uint8Array([
       ...chunk("MThd", [0, 1, 0, tracks.length, 3, 192]),
       ...tracks.flat(),
     ]);
   }
-  return { catalog, fresh, validate, canPlace, events, midi };
+  function copyPattern(pattern) {
+    return { ...pattern, notes: pattern.notes.map((n) => ({ ...n })) };
+  }
+  function pastePattern(project, index, source) {
+    if (!int(index, 0, 15)) error("Choose a destination pattern.");
+    const destination = project.patterns[index];
+    return validate({
+      ...project,
+      patterns: project.patterns.map((p, i) =>
+        i === index
+          ? {
+              ...copyPattern(source),
+              id: destination.id,
+              color: destination.color,
+            }
+          : p,
+      ),
+    });
+  }
+  return {
+    catalog,
+    palette,
+    laneNames,
+    fresh,
+    validate,
+    canPlace,
+    events,
+    midi,
+    copyPattern,
+    pastePattern,
+  };
 });

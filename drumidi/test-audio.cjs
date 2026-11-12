@@ -57,16 +57,31 @@ audio.pump();
 assert(sources.some((s) => Math.abs(s.time - 0.8275) < 1e-9));
 assert(sources.some((s) => Math.abs(s.time - 0.84) < 1e-9));
 audio.context.currentTime = 0.85;
-const position = audio.position();
-audio.pause();
-assert.equal(audio.offset, position);
-assert(!audio.running);
-assert(sources.every((s) => s.stopTime !== undefined));
-audio.start(notes, 1, 300);
-assert(audio.running);
 audio.stop();
 assert.equal(audio.position(), 0);
 assert(!audio.running);
+assert(sources.every((s) => s.stopTime !== undefined));
+audio.start(notes, 1, 300);
+assert.equal(sources.at(-3).time, 0.89);
+audio.stop();
+// Muting ends active and lookahead sources immediately, while the clock keeps running.
+audio.context.currentTime = 0;
+audio.start(notes, 1, 300);
+const live = sources.slice(-3);
+audio.setMuted([{ midi: 38, muted: true }]);
+assert(live.slice(1).every((s) => s.stopTime !== undefined));
+assert(audio.running);
+const count = sources.length;
+audio.hit({ drum: 38, velocity: 99 }, 0.2);
+assert.equal(sources.length, count);
+audio.context.currentTime = 0.046;
+audio.setMuted([{ midi: 38, muted: false }]);
+assert.equal(sources.length, count + 1);
+assert.equal(sources.at(-1).time, 0.052500000000000005);
+const restored = sources.length;
+audio.hit({ drum: 38, velocity: 99 }, 0.21);
+assert.equal(sources.length, restored + 1);
+audio.stop();
 // Open hats are choked by a later scheduled closed hat, with actual event times.
 audio.hit({ drum: 46, velocity: 90 }, 1);
 const open = sources.at(-1);
@@ -81,5 +96,5 @@ audio.pump();
 assert(sources.slice(before).every((s) => s.time >= 5 && s.time < 5.12));
 audio.stop();
 console.log(
-  "PASS: simultaneous/64th scheduling; loop seam; velocity gain and tuning; pause/resume/reset; hi-hat choke; stalled-clock recovery.",
+  "PASS: simultaneous/64th scheduling; loop seam; velocity gain and tuning; start/stop/reset; live global mutes; hi-hat choke; stalled-clock recovery.",
 );

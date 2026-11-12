@@ -5,6 +5,7 @@ class DrumAudio {
     this.context = null;
     this.buffers = new Map();
     this.sources = new Set();
+    this.muted = new Set();
     this.running = false;
     this.offset = 0;
     this.token = 0;
@@ -42,6 +43,7 @@ class DrumAudio {
     );
   }
   hit(note, time) {
+    if (this.muted.has(note.drum)) return;
     const buffer = this.buffers.get(note.drum);
     if (!buffer) return;
     // Closed/pedal hats choke open hats at the scheduled event time.
@@ -70,6 +72,31 @@ class DrumAudio {
     };
     source.start(time);
   }
+  setMuted(drums) {
+    const previous = this.muted;
+    this.muted = new Set(drums.filter((d) => d.muted).map((d) => d.midi));
+    for (const record of this.sources)
+      if (this.muted.has(record.drum)) {
+        try {
+          record.source.stop();
+        } catch {
+          /* already ended */
+        }
+        this.sources.delete(record);
+      }
+    // Restore newly unmuted hits inside the window already visited by pump().
+    if (this.running) {
+      const now = this.context.currentTime;
+      const first = Math.max(
+        0,
+        Math.ceil((now - this.anchor) / this.stepSeconds),
+      );
+      for (let step = first; step < this.next; step++)
+        for (const note of this.byStep.get(step % this.total) || [])
+          if (previous.has(note.drum) && !this.muted.has(note.drum))
+            this.hit(note, this.anchor + step * this.stepSeconds);
+    }
+  }
   start(events, bars, bpm) {
     this.clearSources();
     this.byStep = new Map();
@@ -79,7 +106,7 @@ class DrumAudio {
     }
     this.total = bars * 64;
     this.stepSeconds = 60 / bpm / 16;
-    this.offset %= this.total;
+    this.offset = 0;
     this.anchor =
       this.context.currentTime + 0.04 - this.offset * this.stepSeconds;
     this.next = Math.ceil(this.offset - 1e-7);
@@ -108,15 +135,10 @@ class DrumAudio {
         ) % this.total
       : this.offset;
   }
-  pause() {
-    if (this.running) this.offset = this.position();
-    this.running = false;
-    clearInterval(this.timer);
-    this.clearSources();
-  }
   stop() {
     this.token++;
-    this.pause();
+    this.running = false;
+    this.clearSources();
     this.offset = 0;
   }
   clearSources() {
