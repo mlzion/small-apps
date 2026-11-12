@@ -132,6 +132,52 @@ with sync_playwright() as pw:
  storage=context();storage.add_init_script("Storage.prototype.setItem=function(){throw Error('full')}");s=storage.new_page();s.goto('https://app-lab.test/chordmidi/');expect(s.locator('#status')).to_contain_text('Use Save Project');s.locator('#setup').click()
  with s.expect_download() as dl:s.locator('#save-project').click()
  assert json.loads(Path(dl.value.path()).read_text())['format']=='chordmidi'
+ # Root-only octave dyads integrate with both builders and all existing actions.
+ oc=context(viewport={'width':320,'height':740},is_mobile=True,has_touch=True);op=oc.new_page();op.goto("https://app-lab.test/small-apps/chordmidi/")
+ op.evaluate('''()=>{window.octaveNotes=[];const init=ChordAudio.prototype.init,note=ChordAudio.prototype.note;ChordAudio.prototype.init=function(...args){window.octaveAudio=this;return init.apply(this,args);};ChordAudio.prototype.note=function(pitch,time,duration,program,preview=false){octaveNotes.push({pitch,time,duration,program,preview});return note.call(this,pitch,time,duration,program,preview);};}''')
+ def owheel(id,key):op.locator('#wheel-'+id).focus();op.keyboard.press(key)
+ def octave_quality():
+  owheel('quality','Home')
+  for _ in range(op.evaluate("ChordMidi.qualities.findIndex(q=>q.id==='octave')")):owheel('quality','ArrowDown')
+ def oproject():return op.evaluate("JSON.parse(localStorage.getItem('app-lab-chordmidi-v1'))")
+ owheel('inversion','End');octave_quality()
+ expect(op.locator('#wheel-quality')).to_have_attribute('aria-valuetext','Octave 1–8')
+ expect(op.locator('#wheel-inversion')).to_have_attribute('aria-valuemax','0');expect(op.locator('#wheel-inversion .wheel-option:not(.blank)')).to_have_count(1)
+ owheel('inversion','End');owheel('inversion','ArrowDown');op.locator('#wheel-inversion').dispatch_event('wheel',{'deltaY':120})
+ assert oproject()['builders'][0]['inversion']==0
+ expect(op.locator('#chord-notes')).to_contain_text('C4 – C5');expect(op.locator('#chord-notes')).to_contain_text('60, 72')
+ op.locator('#drop').tap();op.wait_for_function('octaveNotes.length===2');assert op.evaluate('octaveNotes.map(n=>n.pitch)')==[60,72]
+ op.locator('#lane-0 .pad[data-start="0"]').tap();assert oproject()['events'][0]['pitches']==[60,72]
+ op.locator('#lh').tap();octave_quality();expect(op.locator('#chord-notes')).to_contain_text('C3 – C4')
+ op.locator('#lane-1 .pad[data-start="0"]').tap();assert oproject()['events'][1]['pitches']==[48,60]
+ for lane,pitches,label in [(0,[60,72],'C4 – C5'),(1,[48,60],'C3 – C4')]:
+  op.evaluate('octaveNotes=[]');op.locator(f'.event[data-lane="{lane}"]').tap();op.wait_for_function('octaveNotes.length===2')
+  assert op.evaluate('octaveNotes.map(n=>n.pitch)')==pitches
+  expect(op.locator('#chord-notes')).to_contain_text(label);expect(op.locator('#wheel-inversion')).to_have_attribute('aria-valuemax','0')
+ stored=oproject()['events'];op.locator('#rh').tap();owheel('key','Home');owheel('key','ArrowDown');owheel('degree','End')
+ expect(op.locator('#chord-notes')).to_contain_text('B♯4 – B♯5');expect(op.locator('#chord-notes')).to_contain_text('72, 84')
+ owheel('mode','End');expect(op.locator('#chord-notes')).to_contain_text('B4 – B5');expect(op.locator('#chord-notes')).to_contain_text('71, 83')
+ assert oproject()['events']==stored
+ op.evaluate('octaveNotes=[]');op.locator('#play').tap();op.wait_for_function('octaveNotes.filter(n=>!n.preview).length===4')
+ assert sorted(op.evaluate('octaveNotes.filter(n=>!n.preview).map(n=>n.pitch)'))==[48,60,60,72]
+ owheel('inversion','ArrowDown');assert op.evaluate('octaveAudio.running');op.locator('#stop').tap()
+ op.locator('#setup').tap();op.locator('#project-name').fill('Octave dyads')
+ with op.expect_download() as dl:op.locator('#save-project').tap()
+ octave_path=dl.value.path();octave_saved=oproject();assert json.loads(Path(octave_path).read_text())==octave_saved
+ assert all(b['quality']=='octave' and b['inversion']==0 for b in octave_saved['builders'])
+ with op.expect_download() as dl:op.locator('#export-midi').tap()
+ octave_midi=Path(dl.value.path()).read_bytes();assert octave_midi[:4]==b'MThd' and int.from_bytes(octave_midi[10:12],'big')==3
+ assert octave_midi==bytes(op.evaluate("Array.from(ChordMidi.midi(JSON.parse(localStorage.getItem('app-lab-chordmidi-v1'))))"))
+ op.once('dialog',lambda d:d.accept());op.locator('#new-project').tap();op.locator('#setup').tap();op.once('dialog',lambda d:d.accept());op.locator('#project-file').set_input_files(octave_path)
+ expect(op.locator('#setup-dialog')).to_be_hidden();assert oproject()==octave_saved;op.reload();assert oproject()==octave_saved
+ expect(op.locator('#wheel-inversion .wheel-option:not(.blank)')).to_have_count(1)
+ op.locator('#setup').tap();invalid=json.loads(json.dumps(octave_saved));invalid['builders'][0]['inversion']=1
+ op.locator('#project-file').set_input_files({'name':'bad-octave.json','mimeType':'application/json','buffer':json.dumps(invalid).encode()})
+ expect(op.locator('#storage-status')).to_contain_text('Could not load');assert oproject()==octave_saved;op.locator('#close-setup').tap()
+ for width in [320,360,393]:
+  op.set_viewport_size({'width':width,'height':800});assert op.evaluate('document.documentElement.scrollWidth<=innerWidth')
+  assert op.locator('#wheel-quality .selected').evaluate('e=>e.scrollWidth<=e.clientWidth')
+ print('PASS: Octave 1–8 RH/LH root-only wheel and labels, key/mode/degree/register changes, exact two-note Drop/tap/playback, immutable placed pitches, JSON/reload/invalid inversion rejection and three-track MIDI download on narrow portrait sizes.',flush=True)
  assert not missing,missing;assert not errors,errors
  print('PASS: 6 touch wheels, wheel/keyboard/mouse; independent voicings; frozen pitches; placement/hold-drag/resize/select/copy/paste/long-delete/scroll cancellation; meters/8 bars; all 128 real SF2 presets; simultaneous lanes/passing notes; audio clock/offs/pause/resume/loop/click/stop; JSON/MIDI/failure recovery; 6 layouts/fullscreen; both hosting roots.')
  browser.close()

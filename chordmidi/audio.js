@@ -153,6 +153,9 @@ class ChordAudio {
   constructor() {
     this.context = null;
     this.sources = new Set();
+    this.auditionSources = new Set();
+    this.auditionGeneration = 0;
+    this.graphLatency = 0;
     this.running = false;
     this.offset = 0;
     this.generation = 0;
@@ -169,6 +172,7 @@ class ChordAudio {
       limiter.connect(this.context.destination);
     }
     await this.context.resume();
+    if (!this.graphReady) this.graphReady = this.measureGraphLatency();
     if (!this.font) {
       if (!this.loading)
         this.loading = fetch("soundfont/TimGM6mb.sf2")
@@ -183,13 +187,109 @@ class ChordAudio {
           });
       await this.loading;
     }
+    await this.graphReady;
+  }
+  async measureGraphLatency() {
+    // Measure this browser's compressor delay, rather than applying a guessed
+    // visual offset. Gain and pan do not delay samples; SF2 attack stays musical.
+    const Offline =
+      window.OfflineAudioContext || window.webkitOfflineAudioContext;
+    if (!Offline) return;
+    try {
+      const rate = this.context.sampleRate;
+      const offline = new Offline(1, rate, rate);
+      const impulse = offline.createBuffer(1, 1, rate);
+      impulse.getChannelData(0)[0] = 0.25;
+      const source = offline.createBufferSource();
+      source.buffer = impulse;
+      const compressor = offline.createDynamicsCompressor();
+      source.connect(compressor);
+      compressor.connect(offline.destination);
+      source.start(0);
+      const rendered = await offline.startRendering();
+      const first = rendered
+        .getChannelData(0)
+        .findIndex((value) => Math.abs(value) > 1e-8);
+      if (first >= 0) this.graphLatency = first / rate;
+    } catch {
+      // Playback remains available without an offline renderer. Do not guess
+      // at an unmeasured graph delay on that browser.
+    }
+  }
+  outputTime(now = performance.now()) {
+    const c = this.context;
+    let time;
+    try {
+      const stamp = c.getOutputTimestamp?.();
+      if (
+        stamp &&
+        Number.isFinite(stamp.contextTime) &&
+        stamp.contextTime >= 0 &&
+        Number.isFinite(stamp.performanceTime) &&
+        stamp.performanceTime > 0
+      ) {
+        time = stamp.contextTime + (now - stamp.performanceTime) / 1000;
+      }
+    } catch {
+      /* Fall back to the browser's latency estimates. */
+    }
+    if (!Number.isFinite(time)) {
+      const latency = (value) =>
+        Number.isFinite(value) && value >= 0 ? value : 0;
+      time = c.currentTime - latency(c.baseLatency) - latency(c.outputLatency);
+    }
+    return Math.max(0, Math.min(c.currentTime, time) - this.graphLatency);
+  }
+  async audition(pitches, program, duration = 0.8) {
+    this.cancelAudition();
+    const token = this.auditionGeneration,
+      generation = this.generation;
+    const notes = pitches.slice();
+    try {
+      await this.init();
+    } catch (error) {
+      if (token !== this.auditionGeneration || generation !== this.generation)
+        return false;
+      throw error;
+    }
+    if (token !== this.auditionGeneration || generation !== this.generation)
+      return false;
+    this.prepare(notes, program);
+    // One render quantum of scheduling headroom; no fixed 40 ms preview wait.
+    const time = this.context.currentTime + 128 / this.context.sampleRate;
+    for (const pitch of notes) this.note(pitch, time, duration, program, true);
+    return true;
+  }
+  cancelAudition() {
+    this.auditionGeneration++;
+    for (const record of this.auditionSources) {
+      const now = this.context.currentTime;
+      try {
+        // A short de-click fade when cutting an old preview. Normal note-offs
+        // still use the instrument's natural SF2 release envelope.
+        if (record.time <= now) {
+          if (record.gain.gain.cancelAndHoldAtTime)
+            record.gain.gain.cancelAndHoldAtTime(now);
+          else {
+            const value = record.gain.gain.value;
+            record.gain.gain.cancelScheduledValues(now);
+            record.gain.gain.setValueAtTime(value, now);
+          }
+          record.gain.gain.linearRampToValueAtTime(0, now + 0.005);
+          record.source.stop(now + 0.005);
+        } else record.source.stop(now);
+      } catch {
+        /* Already ended. */
+      }
+    }
+    this.auditionSources.clear();
   }
   prepare(pitches, program) {
     for (const pitch of new Set(pitches))
       for (const zone of this.font.voices(program, pitch))
         this.font.sample(zone);
   }
-  note(pitch, time, duration, program = 0) {
+  note(pitch, time, duration, program = 0, audition = false) {
     const c = this.context;
     for (const z of this.font.voices(program, pitch)) {
       const { buffer, s, start } = this.font.sample(z),
@@ -257,8 +357,10 @@ class ChordAudio {
       pan.connect(this.master);
       const r = { source, gain, pan, pitch, time, off };
       this.sources.add(r);
+      if (audition) this.auditionSources.add(r);
       source.onended = () => {
         this.sources.delete(r);
+        this.auditionSources.delete(r);
         source.disconnect();
         gain.disconnect();
         pan.disconnect();
@@ -299,8 +401,8 @@ class ChordAudio {
       p.program,
     );
     this.offset = offset % this.total;
-    this.anchor =
-      this.context.currentTime + 0.04 - this.offset * this.stepSeconds;
+    this.startedAt = this.context.currentTime + 0.04;
+    this.anchor = this.startedAt - this.offset * this.stepSeconds;
     this.next = Math.ceil(this.offset - 1e-7);
     this.running = true;
     // Resume held chords when pausing between grid divisions.
@@ -308,7 +410,7 @@ class ChordAudio {
       if (n.start < this.offset && n.end > this.offset)
         this.note(
           n.pitch,
-          this.context.currentTime + 0.04,
+          this.startedAt,
           (n.end - this.offset) * this.stepSeconds,
           p.program,
         );
@@ -338,7 +440,10 @@ class ChordAudio {
       if (p.metronome && step % beat === 0) this.click(time, step % per === 0);
       this.next++;
     }
-    if (!p.loop && now >= this.anchor + this.total * this.stepSeconds) {
+    if (
+      !p.loop &&
+      this.outputTime() >= this.anchor + this.total * this.stepSeconds
+    ) {
       this.stop();
       this.onEnd?.();
     }
@@ -346,8 +451,8 @@ class ChordAudio {
   position() {
     if (!this.running) return this.offset;
     const pos = Math.max(
-      0,
-      (this.context.currentTime - this.anchor) / this.stepSeconds,
+      this.offset,
+      (this.outputTime() - this.anchor) / this.stepSeconds,
     );
     return this.project.loop ? pos % this.total : Math.min(this.total, pos);
   }
@@ -358,6 +463,7 @@ class ChordAudio {
   }
   clear() {
     clearInterval(this.timer);
+    this.cancelAudition();
     for (const r of this.sources) {
       try {
         r.source.stop();

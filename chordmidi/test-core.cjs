@@ -57,7 +57,7 @@ for (let key = 0; key < 12; key++)
   for (const mode of ["Major", "Minor"])
     for (let degree = 0; degree < 7; degree++)
       for (const q of D.qualities)
-        for (let inv = 0; inv < (q.steps || q.intervals).length; inv++)
+        for (let inv = 0; inv < D.inversionCount(q.id); inv++)
           for (const octave of [1, 4, 6]) {
             const c = D.chord(key, mode, {
               degree,
@@ -77,6 +77,73 @@ for (let key = 0; key < 12; key++)
             assert.equal(c.pitches.length, c.names.length);
             cases++;
           }
+// Octave dyads: every key/mode/degree/register for each independent hand.
+for (let key = 0; key < 12; key++)
+  for (const mode of ["Major", "Minor"])
+    for (let degree = 0; degree < 7; degree++)
+      for (let octave = 1; octave <= 6; octave++)
+        for (const lane of [0, 1]) {
+          const project = D.fresh();
+          project.key = key;
+          project.mode = mode;
+          project.builders[lane] = {
+            degree,
+            quality: "octave",
+            inversion: 0,
+            octave,
+          };
+          const builder = project.builders[lane],
+            c = D.chord(key, mode, builder);
+          const root =
+            12 * (octave + 1) +
+            key +
+            (mode === "Major"
+              ? [0, 2, 4, 5, 7, 9, 11]
+              : [0, 2, 3, 5, 7, 8, 10])[degree];
+          eq(c.pitches, [root, root + 12]);
+          eq(c.names, [
+            D.scale(key, mode)[degree].name,
+            D.scale(key, mode)[degree].name,
+          ]);
+          assert(c.pitches.every((pitch) => pitch >= 0 && pitch <= 127));
+          const labels = c.noteLabels.map((label) =>
+            label.match(/^([A-G])([♯♭]*)(-?\d+)$/),
+          );
+          labels.forEach((match, i) => {
+            assert(match);
+            const alteration = Array.from(match[2]).reduce(
+              (sum, a) => sum + (a === "♯" ? 1 : -1),
+              0,
+            );
+            eq(
+              { C: 0, D: 2, E: 4, F: 5, G: 7, A: 9, B: 11 }[match[1]] +
+                alteration +
+                12 * (+match[3] + 1),
+              c.pitches[i],
+            );
+          });
+          eq(+labels[1][3], +labels[0][3] + 1);
+          eq(D.inversionCount("octave"), 1);
+          const event = D.makeEvent(project, lane, degree, 2);
+          project.events.push(event);
+          eq(event.pitches, c.pitches);
+          eq(D.validate(JSON.parse(JSON.stringify(project))), project);
+          assert.throws(() => D.chord(key, mode, { ...builder, inversion: 1 }));
+          builder.inversion = 1;
+          assert.throws(() => D.validate(project));
+          builder.inversion = 0;
+          event.builder.inversion = 1;
+          assert.throws(() => D.validate(project));
+          cases += 4;
+        }
+eq(D.chord(1, "Major", { ...b, quality: "octave", degree: 6 }).noteLabels, [
+  "B♯4",
+  "B♯5",
+]);
+eq(D.chord(3, "Minor", { ...b, quality: "octave", degree: 5 }).noteLabels, [
+  "C♭5",
+  "C♭6",
+]);
 for (const [meter, length] of [
   ["2/4", 4],
   ["3/4", 6],
@@ -126,6 +193,10 @@ p.events = [
   D.makeEvent(p, 1, 0, 6),
   { ...D.makeEvent(p, 2, 11, 1), pitches: [72] },
 ];
+const octaveMidiProject = structuredClone(p);
+octaveMidiProject.builders[0].quality = "octave";
+octaveMidiProject.builders[0].inversion = 0;
+p.events.push(D.makeEvent(octaveMidiProject, 0, 8, 4));
 const bytes = Buffer.from(D.midi(p));
 eq(bytes.subarray(0, 4).toString(), "MThd");
 eq(bytes.readUInt16BE(8), 1);
@@ -204,6 +275,20 @@ eq(
     [2640, 146, 72],
     [2880, 130, 72],
   ],
+);
+eq(
+  parsed[0]
+    .filter((e) => e.status === 144 && e.tick === 1920)
+    .map((e) => e.data[0])
+    .sort((a, b) => a - b),
+  [67, 79],
+);
+eq(
+  parsed[0]
+    .filter((e) => e.status === 128 && e.tick === 2880)
+    .map((e) => e.data[0])
+    .sort((a, b) => a - b),
+  [67, 79],
 );
 // Instrument names and zero-based programs round trip without app-wide preferences.
 for (const preset of I.presets) {

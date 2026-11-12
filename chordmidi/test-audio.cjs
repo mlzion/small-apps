@@ -53,6 +53,7 @@ const context = {
 const clicks = [],
   sandbox = {
     window: {},
+    performance,
     ChordMidi: D,
     structuredClone,
     setInterval,

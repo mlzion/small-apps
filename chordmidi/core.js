@@ -43,6 +43,14 @@
       letters: [0, 4],
     },
     {
+      id: "octave",
+      name: "Octave 1–8",
+      full: "octave dyad",
+      intervals: [0, 12],
+      letters: [0, 7],
+      inversionCount: 1,
+    },
+    {
       id: "major",
       name: "Major",
       full: "major",
@@ -140,6 +148,10 @@
       letters: [0, 2, 4, 6],
     },
   ];
+  const inversionCount = (quality) => {
+    const q = qualities.find((q) => q.id === quality);
+    return q.inversionCount ?? (q.steps || q.intervals).length;
+  };
   const lanes = ["RH Chords", "LH Chords", "Passing Notes"];
   const inversions = ["Root", "1st", "2nd", "3rd"];
   const meters = ["2/4", "3/4", "4/4", "6/8"];
@@ -172,10 +184,20 @@
       (third === 3 ? roman.toLowerCase() : roman) + (fifth === 6 ? "°" : "")
     );
   }
+  function noteLabel(pitch, name) {
+    const natural = { C: 0, D: 2, E: 4, F: 5, G: 7, A: 9, B: 11 }[name[0]];
+    const accidental = Array.from(name.slice(1)).reduce(
+      (sum, c) => sum + (c === "♯" ? 1 : -1),
+      0,
+    );
+    return name + (Math.round((pitch - natural - accidental) / 12) - 1);
+  }
   function chord(key, mode, b) {
     const q = qualities.find((q) => q.id === b.quality),
       s = scales[mode],
       sc = scale(key, mode);
+    if (q.inversionCount === 1 && b.inversion !== 0)
+      throw Error("Octave 1–8 supports root position only.");
     const at = (i) => s[i % 7] + 12 * Math.floor(i / 7);
     const root = 12 * (b.octave + 1) + key + s[b.degree];
     let intervals = q.steps
@@ -214,6 +236,7 @@
     return {
       pitches,
       names,
+      noteLabels: pitches.map((pitch, i) => noteLabel(pitch, names[i])),
       name: `${sc[b.degree].name} ${full}`,
       label: `${sc[b.degree].name} ${q.id === "diatonic" ? { major: "Maj", minor: "min", diminished: "dim" }[triad] : q.name.replace(" ◇", "")}`,
     };
@@ -248,7 +271,7 @@
       q &&
       int(b.degree, 0, 6) &&
       int(b.octave, 1, 6) &&
-      int(b.inversion, 0, (q.steps || q.intervals).length - 1)
+      int(b.inversion, 0, inversionCount(q.id) - 1)
     );
   }
   function validate(p) {
@@ -352,23 +375,15 @@
   }
   function passingOptions(p) {
     const o = p.passing.octave;
-    const label = (pitch, name) => {
-      const natural = { C: 0, D: 2, E: 4, F: 5, G: 7, A: 9, B: 11 }[name[0]];
-      const accidental = Array.from(name.slice(1)).reduce(
-        (sum, c) => sum + (c === "♯" ? 1 : -1),
-        0,
-      );
-      return name + (Math.round((pitch - natural - accidental) / 12) - 1);
-    };
     if (p.passing.source === "scale")
       return scale(p.key, p.mode).map((n, i) => {
         const pitch = 12 * (o + 1) + p.key + scales[p.mode][i];
-        return { pitch, label: label(pitch, n.name) };
+        return { pitch, label: noteLabel(pitch, n.name) };
       });
     const c = chord(p.key, p.mode, { ...p.builders[0], octave: o });
     return c.pitches.map((pitch, i) => ({
       pitch,
-      label: label(pitch, c.names[i]),
+      label: noteLabel(pitch, c.names[i]),
     }));
   }
   const vlq = (v) => {
@@ -462,6 +477,7 @@
     qualities,
     lanes,
     inversions,
+    inversionCount,
     meters,
     stepsPerBar,
     totalSteps,

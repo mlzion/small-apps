@@ -1,19 +1,23 @@
-# ChordMidi v0.1
+# ChordMidi v0.2
 
 A static, portrait-first chord progression composer. Launch `chordmidi/` from App Lab, or serve this repository with any static server. No build, account, CDN or runtime dependencies. All paths are relative and work at `/chordmidi/` and GitHub Pages `/small-apps/chordmidi/`.
 
 ## Compose
 
-Six three-position thumbwheels select key, major/natural minor, scale degree, chord quality, inversion and octave. Swipe vertically, drag with a mouse, use a mouse wheel, tap adjacent options, or focus a wheel and use Up/Down/Home/End. Two-choice mode shows each available option once. The center is always selected. `◇` marks diatonic triads and sevenths; the third dyad is also derived from the scale. Alternative major/minor/diminished/augmented, power, suspended, sixth and seventh qualities remain available on every degree. Spellings follow scale letters, including E♯, C♭ and double accidentals where necessary.
+Six three-position thumbwheels select key, major/natural minor, scale degree, chord quality, inversion and octave. Swipe vertically, drag with a mouse, use a mouse wheel, tap adjacent options, or focus a wheel and use Up/Down/Home/End. Two-choice mode shows each available option once; a root-only inversion wheel shows Root in the center with blank neighbors. The center is always selected. `◇` marks diatonic triads and sevenths; the third dyad is also derived from the scale. Alternative major/minor/diminished/augmented, power, suspended, sixth and seventh qualities remain available on every degree. Spellings follow scale letters, including E♯, C♭ and double accidentals where necessary.
+
+The **Octave 1–8** dyad plays exactly the scale-degree root and the same note 12 semitones higher, with only root-position inversion. Both RH and LH support it; its note readout includes both octave numbers (for example C4–C5, or B♯4–B♯5). It works with Drop, placement, tap preview, playback, JSON and MIDI like the other qualities.
 
 Choose **RH** or **LH** above the builder to retain independent degree, quality, inversion and octave settings. Key and mode are shared. Octave 4 starts the tonic in MIDI register C4–B4 (C4 = MIDI 60); degrees above the tonic can cross into the next register, and inversions lift the lowest voices by an octave. The readout gives full quality, inversion, octave, spelled notes and exact MIDI pitches. **Drop** auditions the current builder chord without placing it.
 
 - Tap an empty eighth-note pad to place a chord or passing note. Desktop: drag horizontally from the pad to extend its duration. Touch: **hold an empty pad for 260 ms, then drag**; a normal swipe scrolls the timeline.
-- Tap an event to select it and restore its saved key/mode and lane builder settings. Selecting never changes its stored pitches. Drag its right edge to resize. Hold any part of the event for 650 ms to delete; moving cancels deletion.
+- Short-tap a RH or LH chord to select it, restore its saved key/mode and lane builder settings, and audition its **stored MIDI pitches** with the current instrument. A second tap cuts the previous preview with a short de-click fade. Auditioning does not start playback, seek the transport or change the block. Passing-note selection remains silent. Selecting never changes stored pitches. Drag its right edge to resize. Hold any part of the event for 650 ms to delete; moving cancels deletion.
 - **Copy** snapshots selected pitches, settings and duration. **Paste** arms placement; tap an empty pad in either chord lane, or the passing lane for a copied note. Paste again cancels. Lengths that exceed the grid are refused. A chord cannot be pasted into the single-note lane.
 - Keyboard: Enter/Space places or selects, Delete removes a focused event, Shift+Left/Right resizes it.
 - Passing Notes offers scale notes or current RH chord tones and its own octave. Events always hold a single actual pitch.
 - Choose 1–8 bars and 2/4, 3/4, 4/4 or 6/8. Length is in eighths: 4, 6, 8 or 6 per bar. Shortening is refused if it would cut off events; resize/delete those events first. Existing onsets retain their eighth-note offsets when changing meter.
+
+To replace a chord, select it, adjust the wheels and audition with Drop, delete the original, then place the replacement. Wheel changes and Drop never automatically replace or overwrite a block.
 
 Each event stores actual pitches, start, duration and builder metadata. Subsequent builder changes never transpose placed events. Overlaps are supported; same-pitch overlaps within a lane sound/export as a continuous held note, while adjacent events retrigger. RH and LH use independent MIDI channels.
 
@@ -52,7 +56,23 @@ The native SF2 reader supports preset/instrument global/local zones, key and vel
 
 The fixed bottom transport offers return to start, Stop, Play/Pause, Loop, 30–300 BPM and metronome. Instrument selection stays directly above it; scroll the page on shorter displays to reach all editing controls. Audio time drives the cursor and all lanes. Pause silences voices and resumes held notes at the saved position. Stop/return/new/load/edit cancel scheduled sources. Backgrounding the page stops playback to avoid a burst of stale notes. 6/8 uses dotted-quarter metronome beats; other meters use quarter notes.
 
+### Playback synchronization and previews
+
+The scheduler uses `AudioContext.currentTime` with its existing 25 ms pump, 120 ms lookahead and a shared 40 ms scheduling lead at Play/resume. Lookahead queues sources; it does not advance the playhead. Chords, passing notes and metronome keep the same absolute source times, tempo and note lengths. Resumed held notes share one captured start time.
+
+The playhead maps `getOutputTimestamp()`'s audio/performance clock pair onto the current monotonic time, so it follows samples reaching the output rather than samples being rendered ahead. When that API is missing, invalid or throws, the fallback subtracts the browser's reported `baseLatency` and `outputLatency`. The two approaches are alternatives, avoiding double-counting device latency. No manually guessed audio/visual delay is applied.
+
+The master `DynamicsCompressorNode` adds its own graph delay. On first audio initialization, an offline impulse is rendered through an equivalent compressor at the live context's sample rate; the first nonzero sample measures this delay. The playhead accounts for that measurement separately. Chromium in this environment measured about **5.986 ms**; that number is an observed test result, not a hardcoded correction. If offline rendering is unavailable or fails, playback works without guessing at the unmeasured graph delay.
+
+Every animation frame derives position directly from the output clock and the scheduling anchor, without accumulating frame deltas. Chord leading edges now share the grid/bar origin. The viewport follows in small increments as the cursor reaches its right margin; a loop resets to the start. Pause freezes the estimated audible position and resume holds it until its new start reaches output. Natural playback completion waits for the audible final boundary. Stop resets immediately, and tempo edits retain the existing Stop/restart workflow with a fresh anchor.
+
+Chord previews use a separate voice group from arrangement playback. A tap plays a 0.8-second held chord followed by the instrument's normal release; Drop retains its 1.2-second hold. Preloaded samples use one render quantum of scheduling headroom for a responsive onset. New previews cancel earlier preview voices with a 5 ms de-click fade, without cutting arrangement voices or moving the cursor. Rapid taps during the initial SF2 download keep only the latest request. Stop, Pause, Play, edits and backgrounding cancel obsolete previews. Movement, resizing, scrolling, pointer cancellation and long-press deletion do not trigger previews; queued input timestamps also protect holds when the main thread delays the deletion timer.
+
+These are software clock estimates, not a measurement of sound leaving a physical speaker. Bluetooth/device buffers, inaccurate driver timestamps, missing latency APIs and display/compositor frame latency can leave residual offsets. SF2 instruments' intentional sample/attack envelopes also affect perceived attack and are preserved. Samples already handed to an output device cannot be recalled instantly on Stop/Pause. Physical Android speaker/Bluetooth checks are still required; no arbitrary correction is added to hide those limitations.
+
 ## Projects and MIDI
+
+The v0.2 refinements preserve existing chord generation, the project JSON format and MIDI export, and add the root-only Octave 1–8 quality.
 
 The top-right **Setup** gear contains project name, New, Save, Load, Export MIDI and the Instruments library. Autosave uses a separate `app-lab-chordmidi-v1` localStorage key. **Save Project** downloads a complete JSON backup; Load validates the format, settings, event bounds and MIDI pitches before asking to replace the project. New also asks before replacement. Invalid imports leave the current project intact. Storage/audio failures are reported with recovery instructions.
 
@@ -67,8 +87,10 @@ From repository root, with Node, Python Playwright and Chromium available:
 ```sh
 node chordmidi/test-core.cjs
 node chordmidi/test-audio.cjs
+node chordmidi/test-sync.cjs
 node chordmidi/test-instruments.cjs
 python chordmidi/test-browser.py
+python chordmidi/test-sync-browser.py
 python chordmidi/test-instruments-browser.py
 python tests/check_site.py
 node drumidi/test-core.cjs
@@ -78,7 +100,9 @@ python drumidi/test-browser.py
 
 Set `CHROMIUM_PATH` if Chromium is elsewhere. Browser checks route an HTTPS test origin to local files and load the real soundfont; they do not use a mock audio bank. Screenshots go to `/tmp/chordmidi-*.png`.
 
-The model suite checks all 12 keys, both modes, all qualities/degrees/inversions at three registers, explicit pitch and spelling examples, JSON validation/roundtrips, meter lengths and an independent MIDI decoder checking three tracks, preview text metadata, absence of Program Changes, channels, overlapping pitches, onsets and note durations. Browser checks exercise actual CDP touch gestures, mouse and keyboard, editing/scroll cancellation, independent lanes and fixed pitches, all meters, 8 bars, every GM preset's sample decoding, actual audio-clock scheduling, polyphony, passing notes, note-off/stop, pause/resume, looping/metronome, JSON/MIDI downloads, malformed imports, storage/audio failures, fullscreen, six viewport sizes and both hosting roots. The instrument suites independently verify the 12 category ranges, all 96 eligible programs, all 25 default GM names/numbers, exclusions, checkbox/dropdown synchronization, fallback and last-enabled protection, reload/new-project/session persistence, Restore Defaults, hidden eligible/excluded project previews, real selected-instrument SF2 playback, JSON name/program round trips and parsed three-track MIDI with preview text and no Program Changes. The Setup accordion is checked at 320, 360, 393 and 412 px widths. Gallery checks preserve the existing apps and navigation.
+The model suite checks Octave 1–8 across every key, mode, degree, hand and supported octave, rejects invalid inversions and checks spelled octave labels, pitch bounds, JSON and parsed MIDI. It also checks all 12 keys, both modes, all qualities/degrees/inversions at three registers, explicit pitch and spelling examples, JSON validation/roundtrips, meter lengths and an independent MIDI decoder checking three tracks, preview text metadata, absence of Program Changes, channels, overlapping pitches, onsets and note durations. Browser checks exercise actual CDP touch gestures, mouse and keyboard, editing/scroll cancellation, independent lanes and fixed pitches, all meters, 8 bars, every GM preset's sample decoding, actual audio-clock scheduling, polyphony, passing notes, note-off/stop, pause/resume, looping/metronome, JSON/MIDI downloads, malformed imports, storage/audio failures, fullscreen, six viewport sizes and both hosting roots. The instrument suites independently verify the 12 category ranges, all 96 eligible programs, all 25 default GM names/numbers, exclusions, checkbox/dropdown synchronization, fallback and last-enabled protection, reload/new-project/session persistence, Restore Defaults, hidden eligible/excluded project previews, real selected-instrument SF2 playback, JSON name/program round trips and parsed three-track MIDI with preview text and no Program Changes. The Setup accordion is checked at 320, 360, 393 and 412 px widths. Gallery checks preserve the existing apps and navigation.
+
+The synchronization suite adds deterministic checks at 30/60/120/137/300 BPM, all meters, eight bars and three loop cycles with independent simulated render/output clocks. It covers timestamp extrapolation, latency fallbacks, measured graph delay, audible pause/resume/end, tempo restart and latest-wins preview cancellation/voice isolation. The 320 px Chromium suite uses real SF2 samples, an actual offline compressor impulse, native and simulated device timestamps, animation frames and DOM geometry. It checks chord edges, beat/bar clicks, loop boundaries, incremental scrolling, cold/hot RH/LH taps, exact stored pitches/current instrument, paused cursor and JSON/MIDI preservation, gesture exclusions, Drop and manual replacement. Browser comparisons allow display-frame granularity; they do not certify hardware latency.
 
 Physical Android testing is still required for speaker/Bluetooth latency and sound quality, fast thumbwheel flicks, gesture feel under browser chrome, long presses versus OS menus, pinch/scroll behavior, fullscreen/system navigation, safe-area insets and file download/import integration. Browser emulation does not establish these hardware behaviors. No live GitHub Pages deployment is performed by this PR; `/small-apps/` asset and gallery routing are tested locally. Verify the published Pages URL after review/merge.
 

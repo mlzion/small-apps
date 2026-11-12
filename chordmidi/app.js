@@ -78,11 +78,7 @@
   const b = () => project.builders[activeLane];
   const current = () => project.events.find((e) => e.id === selected);
   function normalize() {
-    const q = D.qualities.find((q) => q.id === b().quality);
-    b().inversion = Math.min(
-      b().inversion,
-      (q.steps || q.intervals).length - 1,
-    );
+    b().inversion = Math.min(b().inversion, D.inversionCount(b().quality) - 1);
     project.passing.index = Math.min(
       project.passing.index,
       D.passingOptions(project).length - 1,
@@ -125,14 +121,7 @@
     {
       id: "inversion",
       name: "Inversion",
-      options: () =>
-        D.inversions.slice(
-          0,
-          (
-            D.qualities.find((q) => q.id === b().quality).steps ||
-            D.qualities.find((q) => q.id === b().quality).intervals
-          ).length,
-        ),
+      options: () => D.inversions.slice(0, D.inversionCount(b().quality)),
       value: () => b().inversion,
       set: (v) => (b().inversion = v),
     },
@@ -161,6 +150,7 @@
       lastWheel = 0;
     const move = (value) => {
       const n = conf.options().length;
+      if (n === 1) return;
       conf.set(((value % n) + n) % n);
       normalize();
       changed();
@@ -233,8 +223,8 @@
         const d = document.createElement("div");
         d.className = "wheel-option" + (offset === 0 ? " selected" : "");
         if (
-          n === 2 &&
-          ((i === 0 && offset === -1) || (i === 1 && offset === 1))
+          (n === 1 && offset !== 0) ||
+          (n === 2 && ((i === 0 && offset === -1) || (i === 1 && offset === 1)))
         ) {
           d.classList.add("blank");
           d.textContent = " ";
@@ -250,7 +240,8 @@
     $("chord-name").textContent =
       `${c.name} · ${D.inversions[b().inversion]} · Oct ${b().octave}`;
     $("chord-notes").textContent =
-      c.names.join(" – ") + `   /   MIDI ${c.pitches.join(", ")}`;
+      (b().quality === "octave" ? c.noteLabels : c.names).join(" – ") +
+      `   /   MIDI ${c.pitches.join(", ")}`;
     $("rh").setAttribute("aria-pressed", String(activeLane === 0));
     $("lh").setAttribute("aria-pressed", String(activeLane === 1));
     document
@@ -328,6 +319,7 @@
     renderBuilder();
     renderEvents();
     editButtons();
+    if (e.lane < 2) auditionChord(e.pitches, e.label);
   }
   function renderEvents() {
     document.querySelectorAll(".event").forEach((e) => e.remove());
@@ -336,7 +328,7 @@
       el.className = "event" + (e.id === selected ? " selected" : "");
       el.dataset.id = e.id;
       el.dataset.lane = e.lane;
-      el.style.left = e.start * 32 + 2 + "px";
+      el.style.left = e.start * 32 + "px";
       el.style.width = e.duration * 32 - 4 + "px";
       el.tabIndex = 0;
       el.setAttribute("role", "button");
@@ -477,6 +469,7 @@
       resize = !!e.target.closest(".resize");
     gesture = {
       id: e.pointerId,
+      downTime: e.timeStamp,
       x: e.clientX,
       y: e.clientY,
       lane,
@@ -547,6 +540,12 @@
     gesture = null;
     if (g.deleted || Math.abs($("timeline-scroll").scrollLeft - g.scroll) > 4)
       return;
+    // Input timestamps still distinguish a hold if a busy main thread delays
+    // the deletion timer until after pointerup is queued.
+    if (g.event && !g.moved && e.timeStamp - g.downTime >= 650) {
+      deleteEvent(g.event);
+      return;
+    }
     if (g.resize) {
       if (!g.moved) {
         selectEvent(g.event);
@@ -751,16 +750,27 @@
       transport();
     }
   }
-  $("drop").onclick = () =>
-    ready(() => {
-      const c = D.chord(project.key, project.mode, b());
-      audio.prepare(c.pitches, project.program);
-      const time = audio.context.currentTime + 0.04;
-      for (const pitch of c.pitches)
-        audio.note(pitch, time, 1.2, project.program);
-      say(`Audition: ${c.name}`);
-    });
+  async function auditionChord(pitches, label, duration = 0.8) {
+    if (!audio.font)
+      $("audio-status").textContent = "Loading SF2 instrument bank…";
+    try {
+      const played = await audio.audition(pitches, project.program, duration);
+      if (played) {
+        $("audio-status").textContent =
+          "TimGM6mb · SF2 ready · Instrument library in Setup";
+        say(`Audition: ${label}`);
+      }
+    } catch (error) {
+      say("Could not start audio: " + error.message + ". Try again.");
+      $("audio-status").textContent = "Audio unavailable · retry Drop or Play";
+    }
+  }
+  $("drop").onclick = () => {
+    const c = D.chord(project.key, project.mode, b());
+    auditionChord(c.pitches, c.name, 1.2);
+  };
   $("play").onclick = () => {
+    audio.cancelAudition();
     if (audio.running) {
       audio.pause();
       transport();
@@ -790,8 +800,9 @@
       cursor.style.left = pos + "px";
       if (audio.running) {
         const sc = $("timeline-scroll");
-        if (pos > sc.scrollLeft + sc.clientWidth - 20 || pos < sc.scrollLeft)
-          sc.scrollLeft = Math.max(0, pos - 30);
+        if (pos < sc.scrollLeft) sc.scrollLeft = Math.max(0, pos - 30);
+        else if (pos > sc.scrollLeft + sc.clientWidth - 20)
+          sc.scrollLeft = Math.max(0, pos - sc.clientWidth + 20);
       }
     } else cursor.style.display = "none";
     requestAnimationFrame(frame);
