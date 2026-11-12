@@ -15,3 +15,5 @@ Calculator regression checks cover arithmetic, sequential operations, replacing 
 Synth Lab audio, lesson, keyboard, touch, and display checks are documented in [synth-lab/README.md](../synth-lab/README.md). LaserBreak brings the gallery to ten cards and seven launch links. Its engine and mobile landscape checks are documented in [laserbreak/README.md](../laserbreak/README.md).
 
 DruMidi brings the gallery to eleven cards and eight launch links. See [drumidi/README.md](../drumidi/README.md) for pattern, arrangement, audio, MIDI, persistence, and portrait touch workflow checks.
+
+ChordMidi brings the gallery to twelve cards and nine launch links. See [chordmidi/README.md](../chordmidi/README.md) for music-model, real-SF2 audio, gesture, MIDI, persistence and portrait checks.

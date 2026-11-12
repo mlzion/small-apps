@@ -2,7 +2,7 @@
 
 Small ideas. Working experiments.
 
-A static gallery for browser games, audio tools, MIDI applications, and creative projects. Calculator, Breakout, Falling Blocks, D::FUZE, Celphonica, Synth Lab, LaserBreak, and DruMidi are available; Space Shooter, MIDI Lab, and Paint Studio are planned.
+A static gallery for browser games, audio tools, MIDI applications, and creative projects. Calculator, Breakout, Falling Blocks, D::FUZE, Celphonica, Synth Lab, LaserBreak, DruMidi, and ChordMidi are available; Space Shooter, MIDI Lab, and Paint Studio are planned.
 
 ## Running locally
 
@@ -45,3 +45,7 @@ See [laserbreak/README.md](laserbreak/README.md) for the Phase 1 gameplay test b
 ## DruMidi
 
 See [drumidi/README.md](drumidi/README.md) for the drum pattern editor, arrangement, MIDI and project files, kit licensing, and tests.
+
+## ChordMidi
+
+See [chordmidi/README.md](chordmidi/README.md) for the chord builder, three-lane arrangement, SF2 playback, project/MIDI files, soundfont licensing, and automated and Android checks.
