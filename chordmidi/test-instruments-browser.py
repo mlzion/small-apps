@@ -139,7 +139,7 @@ with sync_playwright() as pw:
     assert project()['program'] == 0 and 1 not in choices()
     page.locator('#restore-instruments').tap(); close_setup(); load(hidden)
     # Instrument chosen through the dropdown drives Drop and every arrangement lane.
-    page.evaluate('''()=>{window.played=[];const note=ChordAudio.prototype.note;ChordAudio.prototype.note=function(pitch,time,duration,program){played.push({pitch,time,duration,program});return note.call(this,pitch,time,duration,program);};}''')
+    page.evaluate('''()=>{window.played=[];const note=ChordAudio.prototype.note;ChordAudio.prototype.note=function(pitch,time,duration,program,...rest){played.push({pitch,time,duration,program});return note.call(this,pitch,time,duration,program,...rest);};}''')
     page.locator('#drop').tap(); page.wait_for_function('played.length>=3')
     assert page.evaluate('played.every(n=>n.program===1)')
     page.locator('#stop').tap(); page.evaluate('played=[]'); page.locator('#play').tap()

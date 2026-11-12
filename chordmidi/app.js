@@ -328,6 +328,7 @@
     renderBuilder();
     renderEvents();
     editButtons();
+    if (e.lane < 2) auditionChord(e.pitches, e.label);
   }
   function renderEvents() {
     document.querySelectorAll(".event").forEach((e) => e.remove());
@@ -336,7 +337,7 @@
       el.className = "event" + (e.id === selected ? " selected" : "");
       el.dataset.id = e.id;
       el.dataset.lane = e.lane;
-      el.style.left = e.start * 32 + 2 + "px";
+      el.style.left = e.start * 32 + "px";
       el.style.width = e.duration * 32 - 4 + "px";
       el.tabIndex = 0;
       el.setAttribute("role", "button");
@@ -477,6 +478,7 @@
       resize = !!e.target.closest(".resize");
     gesture = {
       id: e.pointerId,
+      downTime: e.timeStamp,
       x: e.clientX,
       y: e.clientY,
       lane,
@@ -547,6 +549,12 @@
     gesture = null;
     if (g.deleted || Math.abs($("timeline-scroll").scrollLeft - g.scroll) > 4)
       return;
+    // Input timestamps still distinguish a hold if a busy main thread delays
+    // the deletion timer until after pointerup is queued.
+    if (g.event && !g.moved && e.timeStamp - g.downTime >= 650) {
+      deleteEvent(g.event);
+      return;
+    }
     if (g.resize) {
       if (!g.moved) {
         selectEvent(g.event);
@@ -751,16 +759,27 @@
       transport();
     }
   }
-  $("drop").onclick = () =>
-    ready(() => {
-      const c = D.chord(project.key, project.mode, b());
-      audio.prepare(c.pitches, project.program);
-      const time = audio.context.currentTime + 0.04;
-      for (const pitch of c.pitches)
-        audio.note(pitch, time, 1.2, project.program);
-      say(`Audition: ${c.name}`);
-    });
+  async function auditionChord(pitches, label, duration = 0.8) {
+    if (!audio.font)
+      $("audio-status").textContent = "Loading SF2 instrument bank…";
+    try {
+      const played = await audio.audition(pitches, project.program, duration);
+      if (played) {
+        $("audio-status").textContent =
+          "TimGM6mb · SF2 ready · Instrument library in Setup";
+        say(`Audition: ${label}`);
+      }
+    } catch (error) {
+      say("Could not start audio: " + error.message + ". Try again.");
+      $("audio-status").textContent = "Audio unavailable · retry Drop or Play";
+    }
+  }
+  $("drop").onclick = () => {
+    const c = D.chord(project.key, project.mode, b());
+    auditionChord(c.pitches, c.name, 1.2);
+  };
   $("play").onclick = () => {
+    audio.cancelAudition();
     if (audio.running) {
       audio.pause();
       transport();
@@ -790,8 +809,9 @@
       cursor.style.left = pos + "px";
       if (audio.running) {
         const sc = $("timeline-scroll");
-        if (pos > sc.scrollLeft + sc.clientWidth - 20 || pos < sc.scrollLeft)
-          sc.scrollLeft = Math.max(0, pos - 30);
+        if (pos < sc.scrollLeft) sc.scrollLeft = Math.max(0, pos - 30);
+        else if (pos > sc.scrollLeft + sc.clientWidth - 20)
+          sc.scrollLeft = Math.max(0, pos - sc.clientWidth + 20);
       }
     } else cursor.style.display = "none";
     requestAnimationFrame(frame);
