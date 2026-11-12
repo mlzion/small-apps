@@ -1,41 +1,53 @@
-# DruMidi — Drum MIDI Creator, Phase 1
+# DruMidi — Phase 1.1
 
-A static, portrait-first acoustic drum sketchpad for App Lab. Launch `drumidi/` from the gallery. Serve the repository using any static HTTP server; there is no build, runtime dependency, account, or external audio service. All links and samples are relative, supporting both `/drumidi/` and GitHub Pages `/small-apps/drumidi/`.
+A static, portrait-first acoustic drum sketchpad for App Lab. Launch `drumidi/` from the gallery. Serve the repository using any static HTTP server; there is no build, runtime dependency, account, or external audio service. Relative paths support both `/drumidi/` and GitHub Pages `/small-apps/drumidi/`.
 
-## Working with patterns
+## Patterns and beat entry
 
-- P1–P8 share one configurable GM percussion list. Each has 1–4 bars in 4/4.
-- Select a drum/eighth-note cell, then toggle its eight 64th-note subdivisions below the grid. The blue cell dots show activity; small counts show multiple hits. Green subdivision buttons indicate notes. Bar tabs and arrows navigate the selected pattern.
-- Only the drum rows scroll. Subdivisions remain below them, with the rhythm display and transport anchored at the bottom.
-- Add Drum offers the remaining General MIDI percussion notes, 35–81. Initial rows include acoustic kick, snare, closed/open hats, ride, three toms, and crash.
-- Notes retain their individual velocity. New kicks/snares default to 106, hats/ride to 78, and other instruments to 94. Existing notes are never regenerated during navigation.
-- Reducing a pattern's length retains notes in the hidden bars. Increasing its length brings them back. Hidden notes do not play or export. A length change that would invalidate existing arrangement clips is rejected with an explanation.
+P1–P16 share one configurable GM percussion list. Each has 1–4 bars in 4/4 and a selectable color. Tap the compact pattern selector to choose one of sixteen slots. Select a drum/eighth-note cell, then toggle its eight 64th-note subdivisions below the grid. Blue dots show activity; small counts show multiple hits. Green subdivision buttons indicate notes. Bar tabs and arrows navigate the selected pattern. Only the drum rows scroll; subdivisions and the bottom transport remain visible.
+
+Long press the current pattern selector, a pattern in its picker, or a library block to open pattern actions. The adjacent **⋯** button provides the same actions without long press (keyboard and screen-reader accessible). The arrangement library has its own **⋯** for the selected library pattern.
+
+- **Copy** snapshots the complete pattern, including its length, notes and velocities. Subsequent source edits do not change the clipboard.
+- **Paste** is enabled only when a copied pattern is available and the destination contains **zero notes**, regardless of its length. Muted notes and notes in hidden bars count as notes. Populated destinations disable Paste and explain that Delete must be used first. Paste copies the contents and length while retaining the destination ID, color and arrangement clips. Every clip is revalidated before confirmation; overlaps or invalid boundaries reject the paste without changing the session.
+- **Delete** removes every note (including hidden bars) and resets the pattern to **one bar**. Its ID, color and all arrangement clips remain. Confirmation is required if the pattern contains notes **or** is referenced by any clip, even if already empty; an empty, unreferenced pattern resets without a prompt. The complete arrangement is revalidated before applying the change; invalid placement rejects the operation without changing the session.
+- **Change Color** opens a compact named palette: blue, orange, green, purple, yellow, pink, teal and red. The selector, pattern picker, library blocks and all referenced arrangement clips use the stored color. Text labels keep patterns identifiable independently of color.
+
+The copy clipboard lasts while the page remains open and is cleared on reload or project load/new. It is not part of a project file. Color choices and all pattern contents are saved in the project.
+
+Add Drum offers the remaining General MIDI percussion notes, 35–81. Initial rows include acoustic kick, snare, closed/open hats, ride, three toms, and crash. New kicks/snares default to velocity 106, hats/ride to 78, and other instruments to 94. Each note stores its own velocity. Reducing a pattern's length retains hidden notes for later; hidden bars do not play or export. Length changes that invalidate arrangement clips are rejected.
+
+## Global drum muting
+
+Tap a drum's icon/name to toggle its global mute. A muted drum has a dimmed label/icon, a **MUTE** badge, and a pressed state announced by assistive technology. This does not change the selected grid cell or subdivision group. Editing notes continues normally while muted.
+
+Mutes apply to all sixteen patterns and all three lanes. They take effect while playing without resetting the loop: active and already-scheduled sources for the drum stop immediately, and future hits are skipped. Unmuting restores future hits at their original positions. Note positions/velocities remain intact. Muted instruments are excluded from both pattern and arrangement MIDI exports and from the audible rhythm visualization. Mute states survive automatic saves and JSON downloads/imports. Old projects migrate with every drum unmuted.
 
 ## Arrangement and transport
 
-The timeline is 1–8 bars, with independent **A — Backbone** and **B — Fills** lanes. Drag copies from the library to whole bars, or tap a library pattern and then an empty bar. Each clip spans the stored pattern's actual length. Clips on the same lane cannot overlap or extend past the timeline; gaps remain silent.
+The timeline is 1–8 bars, with independent **A — Backbone**, **B — Fills**, and **C — Cymbals/Percussion** lanes. All lanes accept any pattern and play simultaneously. Drag copies from the library to whole bars, or tap a library pattern and then an empty bar. Each clip spans the pattern's actual length. Clips on the same lane cannot overlap or extend past the timeline; gaps remain silent. Clips on different lanes may overlap freely.
 
-Drag an existing clip to move it. Tap, long press, or right-click a clip for explicit Move, Copy, and Delete actions, with lane/start-bar selectors. These controls also work with keyboard navigation. Every instance references the same stored pattern; edits update every instance. There is no implicit repetition between clips.
+Drag an existing clip to move it. Tap, long press, or right-click a clip for explicit Move, Copy, and Delete actions, with lane/start-bar selectors. Every instance references the stored pattern, so editing or pasting updates all instances.
 
-Play/Pause, Stop, and BPM apply to the active page. Playback loops automatically. Switching pages/patterns, changing composition data, or hiding the browser tab stops/reset playback. Pause retains the playback position. BPM changes restart a playing loop at the new tempo. Browser background playback is intentionally stopped because mobile browsers throttle scheduling.
+The single **Start/Stop** button applies to the active page. Start always begins at the start of the selected pattern or arrangement; playback loops automatically. Stop immediately ends all active/scheduled sources and resets the playhead. Stop also cancels playback waiting for sample initialization. There is no Pause/resume. Switching pages/patterns, changing composition data, or hiding the browser tab stops/reset playback. BPM changes restart a playing loop at the new tempo. Muting is the exception: it updates live without a restart.
 
-The rhythm display is a visualization: faint lines at 64th resolution, blue lane A hits, orange lane B hits, a fixed red playhead, and scrolling notes. One bar spans its width; loop boundaries wrap. It cannot edit notes.
+The visualization retains faint 64th timing lines, a fixed red playhead, scrolling dots and A/B/C lane markers. One bar spans its width; loop boundaries wrap. It is not an editor.
 
 ## Sound and licensing
 
-Native Web Audio plays one consistent **FluidR3 GM standard acoustic kit**. The AudioContext is created and resumed from the Play gesture. Active instruments are fetched and decoded before playback; additional instruments load on the next Play. Velocity controls sample gain. Closed/pedal hats choke open hats.
+Native Web Audio plays the same **FluidR3 GM standard acoustic kit** as Phase 1. The AudioContext is created and resumed from Start. Active instruments are fetched and decoded before playback; newly added instruments load on the next Start. Velocity controls sample gain. Closed/pedal hats choke open hats.
 
-The scheduler runs every 25 ms, scheduling 120 ms ahead using absolute AudioContext times. A 64th is `60 / BPM / 16` seconds. Graphics do not drive note timing. Stale events after a long foreground stall are skipped rather than emitted in a burst.
+The existing scheduler runs every 25 ms, scheduling 120 ms ahead using absolute AudioContext times. A 64th is `60 / BPM / 16` seconds. Graphics do not drive note timing. Stale events after a long foreground stall are skipped rather than emitted in a burst. Muting filters sources at scheduling time and cancels sources already in the lookahead window.
 
-FluidR3 is MIT licensed. We investigated the WebAudioFont player (GPLv3) and use our own player. The separate **WebAudioFont data repository is MIT licensed**; the 47 bundled MP3s are extracted, unmodified FluidR3 sample payloads from that repository, about 1 MB total. The original FluidR3 and data-packaging notices are preserved in [samples/LICENSE.txt](samples/LICENSE.txt). See [samples/SOURCE.md](samples/SOURCE.md) for immutable upstream commit, extraction/tuning recipe, and verification sources. [samples/manifest.json](samples/manifest.json) records SHA-256 hashes. No upstream JavaScript is executed or bundled. No samples are embedded in exported MIDI.
+FluidR3 is MIT licensed. The separate WebAudioFont **data repository is MIT licensed**; the 47 bundled MP3s are unmodified extracted FluidR3 payloads, about 1 MB total. Its GPL player is not used. Original notices remain in [samples/LICENSE.txt](samples/LICENSE.txt); [samples/SOURCE.md](samples/SOURCE.md) records the immutable upstream commit and extraction/tuning recipe; [samples/manifest.json](samples/manifest.json) records SHA-256 hashes. Phase 1.1 does not change these assets. No samples are embedded in MIDI.
 
-## Saving, importing, and MIDI
+## Project compatibility and MIDI
 
-Project settings (gear) provides **Save Project**, **Load Project**, and **New Project**. Every edit automatically saves `app-lab-drumidi-v1` in localStorage. Refreshing restores the complete project. Storage failures are reported with a reminder to download a JSON backup.
+Project settings provides **Save Project**, **Load Project**, and **New Project**. Every edit automatically saves under the existing `app-lab-drumidi-v1` localStorage key to find old sessions. New data uses `format: "drumidi"`, **version 2**. The JSON contains BPM, sixteen patterns/lengths/colors/notes/velocities, drum assignments/default velocities/mutes, timeline length, and clips on three lanes. Notes use integer `step` positions 0–255, in 64ths; clip starts use zero-based bars.
 
-A portable JSON includes `format: "drumidi"`, `version: 1`, BPM, all eight patterns/lengths/notes/velocities, instrument names/GM assignments/default velocities, arrangement length, and clips on both lanes. Notes use integer `step` positions (0–255), measured in 64ths from the pattern start. Clip starts use zero-based bars. The importer validates shape, version, ranges, drum references, duplicate notes, clip IDs, overlap, and bounds. Imports are normalized into known fields. Invalid files leave the current session intact. Files over 16 MB are rejected. A valid import and New Project require confirmation before replacement.
+Version 1 projects (eight patterns/two lanes) are validated and automatically migrated on localStorage restore and JSON import. Their original patterns, notes, velocities, lengths, instruments, clips, BPM and timeline remain intact; P9–P16 and Lane C start empty, default colors are assigned, and instruments start unmuted. The migrated local session is written back as v2. JSON imports/new projects require replacement confirmation. Malformed versions, counts, colors, mute types, drum references, duplicate notes/clip IDs, overlap, and bounds are rejected without replacing the existing session. Files over 32 MB are rejected. Storage failures leave manual JSON downloads available.
 
-MIDI export produces Standard MIDI File **type 1**, **960 PPQ**, percussion **channel 10**, a tempo/time-signature conductor track, and either one selected-pattern note track or two separate arrangement lane tracks. A 64th is exactly **60 ticks**; note-offs follow 30 ticks later. Simultaneous events, individual velocities, silent gaps, and complete loop length (end-of-track timestamps) are preserved. MIDI uses General MIDI note numbers and requires only the DAW's own percussion instrument.
+MIDI remains Standard MIDI File **type 1**, **960 PPQ**, percussion **channel 10**. A pattern export includes the conductor and selected-pattern track. Arrangement export always includes **four tracks**: conductor (tempo and 4/4), Lane A, Lane B, and Lane C, including empty lanes. A 64th is exactly **60 ticks**; note-offs follow 30 ticks later. Simultaneous events, individual velocities, silent gaps, complete end-of-track lengths, and all unmuted note mappings are preserved. The DAW supplies its own percussion instrument.
 
 ## Verification
 
@@ -48,15 +60,12 @@ python drumidi/test-browser.py
 python tests/check_site.py
 ```
 
-Browser checks require Python Playwright and Chromium (`CHROMIUM_PATH` overrides `/usr/bin/chromium`). The tests intercept a local HTTPS origin to serve repository files, including real sample decoding, without an external server.
+Browser checks require Python Playwright and Chromium (`CHROMIUM_PATH` overrides `/usr/bin/chromium`). A local HTTPS origin serves real repository files and samples through route interception.
 
-- Core: independent SMF parser verifies 64ths, simultaneous notes, velocity, tempo, channel 10, conductor/two-lane track structure, silent gaps and end-of-track lengths; JSON roundtrip/validation; shared references; collision/bounds checks; retained hidden notes; SHA-256 for all 47 samples.
-- Audio clock: deterministic simultaneous/64th scheduling, loop seam, gain/tuning, pause/resume/reset, hi-hat choking and stall recovery.
-- Browser: creates a four-bar pattern with all eight subdivisions and a final 64th hit, additional mixed-length patterns, and independent lanes; touch placement/actions/long press and desktop drag/move; full arrangement loop and Web Audio scheduling; pause/resume/stop/page reset; actual MIDI/JSON downloads; project replacement confirmation and invalid import; reload persistence; all 47 sample decodes; six widths (320–1440); gallery launch at both hosting roots; no browser errors or missing assets. Screenshots are written to `/tmp/drumidi-*.png`.
-- Gallery: existing responsive, no-JavaScript, calculator, launch/link and asset regressions, with collection counts updated to 11 apps / 8 available.
+Core tests independently decode MIDI to check 64ths, simultaneous notes, velocity, tempo, channel, all three percussion tracks and conductor, gaps and loop lengths. They cover all sixteen slots, project migration/roundtrip/validation, independent copies, transactional paste and clip constraints, destination color retention, muted MIDI, preserved notes, and all 47 asset hashes. Audio clock tests cover loop seams, restart/reset, live mutes and cancellation, velocity/tuning, hat choking, and stall recovery.
 
-## Phase 1 limits
+The browser workflow covers four-bar editing and mixed lengths; all sixteen selectors; colors and referenced clips; empty-only paste; pattern deletion/reset with conditional accept/cancel; retained clip references; blocked paste; mobile long press on selector/picker/library; three-lane playback; desktop clip dragging and touch actions; actual full looping/64ths/gain; Start/Stop/page reset; MIDI and JSON downloads; v1 migration from storage and files; v2 color/mute roundtrip; refresh; live mute/unmute; audio/storage errors; six widths from 320–1440; and both hosting roots. Screenshots are written to `/tmp/drumidi-*.png`. Existing gallery/calculator checks remain unchanged.
 
-4/4 only, 1–4 bar patterns, two lanes, 1–8 bar arrangement, integer BPM 30–300, a single acoustic kit. Touch uses tap-to-place and explicit clip actions; native drag is provided for desktop. No whole-song arrangement, undo, velocity-curve UI, audio export, MIDI import, or offline service worker. Composition edits stop playback. The future velocity editor can operate on an eighth-note group or entire pattern with slope/Bézier curves; the existing per-note velocities support that extension without changing timing data.
+## Limits
 
-Automated touch checks emulate mobile Chromium. Physical Android devices, device-speaker listening, and importing into a running REAPER instance require manual acceptance checks; binary MIDI timing/mapping/structure are verified independently here. MP3 samples use one recorded velocity layer with velocity-sensitive gain, rather than multiple sample layers.
+4/4 only, 1–4 bar patterns, three lanes, 1–8 bar arrangement, integer BPM 30–300, and one kit with velocity-sensitive gain from a single sample layer. No whole-song arrangement, undo, velocity-curve UI, audio export, MIDI import, or offline service worker. Composition edits stop playback; mutes update live. Physical Android listening and importing into a running REAPER instance remain manual acceptance checks; touch is emulated in Chromium and MIDI is independently decoded in tests.

@@ -13,13 +13,26 @@
     library = "P1",
     clipTarget = null,
     busy = false,
-    storageWarning = "";
+    storageWarning = "",
+    clipboard = null,
+    patternTarget = 0;
   const say = (message) => {
     $("status").textContent = message;
   };
   try {
     const raw = localStorage.getItem(KEY);
-    if (raw) project = D.validate(JSON.parse(raw));
+    if (raw) {
+      const saved = JSON.parse(raw);
+      project = D.validate(saved);
+      if (saved.version === 1) {
+        try {
+          localStorage.setItem(KEY, JSON.stringify(project));
+        } catch {
+          storageWarning =
+            "Project migrated, but automatic saving is unavailable. Use Save Project to download a JSON backup.";
+        }
+      }
+    }
   } catch (e) {
     storageWarning =
       "Could not restore automatic save: " +
@@ -47,19 +60,21 @@
   const active = () => project.patterns[selected];
   const bars = () =>
     page === "pattern" ? active().bars : project.arrangement.bars;
-  const allEvents = () => D.events(project, page, selected);
+  const allEvents = (includeMuted = false) =>
+    D.events(project, page, selected, includeMuted);
+  const laneLetter = (lane) => String.fromCharCode(65 + lane);
+  const color = (p) => D.palette.find((c) => c.id === p.color).hex;
   function transport() {
-    // Keep the tapped icon attached when a BPM input blurs during a Play gesture.
-    if ($("play").dataset.playing !== String(audio.running)) {
-      $("play").innerHTML = audio.running
-        ? '<svg viewBox="0 0 24 28" aria-hidden="true"><path d="M4 2h6v24H4zm10 0h6v24h-6z"/></svg>'
-        : '<svg viewBox="0 0 24 28" aria-hidden="true"><path d="M3 1v26l21-13z"/></svg>';
-      $("play").dataset.playing = String(audio.running);
+    const isPlaying = audio.running || busy;
+    if ($("play").dataset.playing !== String(isPlaying)) {
+      $("play").textContent = isPlaying ? "■ Stop" : "▷ Start";
+      $("play").dataset.playing = String(isPlaying);
     }
-    $("play").setAttribute("aria-label", audio.running ? "Pause" : "Play");
+    $("play").setAttribute("aria-label", isPlaying ? "Stop" : "Start");
+    $("play").setAttribute("aria-pressed", String(isPlaying));
     $("bpm").value = project.bpm;
     $("playback-label").textContent =
-      page === "pattern" ? active().id : "A + B · Arrangement";
+      page === "pattern" ? active().id : "A + B + C · Arrangement";
     $("playback-meta").textContent =
       `${lengthText(bars())} · ${project.bpm} BPM`;
   }
@@ -97,8 +112,184 @@
       : '<ellipse cx="16" cy="7" rx="12" ry="4" fill="none" stroke="currentColor" stroke-width="2"/><path d="M4 7v17q12 8 24 0V7M9 13v9m14-9v9m-7-7v10" fill="none" stroke="currentColor" stroke-width="2"/>';
     return svg;
   }
+  function longPress(target, action) {
+    let timer,
+      x,
+      y,
+      held = false;
+    const cancel = () => {
+      clearTimeout(timer);
+      timer = null;
+    };
+    target.addEventListener("pointerdown", (e) => {
+      if (e.button !== 0) return;
+      held = false;
+      x = e.clientX;
+      y = e.clientY;
+      timer = setTimeout(() => {
+        held = true;
+        action();
+      }, 550);
+    });
+    target.addEventListener("pointermove", (e) => {
+      if (Math.abs(e.clientX - x) > 8 || Math.abs(e.clientY - y) > 8) cancel();
+    });
+    ["pointerup", "pointercancel", "dragstart"].forEach((type) =>
+      target.addEventListener(type, cancel),
+    );
+    target.addEventListener(
+      "click",
+      (e) => {
+        if (held) {
+          held = false;
+          e.preventDefault();
+          e.stopImmediatePropagation();
+        }
+      },
+      true,
+    );
+    target.addEventListener("contextmenu", (e) => {
+      e.preventDefault();
+      cancel();
+      held = true;
+      action();
+    });
+  }
+  function updatePasteAvailability() {
+    const empty = D.isEmptyPattern(project.patterns[patternTarget]);
+    $("paste-pattern").disabled = !clipboard || !empty;
+    $("paste-explanation").textContent = !empty
+      ? "Paste is available only for empty patterns (zero notes). Delete this pattern first to paste."
+      : !clipboard
+        ? "Copy a pattern to enable Paste. An empty pattern has zero notes, regardless of its length."
+        : "Destination is empty. Paste will retain its ID, color and arrangement clips.";
+  }
+  function openPatternMenu(index) {
+    if ($("pattern-dialog").open) return;
+    $("pattern-picker").close();
+    patternTarget = index;
+    const p = project.patterns[index];
+    $("pattern-title").textContent = `${p.id} · Pattern actions`;
+    updatePasteAvailability();
+    $("pattern-message").textContent = clipboard
+      ? `Clipboard: ${clipboard.id}, ${lengthText(clipboard.bars)}`
+      : "Copy a pattern to enable Paste.";
+    $("color-palette").hidden = true;
+    $("change-color").setAttribute("aria-expanded", "false");
+    $("color-palette").replaceChildren(
+      ...D.palette.map((c) => {
+        const b = button(
+          c.name,
+          () => {
+            project.patterns[patternTarget].color = c.id;
+            changed(`${p.id} color saved`);
+            for (const child of $("color-palette").children)
+              child.setAttribute(
+                "aria-pressed",
+                String(child.dataset.color === c.id),
+              );
+          },
+          "color-choice",
+        );
+        b.style.setProperty("--pattern-color", c.hex);
+        b.dataset.color = c.id;
+        b.setAttribute("aria-pressed", String(p.color === c.id));
+        return b;
+      }),
+    );
+    $("pattern-dialog").showModal();
+  }
+  $("copy-pattern").onclick = () => {
+    clipboard = D.copyPattern(project.patterns[patternTarget]);
+    updatePasteAvailability();
+    $("pattern-message").textContent =
+      `Copied ${clipboard.id}, including length, notes and velocities.`;
+  };
+  $("paste-pattern").onclick = () => {
+    if (!clipboard) return;
+    let candidate;
+    try {
+      candidate = D.pastePattern(project, patternTarget, clipboard);
+    } catch {
+      $("pattern-message").textContent =
+        "Cannot paste: pattern length would overlap clips or extend past the timeline. Move or remove those clips first.";
+      return;
+    }
+    if (
+      !confirm(
+        `Replace ${project.patterns[patternTarget].id} with the copied pattern? Its color and arrangement references will be retained.`,
+      )
+    )
+      return;
+    project = candidate;
+    bar = Math.min(bar, active().bars - 1);
+    $("pattern-dialog").close();
+    changed("Pattern pasted · Destination color retained");
+  };
+  $("delete-pattern").onclick = () => {
+    const p = project.patterns[patternTarget];
+    let candidate;
+    try {
+      candidate = D.deletePattern(project, patternTarget);
+    } catch {
+      $("pattern-message").textContent =
+        "Cannot delete: the resulting arrangement would contain overlaps or invalid boundaries.";
+      return;
+    }
+    const referenced = project.arrangement.lanes.some((lane) =>
+      lane.some((c) => c.pattern === p.id),
+    );
+    if (
+      (!D.isEmptyPattern(p) || referenced) &&
+      !confirm(
+        `Delete all notes in ${p.id} and reset it to one bar? Its ID, color and arrangement clips will be retained.`,
+      )
+    )
+      return;
+    project = candidate;
+    bar = Math.min(bar, active().bars - 1);
+    $("pattern-dialog").close();
+    changed(`${p.id} deleted · Reset to one bar · Clips retained`);
+  };
+  $("change-color").onclick = () => {
+    $("color-palette").hidden = !$("color-palette").hidden;
+    $("change-color").setAttribute(
+      "aria-expanded",
+      String(!$("color-palette").hidden),
+    );
+  };
+  function toggleMute(midi) {
+    const d = project.drums.find((d) => d.midi === midi);
+    d.muted = !d.muted;
+    audio.setMuted(project.drums);
+    persist();
+    render();
+    $("drum-grid")
+      .querySelector(`[data-midi="${midi}"]`)
+      .focus({ preventScroll: true });
+    say(`${d.name} ${d.muted ? "muted" : "unmuted"} globally · Notes retained`);
+  }
+
   function renderPattern() {
-    $("pattern").value = selected;
+    $("pattern").textContent = active().id + " ▾";
+    $("pattern").style.setProperty("--pattern-color", color(active()));
+    $("pattern").setAttribute("aria-label", `Pattern ${active().id}`);
+    $("pattern-options").replaceChildren(
+      ...project.patterns.map((p, i) => {
+        const b = button(
+          p.id,
+          () => {
+            selectPattern(i);
+            $("pattern-picker").close();
+          },
+          "pattern-option",
+        );
+        b.style.setProperty("--pattern-color", color(p));
+        b.setAttribute("aria-pressed", String(i === selected));
+        longPress(b, () => openPatternMenu(i));
+        return b;
+      }),
+    );
     $("length").value = active().bars;
     $("bars").replaceChildren();
     for (let i = 0; i < active().bars; i++) {
@@ -116,7 +307,16 @@
     grid.replaceChildren();
     for (const d of project.drums) {
       const row = el("div", "drum-row"),
-        label = el("div", "drum-name" + (drum === d.midi ? " selected" : ""));
+        label = button(
+          "",
+          () => toggleMute(d.midi),
+          "drum-name" +
+            (drum === d.midi ? " selected" : "") +
+            (d.muted ? " muted" : ""),
+        );
+      label.dataset.midi = d.midi;
+      label.setAttribute("aria-label", `Mute ${d.name}`);
+      label.setAttribute("aria-pressed", String(d.muted));
       label.append(
         icon(d.midi),
         el(
@@ -128,7 +328,8 @@
             .replace("Open Hi-hat", "Open hat"),
         ),
       );
-      label.title = `GM ${d.midi} · Default velocity ${d.velocity}`;
+      if (d.muted) label.append(el("small", "mute-indicator", "MUTE"));
+      label.title = `GM ${d.midi} · Default velocity ${d.velocity} · ${d.muted ? "Muted: tap to unmute" : "Tap to mute"}`;
       row.append(label);
       const cells = el("div", "cells");
       for (let i = 0; i < 8; i++) {
@@ -220,6 +421,8 @@
       b.append(el("strong", "", p.id), el("small", "", lengthText(p.bars)));
       b.setAttribute("aria-label", `${p.id}, ${lengthText(p.bars)}`);
       b.setAttribute("aria-pressed", String(library === p.id));
+      b.style.setProperty("--pattern-color", color(p));
+      longPress(b, () => openPatternMenu(project.patterns.indexOf(p)));
       drag(b, { pattern: p.id });
       $("library").append(b);
     }
@@ -232,11 +435,11 @@
       ruler.append(el("span", "", i + 1));
     timeline.append(ruler);
     project.arrangement.lanes.forEach((clips, lane) => {
-      const row = el("div", "lane" + (lane ? " lane-b" : ""));
-      row.append(el("span", "lane-label", lane ? "B" : "A"));
+      const row = el("div", "lane lane-" + laneLetter(lane).toLowerCase());
+      row.append(el("span", "lane-label", laneLetter(lane)));
       row.setAttribute(
         "aria-label",
-        lane ? "Lane B — Fills" : "Lane A — Backbone",
+        `Lane ${laneLetter(lane)} — ${D.laneNames[lane]}`,
       );
       for (let i = 0; i < project.arrangement.bars; i++) {
         const b = button(
@@ -247,7 +450,7 @@
         b.style.gridColumn = i + 2;
         b.setAttribute(
           "aria-label",
-          `Place ${library} in lane ${lane ? "B" : "A"}, bar ${i + 1}`,
+          `Place ${library} in lane ${laneLetter(lane)}, bar ${i + 1}`,
         );
         row.append(b);
       }
@@ -255,10 +458,11 @@
         const p = project.patterns.find((p) => p.id === c.pattern),
           b = button("", () => openClip(c, lane), "clip");
         b.style.gridColumn = `${c.start + 2} / span ${p.bars}`;
+        b.style.setProperty("--pattern-color", color(p));
         b.append(el("strong", "", p.id), el("small", "", lengthText(p.bars)));
         b.setAttribute(
           "aria-label",
-          `${p.id}, lane ${lane ? "B" : "A"}, bar ${c.start + 1}, ${lengthText(p.bars)}. Clip actions`,
+          `${p.id}, lane ${laneLetter(lane)}, bar ${c.start + 1}, ${lengthText(p.bars)}. Clip actions`,
         );
         drag(b, { id: c.id, pattern: c.pattern });
         b.addEventListener("contextmenu", (e) => {
@@ -309,7 +513,7 @@
     });
   }
   function locate(id) {
-    for (let lane = 0; lane < 2; lane++) {
+    for (let lane = 0; lane < 3; lane++) {
       const clip = project.arrangement.lanes[lane].find((c) => c.id === id);
       if (clip) return { clip, lane };
     }
@@ -343,7 +547,7 @@
       start,
     });
     changed(
-      `${data.pattern} ${existing && !copy ? "moved" : "placed"} in lane ${lane ? "B" : "A"}, bar ${start + 1}`,
+      `${data.pattern} ${existing && !copy ? "moved" : "placed"} in lane ${laneLetter(lane)}, bar ${start + 1}`,
     );
     return true;
   }
@@ -369,21 +573,20 @@
     cachedEvents = allEvents();
   }
   async function play() {
-    if (audio.running) {
-      audio.pause();
-      transport();
-      say("Paused · Press Play to resume");
+    if (audio.running || busy) {
+      stop();
+      say("Stopped · Reset to start");
       return;
     }
-    if (busy) return;
     busy = true;
-    $("play").disabled = true;
+    transport();
+    audio.setMuted(project.drums);
     const token = ++audio.token;
     say("Loading acoustic kit…");
     try {
       await audio.init(project.drums);
       if (token !== audio.token) return;
-      audio.start(allEvents(), bars(), project.bpm);
+      audio.start(allEvents(true), bars(), project.bpm);
       transport();
       say("Playing · Loop on");
     } catch (e) {
@@ -392,6 +595,7 @@
       if (token === audio.token) {
         busy = false;
         $("play").disabled = false;
+        transport();
       }
     }
   }
@@ -408,7 +612,9 @@
     render();
     say(
       "Stopped · " +
-        (page === "pattern" ? "Selected pattern" : "Both arrangement lanes"),
+        (page === "pattern"
+          ? "Selected pattern"
+          : "All three arrangement lanes"),
     );
   }
   function download(data, name, type) {
@@ -421,19 +627,24 @@
     a.remove();
     setTimeout(() => URL.revokeObjectURL(url), 1000);
   }
-  $("pattern").append(...project.patterns.map((p, i) => option(i, p.id)));
+
   $("length").append(...[1, 2, 3, 4].map((n) => option(n, lengthText(n))));
   $("arrangement-length").append(
     ...[1, 2, 3, 4, 5, 6, 7, 8].map((n) => option(n, lengthText(n))),
   );
   $("pattern-tab").onclick = () => setPage("pattern");
   $("arrangement-tab").onclick = () => setPage("arrangement");
-  $("pattern").onchange = (e) => {
+  function selectPattern(index) {
     stop();
-    selected = +e.target.value;
+    selected = index;
     bar = 0;
     render();
-  };
+  }
+  $("pattern").onclick = () => $("pattern-picker").showModal();
+  longPress($("pattern"), () => openPatternMenu(selected));
+  $("pattern-menu").onclick = () => openPatternMenu(selected);
+  $("library-menu").onclick = () =>
+    openPatternMenu(project.patterns.findIndex((p) => p.id === library));
   $("length").onchange = (e) => {
     const previous = active().bars;
     active().bars = +e.target.value;
@@ -484,17 +695,13 @@
   $("confirm-drum").onclick = () => {
     const d = D.catalog.find((d) => d.midi === +$("drum-choice").value);
     if (!d) return;
-    project.drums.push({ ...d });
+    project.drums.push({ ...d, muted: false });
     drum = d.midi;
     $("drum-dialog").close();
     changed(`${d.name} added`);
     $("drum-grid").scrollTop = $("drum-grid").scrollHeight;
   };
   $("play").onclick = play;
-  $("stop").onclick = () => {
-    stop();
-    say("Stopped · Reset to start");
-  };
   function bpm(value) {
     const n = Math.round(Number(value));
     if (!Number.isFinite(n) || n < 30 || n > 300) {
@@ -538,8 +745,8 @@
     e.target.value = "";
     if (!file) return;
     try {
-      if (file.size > 16 * 1024 * 1024)
-        throw new Error("Project file is too large (maximum 16 MB).");
+      if (file.size > 32 * 1024 * 1024)
+        throw new Error("Project file is too large (maximum 32 MB).");
       const candidate = D.validate(JSON.parse(await file.text()));
       if (
         !confirm(
@@ -549,6 +756,7 @@
         return;
       stop();
       project = candidate;
+      clipboard = null;
       selected = bar = position = 0;
       drum = project.drums[0].midi;
       $("project-dialog").close();
@@ -566,6 +774,7 @@
       )
     )
       return;
+    clipboard = null;
     project = D.fresh();
     selected = bar = position = 0;
     drum = 35;
@@ -627,13 +836,14 @@
       pixel = usable / 64,
       head = left + usable * 0.47;
     ctx.font = "bold 11px system-ui";
-    for (let lane = 0; lane < 2; lane++) {
-      ctx.fillStyle = lane ? "#a75e13" : "#057deb";
+    for (let lane = 0; lane < 3; lane++) {
+      const laneY = h * (0.12 + lane * 0.29);
+      ctx.fillStyle = ["#057deb", "#a75e13", "#23854e"][lane];
       ctx.beginPath();
-      ctx.roundRect(0, lane ? h * 0.63 : h * 0.27, 23, 22, 4);
+      ctx.roundRect(0, laneY, 23, 22, 4);
       ctx.fill();
       ctx.fillStyle = "#fff";
-      ctx.fillText(lane ? "B" : "A", 7, (lane ? h * 0.63 : h * 0.27) + 15);
+      ctx.fillText(laneLetter(lane), 7, laneY + 15);
     }
     ctx.save();
     ctx.beginPath();
@@ -664,8 +874,8 @@
         const x = head + (note.step + loop * total - current) * pixel;
         if (x < left || x > right) continue;
         const index = project.drums.findIndex((d) => d.midi === note.drum),
-          y = (note.lane ? h * 0.69 : h * 0.23) + (index % 5) * h * 0.052;
-        ctx.fillStyle = note.lane ? "#ffb75c" : "#22b7f4";
+          y = h * (0.16 + note.lane * 0.29) + (index % 5) * h * 0.035;
+        ctx.fillStyle = ["#22b7f4", "#ffb75c", "#68df93"][note.lane];
         ctx.beginPath();
         ctx.arc(x, y, 2.4 + note.velocity / 127, 0, Math.PI * 2);
         ctx.fill();

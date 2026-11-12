@@ -9,7 +9,7 @@
     <meta name="theme-color" content="#0b0f15" />
     <meta
       name="description"
-      content="DruMidi: compose acoustic drum patterns, arrange two lanes, and export precise General MIDI."
+      content="DruMidi: compose acoustic drum patterns, arrange three lanes, and export precise General MIDI."
     />
     <title>DruMidi — Drum MIDI Creator | App Lab</title>
     <link rel="icon" href="../assets/favicon.svg" type="image/svg+xml" />
@@ -55,7 +55,21 @@
           <div class="pattern-toolbar">
             <label
               >Pattern
-              <select id="pattern" aria-label="Pattern"></select></label
+              <button
+                id="pattern"
+                type="button"
+                aria-label="Pattern"
+                aria-haspopup="dialog"
+              >
+                P1 ▾</button
+              ><button
+                id="pattern-menu"
+                type="button"
+                aria-label="Pattern actions"
+                aria-haspopup="dialog"
+              >
+                ⋯
+              </button></label
             ><label
               >Length
               <select id="length" aria-label="Pattern length"></select></label
@@ -97,7 +111,16 @@
               ></select></label
             ><span>4/4 · whole-bar snapping</span>
           </div>
-          <h2 class="section-title">Pattern library</h2>
+          <div class="library-heading">
+            <h2 class="section-title">Pattern library</h2>
+            <button
+              id="library-menu"
+              aria-label="Library pattern actions"
+              aria-haspopup="dialog"
+            >
+              ⋯
+            </button>
+          </div>
           <div id="library" aria-label="Pattern library"></div>
           <p class="hint">
             Drag a pattern to a lane, or tap a pattern then an empty bar. Tap a
@@ -105,7 +128,8 @@
           </p>
           <div class="timeline-scroll"><div id="timeline"></div></div>
           <p class="hint">
-            A · Backbone <span class="lane-b-text">B · Fills</span><br />Empty
+            A · Backbone <span class="lane-b-text">B · Fills</span>
+            <span class="lane-c-text">C · Cymbals/Percussion</span><br />Empty
             bars are silent. Copies share the original pattern.
           </p>
           <div id="placement" role="status"></div>
@@ -121,8 +145,14 @@
           aria-label="Scrolling rhythm visualization with fixed playhead"
         ></canvas>
         <div class="controls">
-          <button id="stop" aria-label="Stop">■</button
-          ><button id="play" class="primary" aria-label="Play">▶︎</button>
+          <button
+            id="play"
+            class="primary"
+            aria-label="Start"
+            aria-pressed="false"
+          >
+            ▷ Start
+          </button>
           <div class="bpm">
             <button id="bpm-down" aria-label="Decrease BPM">−</button
             ><input
@@ -190,6 +220,7 @@
         >Lane<select id="clip-lane">
           <option value="0">A — Backbone</option>
           <option value="1">B — Fills</option>
+          <option value="2">C — Cymbals/Percussion</option>
         </select></label
       ><label>Start bar<select id="clip-start"></select></label>
       <div class="project-actions">
@@ -197,6 +228,33 @@
         ><button id="delete-clip">Delete</button>
       </div>
       <p id="clip-error" role="alert"></p>
+    </dialog>
+    <dialog id="pattern-picker" aria-labelledby="picker-title">
+      <form method="dialog">
+        <div class="dialog-heading">
+          <h2 id="picker-title">Select pattern</h2>
+          <button aria-label="Close pattern selector">✕</button>
+        </div>
+      </form>
+      <div id="pattern-options"></div>
+    </dialog>
+    <dialog id="pattern-dialog" aria-labelledby="pattern-title">
+      <form method="dialog">
+        <div class="dialog-heading">
+          <h2 id="pattern-title">Pattern actions</h2>
+          <button aria-label="Close pattern actions">✕</button>
+        </div>
+      </form>
+      <div class="project-actions">
+        <button id="copy-pattern">Copy</button
+        ><button id="paste-pattern" aria-describedby="paste-explanation">
+          Paste</button
+        ><button id="delete-pattern">Delete</button
+        ><button id="change-color" aria-expanded="false">Change Color</button>
+      </div>
+      <div id="color-palette" aria-label="Pattern colors" hidden></div>
+      <p id="paste-explanation"></p>
+      <p id="pattern-message" role="status"></p>
     </dialog>
     <input
       id="project-file"
