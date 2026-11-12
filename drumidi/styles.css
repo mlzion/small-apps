@@ -948,3 +948,156 @@ header button svg {
   border-bottom: 1px solid #3a444f;
   border-right: 1px solid #535c69;
 }
+/* Velocity editor keeps the existing portrait shell and bottom transport. */
+.tabs button {
+  min-width: 0;
+  font-size: clamp(13px, 3.3vw, 20px);
+}
+#velocity-page {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-height: 360px;
+}
+.velocity-selectors {
+  display: grid;
+  grid-template-columns: 0.8fr 1.2fr;
+  gap: 10px;
+  flex: none;
+}
+.velocity-selectors label {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  color: #c1cede;
+  font-size: 12px;
+  font-weight: 600;
+  min-width: 0;
+}
+.velocity-selectors select {
+  min-width: 0;
+  width: 100%;
+  height: 40px;
+  padding: 6px 9px;
+  font-size: 14px;
+}
+.velocity-help {
+  margin: 0;
+  color: #a9b5c7;
+  font-size: 11px;
+  line-height: 1.5;
+  flex: none;
+}
+#velocity-graph {
+  flex: 1;
+  min-height: 210px;
+  position: relative;
+  border: 1px solid #526172;
+  border-radius: 12px;
+  background: linear-gradient(#1d2732, #10161e);
+  touch-action: none;
+  user-select: none;
+  overflow: hidden;
+}
+#velocity-canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+  position: absolute;
+  inset: 0;
+}
+.velocity-point {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  width: 44px;
+  height: 44px;
+  min-width: 44px;
+  padding: 0;
+  border: 0;
+  background: none;
+  box-shadow: none;
+  border-radius: 50%;
+  touch-action: none;
+  z-index: 2;
+  cursor: ns-resize;
+}
+.velocity-point span {
+  display: block;
+  width: 22px;
+  height: 22px;
+  border: 3px solid #d5f4ff;
+  background: #0b9fe9;
+  box-shadow: 0 0 9px #0cafff80;
+  border-radius: 50%;
+  margin: auto;
+  pointer-events: none;
+}
+.velocity-point.middle {
+  cursor: move;
+}
+.velocity-point.middle span {
+  background: #dca14b;
+  border-color: #ffe5b5;
+}
+.velocity-point:hover {
+  filter: brightness(1.2);
+}
+.velocity-point:focus-visible {
+  outline: 2px solid white;
+  outline-offset: -2px;
+}
+#velocity-empty {
+  position: absolute;
+  left: 15%;
+  right: 5%;
+  top: 38%;
+  text-align: center;
+  color: #a9b5c7;
+  font-size: 14px;
+  pointer-events: none;
+}
+.velocity-summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  flex: none;
+}
+#velocity-values {
+  font-size: 14px;
+  color: #bde7ff;
+  font-variant-numeric: tabular-nums;
+}
+#velocity-reset {
+  padding: 8px 12px;
+  min-height: 40px;
+  font-size: 13px;
+}
+#velocity-info {
+  margin: 0;
+  font-size: 11px;
+  color: #a9b5c7;
+  line-height: 1.5;
+  flex: none;
+  min-height: 17px;
+}
+@media (min-width: 600px) {
+  .velocity-selectors label {
+    font-size: 14px;
+  }
+  .velocity-selectors select {
+    height: 44px;
+    font-size: 16px;
+  }
+  .velocity-help,
+  #velocity-info {
+    font-size: 13px;
+  }
+  #velocity-page {
+    gap: 12px;
+  }
+  #velocity-graph {
+    min-height: 250px;
+  }
+}

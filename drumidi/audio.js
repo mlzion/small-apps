@@ -63,7 +63,14 @@ class DrumAudio {
     gain.gain.value = (note.velocity / 127) ** 1.35;
     source.connect(gain);
     gain.connect(this.master);
-    const record = { source, gain, drum: note.drum, time };
+    const record = {
+      source,
+      gain,
+      drum: note.drum,
+      step: note.step,
+      velocity: note.velocity,
+      time,
+    };
     this.sources.add(record);
     source.onended = () => {
       this.sources.delete(record);
@@ -71,6 +78,33 @@ class DrumAudio {
       gain.disconnect();
     };
     source.start(time);
+  }
+  updateVelocities(events, drum) {
+    const velocities = new Map(
+      events.filter((n) => n.drum === drum).map((n) => [n.step, n.velocity]),
+    );
+    for (const notes of this.byStep?.values() || [])
+      for (const note of notes)
+        if (note.drum === drum && velocities.has(note.step))
+          note.velocity = velocities.get(note.step);
+    const now = this.context?.currentTime || 0;
+    for (const record of this.sources) {
+      if (record.drum !== drum || !velocities.has(record.step)) continue;
+      const velocity = velocities.get(record.step);
+      if (velocity === record.velocity) continue;
+      record.velocity = velocity;
+      const target = (velocity / 127) ** 1.35,
+        parameter = record.gain.gain;
+      if (parameter.setValueAtTime) {
+        parameter.cancelScheduledValues(now);
+        parameter.setValueAtTime(
+          record.time > now ? target : parameter.value,
+          now,
+        );
+        if (record.time <= now)
+          parameter.linearRampToValueAtTime(target, now + 0.005);
+      } else parameter.value = target;
+    }
   }
   setMuted(drums) {
     const previous = this.muted;
@@ -102,7 +136,7 @@ class DrumAudio {
     this.byStep = new Map();
     for (const note of events) {
       if (!this.byStep.has(note.step)) this.byStep.set(note.step, []);
-      this.byStep.get(note.step).push(note);
+      this.byStep.get(note.step).push({ ...note });
     }
     this.total = bars * 64;
     this.stepSeconds = 60 / bpm / 16;

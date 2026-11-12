@@ -1,4 +1,4 @@
-# DruMidi — Phase 1.1
+# DruMidi — Phase 1.2
 
 A static, portrait-first acoustic drum sketchpad for App Lab. Launch `drumidi/` from the gallery. Serve the repository using any static HTTP server; there is no build, runtime dependency, account, or external audio service. Relative paths support both `/drumidi/` and GitHub Pages `/small-apps/drumidi/`.
 
@@ -17,6 +17,26 @@ The copy clipboard lasts while the page remains open and is cleared on reload or
 
 Add Drum offers the remaining General MIDI percussion notes, 35–81. Initial rows include acoustic kick, snare, closed/open hats, ride, three toms, and crash. New kicks/snares default to velocity 106, hats/ride to 78, and other instruments to 94. Each note stores its own velocity. Reducing a pattern's length retains hidden notes for later; hidden bars do not play or export. Length changes that invalidate arrangement clips are rejected.
 
+## Velocity Editor
+
+The top navigation is **Pattern**, **Velocity**, and **Arrangement**. Velocity has its own Pattern (P1–P16) and Drum selectors. The drum list contains only instruments with stored notes in the chosen pattern, including muted instruments. There is no need to return to Pattern to select another instrument or pattern.
+
+The graph spans the complete selected pattern (1–4 bars). Blue dots/stems show existing hit positions and stored velocities at exact 64th positions; vertical labels span 1–127. The lighter curve passes through three large draggable points:
+
+- Left: vertical movement only, starting velocity.
+- Middle: horizontal and vertical movement, shaping the two sides.
+- Right: vertical movement only, ending velocity.
+
+The curve is a C1 piecewise cubic Hermite interpolant with a harmonic middle slope. It passes through all three points, remains smooth at the middle and does not overshoot the velocity range. It has no Bézier tangent handles. Dragging writes rounded integer velocities to existing active-bar notes for the selected drum only; it never creates, deletes, reorders, or moves notes. Values between the selected drum's hits affect the visual guide only. Endpoint values apply at the pattern's start/end boundaries; the last 64th lies just before the end boundary.
+
+All three handles have 44 px touch targets. Pointer capture keeps a drag active outside a handle, and `touch-action: none` prevents scrolling on the graph. Keyboard users can focus each handle: Up/Down changes velocity, Home/End sets 1/127, and Left/Right moves the middle point in time. Shift increases the step. The middle point stays far enough from either end to keep touch targets usable.
+
+Start previews the **entire selected pattern**, including the other drums, in a loop. Curve editing and Reset keep the clock running; future events and already-queued gains update immediately. Active sample tails transition over 5 ms to avoid abrupt volume clicks. Changing drums preserves playback. Changing the Velocity pattern selector automatically starts that pattern from the beginning, including when previously stopped. Top-level tab changes retain the existing Stop/reset behavior. The moving red graph playhead follows the same AudioContext clock as sound.
+
+**Reset to Default** sets only that drum's notes in that pattern to **100**, including retained notes in hidden bars. Curve dragging edits only hits in active bars; notes beyond a temporarily shortened pattern are not silently changed. The footer reports hidden-bar notes if present. An empty pattern has a disabled drum selector and Reset; hidden-only instruments can still be reset.
+
+Velocities autosave through the existing project/localStorage system and remain editable in Pattern, shared arrangement references, JSON projects and MIDI exports. There is no Apply or Undo. Control-point guides are cached while the page is open; after reload or project load they are estimated from stored note velocities. Loading/selecting a graph never changes those velocities until a handle is moved or Reset is used. A three-point guide cannot exactly describe an arbitrary existing velocity sequence, so the note dots always show the saved values. No new project-format version is required.
+
 ## Global drum muting
 
 Tap a drum's icon/name to toggle its global mute. A muted drum has a dimmed label/icon, a **MUTE** badge, and a pressed state announced by assistive technology. This does not change the selected grid cell or subdivision group. Editing notes continues normally while muted.
@@ -29,7 +49,7 @@ The timeline is 1–8 bars, with independent **A — Backbone**, **B — Fills**
 
 Drag an existing clip to move it. Tap, long press, or right-click a clip for explicit Move, Copy, and Delete actions, with lane/start-bar selectors. Every instance references the stored pattern, so editing or pasting updates all instances.
 
-The single **Start/Stop** button applies to the active page. Start always begins at the start of the selected pattern or arrangement; playback loops automatically. Stop immediately ends all active/scheduled sources and resets the playhead. Stop also cancels playback waiting for sample initialization. There is no Pause/resume. Switching pages/patterns, changing composition data, or hiding the browser tab stops/reset playback. BPM changes restart a playing loop at the new tempo. Muting is the exception: it updates live without a restart.
+The single **Start/Stop** button applies to the active page. Start always begins at the start of the selected pattern or arrangement; playback loops automatically. Stop immediately ends all active/scheduled sources and resets the playhead. Stop also cancels playback waiting for sample initialization. There is no Pause/resume. Switching pages/patterns, changing composition data, or hiding the browser tab stops/reset playback. BPM changes restart a playing loop at the new tempo. Muting and Velocity edits are exceptions: they update live without a restart.
 
 The visualization retains faint 64th timing lines, a fixed red playhead, scrolling dots and A/B/C lane markers. One bar spans its width; loop boundaries wrap. It is not an editor.
 
@@ -39,7 +59,7 @@ Native Web Audio plays the same **FluidR3 GM standard acoustic kit** as Phase 1.
 
 The existing scheduler runs every 25 ms, scheduling 120 ms ahead using absolute AudioContext times. A 64th is `60 / BPM / 16` seconds. Graphics do not drive note timing. Stale events after a long foreground stall are skipped rather than emitted in a burst. Muting filters sources at scheduling time and cancels sources already in the lookahead window.
 
-FluidR3 is MIT licensed. The separate WebAudioFont **data repository is MIT licensed**; the 47 bundled MP3s are unmodified extracted FluidR3 payloads, about 1 MB total. Its GPL player is not used. Original notices remain in [samples/LICENSE.txt](samples/LICENSE.txt); [samples/SOURCE.md](samples/SOURCE.md) records the immutable upstream commit and extraction/tuning recipe; [samples/manifest.json](samples/manifest.json) records SHA-256 hashes. Phase 1.1 does not change these assets. No samples are embedded in MIDI.
+FluidR3 is MIT licensed. The separate WebAudioFont **data repository is MIT licensed**; the 47 bundled MP3s are unmodified extracted FluidR3 payloads, about 1 MB total. Its GPL player is not used. Original notices remain in [samples/LICENSE.txt](samples/LICENSE.txt); [samples/SOURCE.md](samples/SOURCE.md) records the immutable upstream commit and extraction/tuning recipe; [samples/manifest.json](samples/manifest.json) records SHA-256 hashes. Phase 1.2 does not change these assets. No samples are embedded in MIDI.
 
 ## Project compatibility and MIDI
 
@@ -47,7 +67,7 @@ Project settings provides **Save Project**, **Load Project**, and **New Project*
 
 Version 1 projects (eight patterns/two lanes) are validated and automatically migrated on localStorage restore and JSON import. Their original patterns, notes, velocities, lengths, instruments, clips, BPM and timeline remain intact; P9–P16 and Lane C start empty, default colors are assigned, and instruments start unmuted. The migrated local session is written back as v2. JSON imports/new projects require replacement confirmation. Malformed versions, counts, colors, mute types, drum references, duplicate notes/clip IDs, overlap, and bounds are rejected without replacing the existing session. Files over 32 MB are rejected. Storage failures leave manual JSON downloads available.
 
-MIDI remains Standard MIDI File **type 1**, **960 PPQ**, percussion **channel 10**. A pattern export includes the conductor and selected-pattern track. Arrangement export always includes **four tracks**: conductor (tempo and 4/4), Lane A, Lane B, and Lane C, including empty lanes. A 64th is exactly **60 ticks**; note-offs follow 30 ticks later. Simultaneous events, individual velocities, silent gaps, complete end-of-track lengths, and all unmuted note mappings are preserved. The DAW supplies its own percussion instrument.
+MIDI remains Standard MIDI File **type 1**, **960 PPQ**, percussion **channel 10**. Pattern and Velocity exports include the conductor and the entire selected-pattern track (all unmuted drums). Arrangement export always includes **four tracks**: conductor (tempo and 4/4), Lane A, Lane B, and Lane C, including empty lanes. A 64th is exactly **60 ticks**; note-offs follow 30 ticks later. Simultaneous events, individual velocities, silent gaps, complete end-of-track lengths, and all unmuted note mappings are preserved. The DAW supplies its own percussion instrument.
 
 ## Verification
 
@@ -56,6 +76,8 @@ From the repository root:
 ```sh
 node drumidi/test-core.cjs
 node drumidi/test-audio.cjs
+node drumidi/test-velocity.cjs
+python drumidi/test-velocity-browser.py
 python drumidi/test-browser.py
 python tests/check_site.py
 ```
@@ -66,6 +88,8 @@ Core tests independently decode MIDI to check 64ths, simultaneous notes, velocit
 
 The browser workflow covers four-bar editing and mixed lengths; all sixteen selectors; colors and referenced clips; empty-only paste; pattern deletion/reset with conditional accept/cancel; retained clip references; blocked paste; mobile long press on selector/picker/library; three-lane playback; desktop clip dragging and touch actions; actual full looping/64ths/gain; Start/Stop/page reset; MIDI and JSON downloads; v1 migration from storage and files; v2 color/mute roundtrip; refresh; live mute/unmute; audio/storage errors; six widths from 320–1440; and both hosting roots. Screenshots are written to `/tmp/drumidi-*.png`. Existing gallery/calculator checks remain unchanged.
 
+Velocity model tests check interpolation through each control point, C1 continuity, bounded monotone segments, all four pattern lengths and 64th positions, unchanged note counts/timing/other drums and patterns, Reset 100, persistence, and Velocity MIDI equivalence. The audio suite also verifies queued/active gain updates without source recreation or clock reset. `test-velocity-browser.py` checks mouse, real touch events and keyboard interaction, no-scroll/cancellation, live editing, independent selectors, automatic pattern restart, empty patterns, reset, reload, independently parsed downloaded MIDI, and six portrait/desktop widths. Velocity screenshots use `/tmp/drumidi-velocity-*.png`.
+
 ## Limits
 
-4/4 only, 1–4 bar patterns, three lanes, 1–8 bar arrangement, integer BPM 30–300, and one kit with velocity-sensitive gain from a single sample layer. No whole-song arrangement, undo, velocity-curve UI, audio export, MIDI import, or offline service worker. Composition edits stop playback; mutes update live. Physical Android listening and importing into a running REAPER instance remain manual acceptance checks; touch is emulated in Chromium and MIDI is independently decoded in tests.
+4/4 only, 1–4 bar patterns, three lanes, 1–8 bar arrangement, integer BPM 30–300, and one kit with velocity-sensitive gain from a single sample layer. No whole-song arrangement, undo, per-note velocity bars, audio export, MIDI import, or offline service worker. The Velocity curve operates on the selected drum across the active pattern, not a selected eighth-note group. Pattern/arrangement composition edits stop playback; mutes and Velocity edits update live. Physical Android listening and importing into a running REAPER instance remain manual acceptance checks; touch is emulated in Chromium and MIDI is independently decoded in tests.

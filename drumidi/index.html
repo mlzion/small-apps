@@ -16,6 +16,7 @@
     <link rel="stylesheet" href="styles.css" />
     <script src="core.js" defer></script>
     <script src="audio.js" defer></script>
+    <script src="velocity.js" defer></script>
     <script src="app.js" defer></script>
   </head>
   <body>
@@ -47,7 +48,8 @@
         </button>
       </header>
       <nav class="tabs" aria-label="Editor pages">
-        <button id="pattern-tab" aria-pressed="true">Pattern Editor</button
+        <button id="pattern-tab" aria-pressed="true">Pattern</button
+        ><button id="velocity-tab" aria-pressed="false">Velocity</button
         ><button id="arrangement-tab" aria-pressed="false">Arrangement</button>
       </nav>
       <main>
@@ -100,6 +102,72 @@
             </div>
             <div id="subdivisions"></div>
           </section>
+        </section>
+        <section id="velocity-page" aria-label="Velocity Editor" hidden>
+          <div class="velocity-selectors">
+            <label
+              >Pattern<select
+                id="velocity-pattern"
+                aria-label="Velocity pattern"
+              ></select
+            ></label>
+            <label
+              >Drum<select
+                id="velocity-drum"
+                aria-label="Velocity drum"
+              ></select
+            ></label>
+          </div>
+          <p class="velocity-help">
+            Drag the three points to shape velocity. The middle point also moves
+            in time.
+          </p>
+          <div id="velocity-graph" aria-label="Velocity curve editor">
+            <canvas
+              id="velocity-canvas"
+              role="img"
+              aria-label="Note velocities from 1 to 127 over the entire pattern"
+            ></canvas>
+            <button
+              class="velocity-point"
+              data-point="0"
+              aria-label="Starting velocity"
+              role="slider"
+              aria-valuemin="1"
+              aria-valuemax="127"
+              aria-valuenow="100"
+            >
+              <span></span>
+            </button>
+            <button
+              class="velocity-point middle"
+              data-point="1"
+              aria-label="Middle velocity and time"
+              role="slider"
+              aria-valuemin="1"
+              aria-valuemax="127"
+              aria-valuenow="100"
+            >
+              <span></span>
+            </button>
+            <button
+              class="velocity-point"
+              data-point="2"
+              aria-label="Ending velocity"
+              role="slider"
+              aria-valuemin="1"
+              aria-valuemax="127"
+              aria-valuenow="100"
+            >
+              <span></span>
+            </button>
+            <p id="velocity-empty" hidden></p>
+          </div>
+          <div class="velocity-summary">
+            <span id="velocity-values"></span
+            ><button id="velocity-reset">Reset to Default</button>
+          </div>
+          <p id="velocity-info" role="status"></p>
         </section>
         <section id="arrangement-page" aria-label="Arrangement" hidden>
           <div class="arrange-toolbar">
