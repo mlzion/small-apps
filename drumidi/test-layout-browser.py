@@ -61,10 +61,10 @@ with sync_playwright() as pw:
  # Compact clips retain accurate touch move/copy/delete controls and IDs.
  page.locator('.lane-c .clip').tap();page.locator('#clip-start').select_option('2');page.locator('#move-clip').tap();assert project()['arrangement']['lanes'][2][0]['id']=='c';assert project()['arrangement']['lanes'][2][0]['start']==2
  # Deleting a referenced pattern retains clips and resets every selector/clip to gray.
- refs=project()['arrangement'];page.locator('#pattern-tab').tap();choose(15);page.locator('#pattern-menu').tap();page.once('dialog',lambda d:d.accept());page.locator('#delete-pattern').tap();assert project()['patterns'][15]['color']=='gray';assert project()['arrangement']==refs
+ refs=project()['arrangement'];page.locator('#pattern-tab').tap();choose(15);page.locator('#pattern').click(button='right');page.once('dialog',lambda d:d.accept());page.locator('#delete-pattern').tap();assert project()['patterns'][15]['color']=='gray';assert project()['arrangement']==refs
  assert assigned(page.locator('#pattern'))=='#c7cdd5';page.locator('#arrangement-tab').tap();assert assigned(page.locator('.lane-c .clip'))=='#c7cdd5'
  # Light gray is an explicit palette option and assigned colors remain consistent.
- page.locator('#pattern-tab').tap();choose(1);page.locator('#pattern-menu').tap();page.locator('#change-color').tap();expect(page.get_by_role('button',name='Light Gray',exact=True)).to_be_visible();page.get_by_role('button',name='Green',exact=True).tap();page.get_by_label('Close pattern actions').tap();assert assigned(page.locator('#pattern'))=='#46b96d'
+ page.locator('#pattern-tab').tap();choose(1);page.locator('#pattern').click(button='right');page.locator('#change-color').tap();expect(page.get_by_role('button',name='Light Gray',exact=True)).to_be_visible();page.get_by_role('button',name='Green',exact=True).tap();page.get_by_label('Close pattern actions').tap();assert assigned(page.locator('#pattern'))=='#46b96d'
  page.locator('#arrangement-tab').tap();assert assigned(page.locator('.lane-b .clip'))=='#46b96d'
  # Project and MIDI exports remain immediately authoritative while the loop is frozen.
  page.locator('#velocity-tab').tap();page.locator('#velocity-pattern').select_option('0');page.locator('#velocity-drum').select_option('38');page.wait_for_function('window.currentAudio?.running')

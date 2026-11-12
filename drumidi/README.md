@@ -1,4 +1,4 @@
-# DruMidi — Phase 1.3
+# DruMidi — Phase 1.4
 
 A static, portrait-first acoustic drum sketchpad for App Lab. Launch `drumidi/` from the gallery. Serve the repository using any static HTTP server; there is no build, runtime dependency, account, or external audio service. Relative paths support both `/drumidi/` and GitHub Pages `/small-apps/drumidi/`.
 
@@ -6,14 +6,14 @@ A static, portrait-first acoustic drum sketchpad for App Lab. Launch `drumidi/` 
 
 P1–P16 share one configurable GM percussion list. Each has 1–4 bars in 4/4 and a selectable color. New and unassigned patterns use **Light Gray**. Tap the compact pattern selector to choose one of sixteen slots. Select a drum/eighth-note cell, then toggle its eight 64th-note subdivisions below the grid. Blue dots show activity; small counts show multiple hits. Green subdivision buttons indicate notes. Bar tabs and arrows navigate the selected pattern. Only the drum rows scroll; subdivisions and the bottom transport remain visible.
 
-Long press the current pattern selector, a pattern in its picker, or a library block to open pattern actions. The adjacent **⋯** button provides the same actions without long press (keyboard and screen-reader accessible). The arrangement library has its own **⋯** for the selected library pattern.
+Long press the current pattern selector, a pattern in its picker, or an Arrangement library block to open Copy, Paste, Delete and Change Color. Desktop users can right-click; keyboard users can focus a pattern and press **Shift+F10** or the context-menu key. The redundant ellipsis buttons have been removed. Normal taps/clicks still select patterns or open the picker; scrolling/dragging cancels a pending long press.
 
-- **Copy** snapshots the complete pattern, including its length, notes and velocities. Subsequent source edits do not change the clipboard.
-- **Paste** is enabled only when a copied pattern is available and the destination contains **zero notes**, regardless of its length. Muted notes and notes in hidden bars count as notes. Populated destinations disable Paste and explain that Delete must be used first. Paste copies the contents and length while retaining the destination ID, color and arrangement clips. Every clip is revalidated before confirmation; overlaps or invalid boundaries reject the paste without changing the session.
+- **Copy** snapshots the complete pattern, including its **color**, length, notes and velocities. Subsequent source edits do not change the clipboard.
+- **Paste** is enabled only when a copied pattern is available and the destination contains **zero notes**, regardless of its length. Muted notes and notes in hidden bars count as notes. Populated destinations disable Paste and explain that Delete must be used first. Paste replaces the contents, length **and color with the copied source values**, retaining the destination ID and arrangement clips. Selectors and referenced clips update immediately. Every clip is revalidated before confirmation; overlaps or invalid boundaries reject the paste without changing the session.
 - **Delete** removes every note (including hidden bars) and resets the pattern to **one bar**. Its ID and all arrangement clips remain; its color resets to **Light Gray**. Confirmation is required if the pattern contains notes **or** is referenced by any clip, even if already empty; an empty, unreferenced pattern resets without a prompt. The complete arrangement is revalidated before applying the change; invalid placement rejects the operation without changing the session.
 - **Change Color** opens a compact named palette: light gray, blue, orange, green, purple, yellow, pink, teal and red. The selector, pattern picker, library blocks and all referenced arrangement clips use the stored color. Text labels keep patterns identifiable independently of color.
 
-Gray means empty or not assigned a custom color; notes can be entered without assigning a color. Explicit colors are displayed by the Pattern selector, picker, Arrangement strip and all clip instances. Existing stored colors are preserved on import/restore, even for empty patterns; earlier files do not distinguish automatic colors from user choices. Missing, null or empty color fields normalize to gray without a project version change. Copy snapshots include color; Paste retains the destination color, as before.
+Gray means empty or not assigned a custom color; notes can be entered without assigning a color. Explicit colors are displayed by the Pattern selector, picker, Arrangement strip and all clip instances. Existing stored colors are preserved on import/restore, even for empty patterns; earlier files do not distinguish automatic colors from user choices. Missing, null or empty color fields normalize to gray without a project version change. Copy snapshots include color; Paste now restores the copied color instead of keeping the destination color.
 
 The copy clipboard lasts while the page remains open and is cleared on reload or project load/new. It is not part of a project file. Color choices and all pattern contents are saved in the project.
 
@@ -49,7 +49,7 @@ Mutes apply to all sixteen patterns and all three lanes. They take effect while 
 
 The pattern library is a **single horizontal, touch-scrollable P1–P16 strip**. Swipe to reach later patterns; selection preserves scroll position and does not rebuild the timeline.
 
-The timeline is 1–8 bars, with independent **A — Backbone**, **B — Fills**, and **C — Cymbals/Percussion** lanes. All lanes accept any pattern and play simultaneously. Drag copies from the library to whole bars, or tap a library pattern and then an empty bar. Each clip spans the pattern's actual length. Clips on the same lane cannot overlap or extend past the timeline; gaps remain silent. Clips on different lanes may overlap freely. Clip height is 58 px (about 75% of the former 78 px); bar spans and snapping are unchanged. Reduced spacing and the single-row library let all three lanes fit vertically on tested portrait sizes from 360×800 upward. The timeline still scrolls horizontally to maintain usable whole-bar targets. Shorter screens, zoom and long status messages can require vertical scrolling.
+The timeline is 1–8 bars, with independent **A — Backbone**, **B — Cymbals**, and **C — Fills** lanes. All lanes accept any pattern or drum instrument and play simultaneously. These are label changes only: existing lane arrays, clip IDs/positions and MIDI track order are never swapped. Drag copies from the library to whole bars, or tap a library pattern and then an empty bar. Each clip spans the pattern's actual length. Clips on the same lane cannot overlap or extend past the timeline; gaps remain silent. Clips on different lanes may overlap freely. Each whole-bar drop area is a fixed **56×56 px square**, with a 52 px high clip inside it. Two bars span two columns plus the existing gap; musical duration and snapping are unchanged. Reduced spacing and the single-row library let all three lanes fit vertically on tested portrait sizes from 320×740 upward. The timeline still scrolls horizontally to maintain usable whole-bar targets. Shorter screens, zoom and long status messages can require vertical scrolling.
 
 Drag an existing clip to move it. Tap, long press, or right-click a clip for explicit Move, Copy, and Delete actions, with lane/start-bar selectors. Every instance references the stored pattern, so editing or pasting updates all instances.
 
@@ -57,17 +57,33 @@ The single **Start/Stop** button applies to the active page. Start always begins
 
 The visualization retains faint 64th timing lines, a fixed red playhead, scrolling dots and A/B/C lane markers. One bar spans its width; loop boundaries wrap. It is not an editor.
 
+## Fullscreen and Project Name
+
+The small header button toggles the document through the browser's Fullscreen API. Fullscreen is **never** entered automatically. It survives Pattern/Velocity/Arrangement tab switches and includes settings and clip dialogs. The toggle or the browser's normal exit command restores the normal layout; returning through **Back to App Lab** explicitly exits fullscreen before navigating. Unsupported browsers show a disabled button with an explanation, and denied requests produce a status message. Browser policies and mobile support can vary; native Android UI behavior still warrants a physical-device check.
+
+Project Settings has an editable **Project Name**, saved immediately without interrupting playback. New projects and unnamed localStorage sessions use **DruMidi Project**. Version 1/2 JSON imports with no stored name use the imported filename without its final `.json` extension (case-insensitive); a stored name takes precedence. Normalization is written back to localStorage. New Project resets the name. Name metadata does not require a format-version bump; existing pattern, mute and arrangement data remain intact.
+
+Downloads use the stored project name:
+
+| Action, name `Rock Beat 1` | Download |
+| --- | --- |
+| Save Project | `Rock Beat 1.json` |
+| Arrangement MIDI | `Rock Beat 1.mid` |
+| Pattern or Velocity export for P3 | `Rock Beat 1-P3.mid` |
+
+Stored names can contain characters that are unsuitable for Windows filenames. Downloads replace forbidden characters/control codes with underscores, remove trailing spaces/dots, prefix reserved device names (for example `CON` → `_CON`), and limit the filename stem to 200 UTF-16 units without splitting Unicode characters. The stored name is retained independently of filename sanitization. Names are trimmed and limited to 1024 characters; blank names fall back to the default.
+
 ## Sound and licensing
 
 Native Web Audio plays the same **FluidR3 GM standard acoustic kit** as Phase 1. The AudioContext is created and resumed from Start. Active instruments are fetched and decoded before playback; newly added instruments load on the next Start. Velocity controls sample gain. Closed/pedal hats choke open hats.
 
 The existing scheduler runs every 25 ms, scheduling 120 ms ahead using absolute AudioContext times. A 64th is `60 / BPM / 16` seconds. Graphics do not drive note timing. Stale events after a long foreground stall are skipped rather than emitted in a burst. Muting filters sources at scheduling time and cancels sources already in the lookahead window.
 
-FluidR3 is MIT licensed. The separate WebAudioFont **data repository is MIT licensed**; the 47 bundled MP3s are unmodified extracted FluidR3 payloads, about 1 MB total. Its GPL player is not used. Original notices remain in [samples/LICENSE.txt](samples/LICENSE.txt); [samples/SOURCE.md](samples/SOURCE.md) records the immutable upstream commit and extraction/tuning recipe; [samples/manifest.json](samples/manifest.json) records SHA-256 hashes. Phase 1.3 does not change these assets. No samples are embedded in MIDI.
+FluidR3 is MIT licensed. The separate WebAudioFont **data repository is MIT licensed**; the 47 bundled MP3s are unmodified extracted FluidR3 payloads, about 1 MB total. Its GPL player is not used. Original notices remain in [samples/LICENSE.txt](samples/LICENSE.txt); [samples/SOURCE.md](samples/SOURCE.md) records the immutable upstream commit and extraction/tuning recipe; [samples/manifest.json](samples/manifest.json) records SHA-256 hashes. Phase 1.4 does not change these assets. No samples are embedded in MIDI.
 
 ## Project compatibility and MIDI
 
-Project settings provides **Save Project**, **Load Project**, and **New Project**. Every edit automatically saves under the existing `app-lab-drumidi-v1` localStorage key to find old sessions. New data uses `format: "drumidi"`, **version 2**. The JSON contains BPM, sixteen patterns/lengths/colors/notes/velocities, drum assignments/default velocities/mutes, timeline length, and clips on three lanes. Notes use integer `step` positions 0–255, in 64ths; clip starts use zero-based bars.
+Project settings provides **Save Project**, **Load Project**, and **New Project**. Every edit automatically saves under the existing `app-lab-drumidi-v1` localStorage key to find old sessions. New data uses `format: "drumidi"`, **version 2**. The JSON contains the project name, BPM, sixteen patterns/lengths/colors/notes/velocities, drum assignments/default velocities/mutes, timeline length, and clips on three lanes. Notes use integer `step` positions 0–255, in 64ths; clip starts use zero-based bars.
 
 Version 1 projects (eight patterns/two lanes) are validated and automatically migrated on localStorage restore and JSON import. Their original patterns, notes, velocities, lengths, instruments, clips, BPM and timeline remain intact; P9–P16 and Lane C start empty, missing colors default to light gray, and instruments start unmuted. The migrated local session is written back as v2. JSON imports/new projects require replacement confirmation. Malformed versions, counts, colors, mute types, drum references, duplicate notes/clip IDs, overlap, and bounds are rejected without replacing the existing session. Files over 32 MB are rejected. Storage failures leave manual JSON downloads available.
 
@@ -83,13 +99,14 @@ node drumidi/test-audio.cjs
 node drumidi/test-velocity.cjs
 python drumidi/test-velocity-browser.py
 python drumidi/test-layout-browser.py
+python drumidi/test-interface-browser.py
 python drumidi/test-browser.py
 python tests/check_site.py
 ```
 
 Browser checks require Python Playwright and Chromium (`CHROMIUM_PATH` overrides `/usr/bin/chromium`). A local HTTPS origin serves real repository files and samples through route interception.
 
-Core tests independently decode MIDI to check 64ths, simultaneous notes, velocity, tempo, channel, all three percussion tracks and conductor, gaps and loop lengths. They cover all sixteen slots, project migration/roundtrip/validation, independent copies, transactional paste and clip constraints, destination color retention, muted MIDI, preserved notes, and all 47 asset hashes. Audio clock tests cover loop seams, restart/reset, live mutes and cancellation, velocity/tuning, hat choking, and stall recovery.
+Core tests independently decode MIDI to check 64ths, simultaneous notes, velocity, tempo, channel, all three percussion tracks and conductor, gaps and loop lengths. They cover all sixteen slots, project migration/roundtrip/validation, independent copies, transactional paste and clip constraints, copied source color retention, muted MIDI, preserved notes, and all 47 asset hashes. Audio clock tests cover loop seams, restart/reset, live mutes and cancellation, velocity/tuning, hat choking, and stall recovery.
 
 The browser workflow covers four-bar editing and mixed lengths; all sixteen selectors; colors and referenced clips; empty-only paste; pattern deletion/reset with conditional accept/cancel; retained clip references; blocked paste; mobile long press on selector/picker/library; three-lane playback; desktop clip dragging and touch actions; actual full looping/64ths/gain; Start/Stop/page reset; MIDI and JSON downloads; v1 migration from storage and files; v2 color/mute roundtrip; refresh; live mute/unmute; audio/storage errors; six widths from 320–1440; and both hosting roots. Screenshots are written to `/tmp/drumidi-*.png`. Existing gallery/calculator checks remain unchanged.
 
@@ -100,6 +117,8 @@ Velocity model tests check interpolation through each control point, C1 continui
 Phase 1.3 removes the edit-time audio event/source traversal and gain automation. The audio scheduler still pumps every 25 ms with 120 ms lookahead, and graphics never drive timing. The velocity curve/notes canvas redraws only after edits, selection changes or resize; a lightweight DOM playhead moves independently. The footer runs at up to 30 fps while playing and reads only visible step buckets (roughly one bar), with drum rows prepared outside the frame loop. When stopped, rendering is invalidation-driven with no continuous animation. A ResizeObserver refreshes resized canvases.
 
 `test-layout-browser.py` verifies a real horizontal touch swipe to P16, assigned/gray/deleted colors, unchanged bar spans and touch clip movement, all three lanes fitting on five phone/desktop layouts, fixed velocities and gains across repeated loops, new velocities after restart, immediate MIDI/JSON exports, persistence/import, cached graph draws, bounded footer frame counts, and zero idle canvas redraws. Screenshots use `/tmp/drumidi-layout-*.png`. The checks identify and guard avoidable rendering/audio-update work; they are not a physical Android performance certification. Saving the complete project to localStorage remains synchronous to preserve immediate persistence.
+
+`test-interface-browser.py` covers native Fullscreen API entry/exit, external exit, tab/dialog persistence and explicit gallery exit at both hosting roots; unsupported and denied requests; project-name persistence/defaults, legacy JSON filename and localStorage naming, Windows-safe exports; source-color paste into referenced patterns with immediate selector/clip updates; right-click/long-press actions without ellipses; unchanged lane arrays and MIDI track order with renamed labels; square drop cells and portrait fit at six sizes. Screenshots use `/tmp/drumidi-interface-*.png`.
 
 ## Limits
 
