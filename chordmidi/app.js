@@ -298,7 +298,11 @@
     if (e.lane < 2) {
       activeLane = e.lane;
       project.builders[activeLane] = { ...e.builder };
-    } else project.passing = { ...e.passing };
+    } else {
+      project.passing = { ...e.passing };
+      if (e.passing.source === "chord" && e.sourceBuilder)
+        project.builders[0] = { ...e.sourceBuilder };
+    }
     normalize();
     persist();
     renderBuilder();

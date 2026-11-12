@@ -312,7 +312,8 @@
           ? e.passing &&
             ["scale", "chord"].includes(e.passing.source) &&
             int(e.passing.index, 0, 6) &&
-            int(e.passing.octave, 1, 6)
+            int(e.passing.octave, 1, 6) &&
+            (e.sourceBuilder === undefined || validBuilder(e.sourceBuilder))
           : validBuilder(e.builder))
       )
         fail();
@@ -338,7 +339,9 @@
       label: c.label,
       key: p.key,
       mode: p.mode,
-      ...(lane === 2 ? { passing } : { builder: { ...b } }),
+      ...(lane === 2
+        ? { passing, sourceBuilder: { ...p.builders[0] } }
+        : { builder: { ...b } }),
     };
   }
   function passingOptions(p) {

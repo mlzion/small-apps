@@ -49,6 +49,9 @@ passingProject.key = 1;
 passingProject.mode = "Major";
 passingProject.builders[0].degree = 6;
 eq(D.passingOptions(passingProject)[0], { pitch: 72, label: "B♯4" });
+const passingEvent = D.makeEvent(passingProject, 2, 0);
+passingProject.builders[0].degree = 0;
+eq(passingEvent.sourceBuilder.degree, 6);
 for (let key = 0; key < 12; key++)
   for (const mode of ["Major", "Minor"])
     for (let degree = 0; degree < 7; degree++)

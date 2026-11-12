@@ -110,6 +110,9 @@ with sync_playwright() as pw:
  page.reload();assert project()==saved
  page.locator('#setup').tap();page.locator('#project-file').set_input_files({'name':'bad.json','mimeType':'application/json','buffer':b'{"format":"chordmidi","version":2}'})
  expect(page.locator('#storage-status')).to_contain_text('Could not load');assert project()==saved;page.locator('#close-setup').tap()
+ # Selecting a chord-tone passing event restores the RH source voicing too.
+ page.locator('#note-source').select_option('chord');page.locator('#passing-note').select_option('2');pad(2,4).tap();assert project()['events'][-1]['pitches']==[67]
+ wheel('degree','End');page.locator('.event[data-lane="2"]').last.tap();expect(page.locator('#wheel-degree')).to_have_attribute('aria-valuenow','0');expect(page.locator('#passing-note')).to_have_value('2');assert page.locator('#passing-note option:checked').inner_text()=='G4'
  # Portrait widths, fixed transport and no horizontal page overflow.
  for width,height in [(320,740),(360,800),(393,851),(412,915),(768,1024),(1440,1000)]:
   page.set_viewport_size({'width':width,'height':height});page.evaluate('scrollTo(0,0)');assert page.evaluate('document.documentElement.scrollWidth<=innerWidth'),width
