@@ -78,11 +78,7 @@
   const b = () => project.builders[activeLane];
   const current = () => project.events.find((e) => e.id === selected);
   function normalize() {
-    const q = D.qualities.find((q) => q.id === b().quality);
-    b().inversion = Math.min(
-      b().inversion,
-      (q.steps || q.intervals).length - 1,
-    );
+    b().inversion = Math.min(b().inversion, D.inversionCount(b().quality) - 1);
     project.passing.index = Math.min(
       project.passing.index,
       D.passingOptions(project).length - 1,
@@ -125,14 +121,7 @@
     {
       id: "inversion",
       name: "Inversion",
-      options: () =>
-        D.inversions.slice(
-          0,
-          (
-            D.qualities.find((q) => q.id === b().quality).steps ||
-            D.qualities.find((q) => q.id === b().quality).intervals
-          ).length,
-        ),
+      options: () => D.inversions.slice(0, D.inversionCount(b().quality)),
       value: () => b().inversion,
       set: (v) => (b().inversion = v),
     },
@@ -161,6 +150,7 @@
       lastWheel = 0;
     const move = (value) => {
       const n = conf.options().length;
+      if (n === 1) return;
       conf.set(((value % n) + n) % n);
       normalize();
       changed();
@@ -233,8 +223,8 @@
         const d = document.createElement("div");
         d.className = "wheel-option" + (offset === 0 ? " selected" : "");
         if (
-          n === 2 &&
-          ((i === 0 && offset === -1) || (i === 1 && offset === 1))
+          (n === 1 && offset !== 0) ||
+          (n === 2 && ((i === 0 && offset === -1) || (i === 1 && offset === 1)))
         ) {
           d.classList.add("blank");
           d.textContent = " ";
@@ -250,7 +240,8 @@
     $("chord-name").textContent =
       `${c.name} · ${D.inversions[b().inversion]} · Oct ${b().octave}`;
     $("chord-notes").textContent =
-      c.names.join(" – ") + `   /   MIDI ${c.pitches.join(", ")}`;
+      (b().quality === "octave" ? c.noteLabels : c.names).join(" – ") +
+      `   /   MIDI ${c.pitches.join(", ")}`;
     $("rh").setAttribute("aria-pressed", String(activeLane === 0));
     $("lh").setAttribute("aria-pressed", String(activeLane === 1));
     document
