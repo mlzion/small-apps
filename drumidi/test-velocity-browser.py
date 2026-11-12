@@ -57,9 +57,8 @@ with sync_playwright() as pw:
  assert edited['patterns'][1:]==before['patterns'][1:]
  assert page.evaluate('currentAudio.anchor')==anchor and page.evaluate('startCount')==start_count
  expect(page.get_by_role('button',name='Stop',exact=True)).to_be_visible()
- assert page.evaluate('''() => {const p=JSON.parse(localStorage.getItem('app-lab-drumidi-v1'));return [...currentAudio.byStep.values()].flat().every(n=>n.velocity===p.patterns[0].notes.find(p=>p.step===n.step&&p.drum===n.drum).velocity);}''')
- # Already queued and ringing sources receive the edited gain; loop is not rebuilt.
- assert page.evaluate('''() => [...currentAudio.sources].filter(r=>r.drum===38).every(r=>r.velocity===JSON.parse(localStorage.getItem('app-lab-drumidi-v1')).patterns[0].notes.find(n=>n.drum===38&&n.step===r.step).velocity)''')
+ assert page.evaluate("currentAudio.byStep.get(0).find(n=>n.drum===38).velocity")==before['patterns'][0]['notes'][0]['velocity']
+ assert page.evaluate("[...currentAudio.sources].filter(r=>r.drum===38).every(r=>r.velocity>=40 && r.velocity<=119)")
  page.wait_for_timeout(100);assert page.evaluate('currentAudio.position()')>0
  # Keyboard sliders and vertical endpoint constraints.
  knob(page,0).focus();page.keyboard.press('Home');assert project(page)['patterns'][0]['notes'][0]['velocity']==1
@@ -71,6 +70,10 @@ with sync_playwright() as pw:
  assert [n for n in after_reset['patterns'][0]['notes'] if n['drum']==38]==snare
  assert after_reset['patterns'][1:]==before['patterns'][1:]
  page.locator('#velocity-drum').select_option('38');assert page.evaluate('startCount')==start_count
+ # Stop/Start is the only point that captures the edited project velocities.
+ snapshot=project(page)['patterns'][0]['notes'][0]['velocity'];assert snapshot==2
+ assert page.evaluate("currentAudio.byStep.get(0).find(n=>n.drum===38).velocity")==40
+ page.get_by_role('button',name='Stop',exact=True).click();page.get_by_role('button',name='Start',exact=True).click();page.wait_for_function("currentAudio.running && currentAudio.byStep.get(0).find(n=>n.drum===38).velocity===2")
  # Switching patterns from this page starts the new complete pattern, from the beginning.
  for index,bars in [(1,1),(2,2),(3,3),(0,4)]:
   previous=page.evaluate('startCount');page.locator('#velocity-pattern').select_option(str(index));page.wait_for_function(f'startCount>{previous}');assert page.evaluate('currentAudio.total')==bars*64
@@ -122,5 +125,5 @@ with sync_playwright() as pw:
   assert all(k.bounding_box()['width']>=44 and k.bounding_box()['height']>=44 for k in touch.locator('.velocity-point').all())
   touch.screenshot(path=f'/tmp/drumidi-velocity-{width}.png')
  assert not errors,errors;assert not missing,missing
- print('PASS: independent pattern/drum selectors; smooth curve mouse/touch/keyboard; 64th note/time/count isolation; live queued gains and uninterrupted clock; pattern restarts; empty patterns; reset 100; reload; independent MIDI velocities/length; six widths; pointer cancel/no scroll; no missing files/JS errors.')
+ print('PASS: independent pattern/drum selectors; smooth curve mouse/touch/keyboard; 64th note/time/count isolation; fixed playback snapshot and uninterrupted clock; restart hears edits; pattern restarts; empty patterns; reset 100; reload; independent MIDI velocities/length; six widths; pointer cancel/no scroll; no missing files/JS errors.')
  browser.close()

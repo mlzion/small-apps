@@ -98,65 +98,46 @@ audio.stop();
 console.log(
   "PASS: simultaneous/64th scheduling; loop seam; velocity gain and tuning; start/stop/reset; live global mutes; hi-hat choke; stalled-clock recovery.",
 );
-// Live velocity edits preserve scheduler position and source identity, including
-// already scheduled hits. Non-selected drums keep their gain and note velocity.
+// Start captures a deep event snapshot; editing project velocities must not
+// alter gains, queued notes, or later repeats until playback is restarted.
 audio.context.currentTime = 0;
-audio.start(notes, 1, 300);
+const projectNotes = notes.map((n) => ({ ...n }));
+audio.start(projectNotes, 1, 300);
 const anchor = audio.anchor,
   next = audio.next,
   records = [...audio.sources],
   oldCount = sources.length;
-const kick = records.find((r) => r.drum === 35),
-  originalKickGain = kick.gain.gain.value;
-const edited = notes.map((n) => ({
-  ...n,
-  velocity: n.drum === 38 ? 20 : n.velocity,
-}));
-audio.updateVelocities(edited, 38);
+const gainValues = records.map((r) => r.gain.gain.value);
+for (const note of projectNotes) if (note.drum === 38) note.velocity = 120;
 assert.equal(audio.anchor, anchor);
 assert.equal(audio.next, next);
 assert(audio.running);
 assert.equal(sources.length, oldCount);
-assert.equal(kick.gain.gain.value, originalKickGain);
-assert(
-  audio.byStep
-    .get(0)
-    .filter((n) => n.drum === 38)
-    .every((n) => n.velocity === 20),
+assert.deepEqual(
+  records.map((r) => r.gain.gain.value),
+  gainValues,
+);
+assert.equal(audio.byStep.get(0).find((n) => n.drum === 38).velocity, 78);
+audio.context.currentTime = 0.78;
+audio.pump();
+assert.equal(
+  [...audio.sources].filter((r) => r.drum === 38 && r.step === 0).at(-1)
+    .velocity,
+  78,
+);
+audio.stop();
+audio.start(projectNotes, 1, 300);
+assert.equal(
+  [...audio.sources].find((r) => r.drum === 38 && r.step === 0).velocity,
+  120,
 );
 assert(
-  [...audio.sources]
-    .filter((r) => r.drum === 38)
-    .every((r) => Math.abs(r.gain.gain.value - (20 / 127) ** 1.35) < 1e-9),
-);
-// Exercise the real AudioParam path for active tails and future queued samples.
-for (const record of audio.sources) {
-  record.gain.gain.calls = [];
-  for (const method of [
-    "cancelScheduledValues",
-    "setValueAtTime",
-    "linearRampToValueAtTime",
-  ])
-    record.gain.gain[method] = (...args) =>
-      record.gain.gain.calls.push([method, ...args]);
-}
-audio.context.currentTime = 0.045;
-audio.updateVelocities(notes, 38);
-const snare = [...audio.sources].filter((r) => r.drum === 38);
-assert(
-  snare
-    .find((r) => r.time < 0.045)
-    .gain.gain.calls.some((c) => c[0] === "linearRampToValueAtTime"),
-);
-assert(
-  snare
-    .find((r) => r.time > 0.045)
-    .gain.gain.calls.some(
-      (c) =>
-        c[0] === "setValueAtTime" && Math.abs(c[1] - (41 / 127) ** 1.35) < 1e-9,
-    ),
+  Math.abs(
+    [...audio.sources].find((r) => r.drum === 38).gain.gain.value -
+      (120 / 127) ** 1.35,
+  ) < 1e-9,
 );
 audio.stop();
 console.log(
-  "PASS: live velocity edits update future events, queued hits and active tails without resetting loop or changing other instruments.",
+  "PASS: playback velocities/gains are fixed across loop repeats; source project can edit immediately; Stop/Start captures new velocities.",
 );

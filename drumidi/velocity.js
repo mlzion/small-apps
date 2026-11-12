@@ -13,6 +13,7 @@ class VelocityEditor {
       { x: 0.5, y: 100 },
       { x: 1, y: 100 },
     ];
+    this.dirty = true;
     this.drag = null;
     this.handles.forEach((handle, index) => {
       handle.addEventListener("pointerdown", (e) => {
@@ -111,6 +112,7 @@ class VelocityEditor {
       h.disabled = !this.enabled;
       h.hidden = !this.enabled;
     });
+    this.dirty = true;
     this.updateHandles();
   }
   clearCache() {
@@ -137,6 +139,7 @@ class VelocityEditor {
             : 1,
       y: Math.round(Math.max(1, Math.min(127, y))),
     };
+    this.dirty = true;
     this.onCurve(this.points);
     this.cache.set(this.key, {
       points: this.points.map((p) => ({ ...p })),
@@ -161,6 +164,9 @@ class VelocityEditor {
       ? this.points.map((p) => p.y).join(" → ")
       : "No active hits";
   }
+  invalidate() {
+    this.dirty = true;
+  }
   draw(position, playing) {
     if (!this.pattern) return;
     const rect = this.canvas.getBoundingClientRect(),
@@ -174,9 +180,27 @@ class VelocityEditor {
       this.canvas.width = Math.round(w * ratio);
       this.canvas.height = Math.round(h * ratio);
       this.updateHandles();
+      this.dirty = true;
     }
+    const box = this.plot();
+    // A positioned DOM line moves independently from the static curve/note canvas.
+    this.playhead ||= (() => {
+      const line = document.createElement("div");
+      line.className = "velocity-playhead";
+      line.setAttribute("aria-hidden", "true");
+      this.container.append(line);
+      return line;
+    })();
+    this.playhead.hidden = !playing;
+    if (playing) {
+      this.playhead.style.left =
+        box.left + (position / (this.pattern.bars * 64)) * box.width + "px";
+      this.playhead.style.top = box.top + "px";
+      this.playhead.style.height = box.height + "px";
+    }
+    if (!this.dirty) return;
+    this.dirty = false;
     const ctx = this.context,
-      box = this.plot(),
       total = this.pattern.bars * 64;
     const px = (x) => box.left + x * box.width,
       py = (y) => box.top + ((127 - y) / 126) * box.height;
@@ -240,15 +264,6 @@ class VelocityEditor {
         if (i === 0) ctx.moveTo(px(x), y);
         else ctx.lineTo(px(x), y);
       }
-      ctx.stroke();
-    }
-    if (playing) {
-      const x = px(position / total);
-      ctx.strokeStyle = "#ff777e";
-      ctx.lineWidth = 2;
-      ctx.beginPath();
-      ctx.moveTo(x, py(127));
-      ctx.lineTo(x, py(1));
       ctx.stroke();
     }
   }

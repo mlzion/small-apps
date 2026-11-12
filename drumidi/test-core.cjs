@@ -263,7 +263,7 @@ const original = JSON.stringify(deletion),
 assert.equal(JSON.stringify(deletion), original);
 assert.deepEqual(removed.patterns[15], {
   id: "P16",
-  color: "teal",
+  color: "gray",
   bars: 1,
   notes: [],
 });
@@ -287,4 +287,26 @@ assert.throws(() => D.deletePattern(invalidOverlap, 15));
 assert.throws(() => D.deletePattern(deletion, 16));
 console.log(
   "PASS: empty-only paste including hidden/muted notes; empty multi-bar destinations; transactional deletion/reset; ID/color/three-lane references; arrangement revalidation.",
+);
+
+assert(D.fresh().patterns.every((p) => p.color === "gray"));
+const noColors = D.fresh();
+for (const p of noColors.patterns) delete p.color;
+assert(D.validate(noColors).patterns.every((p) => p.color === "gray"));
+noColors.patterns[0].color = null;
+noColors.patterns[1].color = "";
+noColors.patterns[2].color = "purple";
+const normalized = D.validate(noColors);
+assert.equal(normalized.patterns[0].color, "gray");
+assert.equal(normalized.patterns[1].color, "gray");
+assert.equal(normalized.patterns[2].color, "purple");
+assert(D.validate(legacy).patterns.every((p) => p.color === "gray"));
+assert.equal(D.copyPattern(normalized.patterns[2]).color, "purple");
+assert.equal(D.deletePattern(normalized, 2).patterns[2].color, "gray");
+assert.equal(
+  D.validate(JSON.parse(JSON.stringify(normalized))).patterns[2].color,
+  "purple",
+);
+console.log(
+  "PASS: gray defaults/missing-color normalization/legacy migration; explicit colors persist and copy; deletion resets to gray.",
 );

@@ -78,9 +78,11 @@
       page !== "arrangement" ? active().id : "A + B + C · Arrangement";
     $("playback-meta").textContent =
       `${lengthText(bars())} · ${project.bpm} BPM`;
+    invalidateVisuals();
   }
   function stop() {
     audio.stop();
+    refreshRhythm();
     busy = false;
     $("play").disabled = false;
     transport();
@@ -243,7 +245,7 @@
     if (
       (!D.isEmptyPattern(p) || referenced) &&
       !confirm(
-        `Delete all notes in ${p.id} and reset it to one bar? Its ID, color and arrangement clips will be retained.`,
+        `Delete all notes in ${p.id} and reset it to one bar? Its ID and arrangement clips will be retained; its color will reset to light gray.`,
       )
     )
       return;
@@ -407,19 +409,30 @@
   }
   function renderArrangement() {
     $("arrangement-length").value = project.arrangement.bars;
+    const libraryScroll = $("library").scrollLeft;
     $("library").replaceChildren();
     for (const p of project.patterns) {
       const b = button(
         "",
         () => {
           library = p.id;
-          renderArrangement();
+          for (const item of $("library").children)
+            item.setAttribute(
+              "aria-pressed",
+              String(item.dataset.pattern === library),
+            );
+          for (const slot of $("timeline").querySelectorAll(".bar-slot"))
+            slot.setAttribute(
+              "aria-label",
+              `Place ${library} in lane ${laneLetter(+slot.dataset.lane)}, bar ${+slot.dataset.start + 1}`,
+            );
           $("placement").textContent =
-            `${library} selected. Tap an empty bar in either lane.`;
+            `${library} selected · Tap a bar to place.`;
         },
         "library-pattern",
       );
       b.append(el("strong", "", p.id), el("small", "", lengthText(p.bars)));
+      b.dataset.pattern = p.id;
       b.setAttribute("aria-label", `${p.id}, ${lengthText(p.bars)}`);
       b.setAttribute("aria-pressed", String(library === p.id));
       b.style.setProperty("--pattern-color", color(p));
@@ -427,6 +440,7 @@
       drag(b, { pattern: p.id });
       $("library").append(b);
     }
+    $("library").scrollLeft = libraryScroll;
     const timeline = $("timeline");
     timeline.replaceChildren();
     timeline.style.setProperty("--bars", project.arrangement.bars);
@@ -449,6 +463,8 @@
           "bar-slot",
         );
         b.style.gridColumn = i + 2;
+        b.dataset.lane = lane;
+        b.dataset.start = i;
         b.setAttribute(
           "aria-label",
           `Place ${library} in lane ${laneLetter(lane)}, bar ${i + 1}`,
@@ -571,11 +587,32 @@
     D.applyVelocityCurve(active(), velocityDrum, points);
     velocityEdited("Velocity curve saved");
   });
+  function refreshRhythm() {
+    const events = audio.running
+      ? [...audio.byStep.values()]
+          .flat()
+          .filter((n) => !audio.muted.has(n.drum))
+      : allEvents();
+    cachedEvents = events.map((n) => ({
+      ...n,
+      row: project.drums.findIndex((d) => d.midi === n.drum) % 5,
+    }));
+    rhythmByStep = new Map();
+    for (const note of cachedEvents) {
+      if (!rhythmByStep.has(note.step)) rhythmByStep.set(note.step, []);
+      rhythmByStep.get(note.step).push(note);
+    }
+  }
   function velocityEdited(message) {
-    audio.updateVelocities(allEvents(true), velocityDrum);
-    cachedEvents = allEvents();
+    // Playback keeps the deep-copied velocities captured by audio.start().
+    // Only project/editor/MIDI data changes until the user starts playback again.
     persist();
-    say(storageWarning || message + " · Playback continues");
+    if (!audio.running) refreshRhythm();
+    say(
+      storageWarning ||
+        message + (audio.running ? " · Stop and Start to hear changes" : ""),
+    );
+    invalidateVisuals();
   }
   function renderVelocity() {
     $("velocity-pattern").value = selected;
@@ -601,6 +638,7 @@
       ? "No hits in active bars"
       : "No notes yet";
     velocityEditor.setData(active(), velocityDrum);
+    invalidateVisuals();
   }
   $("velocity-pattern").append(
     ...project.patterns.map((p, i) => option(i, p.id)),
@@ -625,7 +663,8 @@
     renderArrangement();
     renderVelocity();
     transport();
-    cachedEvents = allEvents();
+    refreshRhythm();
+    invalidateVisuals();
   }
   async function play() {
     if (audio.running || busy) {
@@ -642,6 +681,7 @@
       await audio.init(project.drums);
       if (token !== audio.token) return;
       audio.start(allEvents(true), bars(), project.bpm);
+      refreshRhythm();
       transport();
       say("Playing · Loop on");
     } catch (e) {
@@ -862,14 +902,39 @@
     if (document.hidden) {
       stop();
       say("Stopped while the app is in the background");
-    }
+    } else invalidateVisuals();
   });
   window.addEventListener("pagehide", stop);
   // One bar spans the display; repetitions on either side show the loop seam.
   const canvas = $("rhythm"),
     ctx = canvas.getContext("2d");
-  let cachedEvents = [];
-  function draw() {
+  let cachedEvents = [],
+    rhythmByStep = new Map(),
+    frameRequest = null,
+    visualsDirty = true,
+    lastDraw = -Infinity;
+  function invalidateVisuals() {
+    visualsDirty = true;
+    if (frameRequest === null) frameRequest = requestAnimationFrame(draw);
+  }
+  const resizeObserver = new ResizeObserver(() => {
+    velocityEditor.invalidate();
+    invalidateVisuals();
+  });
+  resizeObserver.observe(canvas);
+  resizeObserver.observe($("velocity-graph"));
+  function draw(timestamp = 0) {
+    frameRequest = null;
+    if (document.hidden) return;
+    if (audio.running && timestamp - lastDraw < 1000 / 30) {
+      if (visualsDirty && page === "velocity")
+        velocityEditor.draw(audio.position(), true);
+      visualsDirty = false;
+      frameRequest = requestAnimationFrame(draw);
+      return;
+    }
+    lastDraw = timestamp;
+    visualsDirty = false;
     const box = canvas.getBoundingClientRect(),
       ratio = window.devicePixelRatio || 1,
       w = box.width,
@@ -922,14 +987,12 @@
       ctx.lineTo(x, h - 4);
       ctx.stroke();
     }
-    for (const note of cachedEvents) {
-      const start = Math.floor((first - note.step) / total),
-        end = Math.ceil((last - note.step) / total);
-      for (let loop = start; loop <= end; loop++) {
-        const x = head + (note.step + loop * total - current) * pixel;
-        if (x < left || x > right) continue;
-        const index = project.drums.findIndex((d) => d.midi === note.drum),
-          y = h * (0.16 + note.lane * 0.29) + (index % 5) * h * 0.035;
+    for (let step = first; step <= last; step++) {
+      const x = head + (step - current) * pixel;
+      if (x < left || x > right) continue;
+      const notes = rhythmByStep.get(((step % total) + total) % total) || [];
+      for (const note of notes) {
+        const y = h * (0.16 + note.lane * 0.29) + note.row * h * 0.035;
         ctx.fillStyle = ["#22b7f4", "#ffb75c", "#68df93"][note.lane];
         ctx.beginPath();
         ctx.arc(x, y, 2.4 + note.velocity / 127, 0, Math.PI * 2);
@@ -951,9 +1014,9 @@
     ctx.fill();
     if (page === "velocity")
       velocityEditor.draw(audio.position(), audio.running);
-    requestAnimationFrame(draw);
+    if (audio.running) frameRequest = requestAnimationFrame(draw);
   }
   render();
   if (storageWarning) say(storageWarning);
-  draw();
+  invalidateVisuals();
 })();
