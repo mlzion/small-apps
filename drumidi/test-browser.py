@@ -95,7 +95,7 @@ with sync_playwright() as pw:
  data=Path(dl.value.path()).read_bytes();assert data[:4]==b'MThd' and int.from_bytes(data[10:12],'big')==2
  page.locator('#arrangement-tab').tap()
  with page.expect_download() as dl:page.locator('#export').tap()
- data=Path(dl.value.path()).read_bytes();assert data[:4]==b'MThd' and int.from_bytes(data[10:12],'big')==4
+ data=Path(dl.value.path()).read_bytes();assert data[:4]==b'MThd' and int.from_bytes(data[10:12],'big')==5
  # Full editable JSON export/load roundtrip; explicit replacement confirmation.
  saved=project();page.locator('#settings').tap()
  with page.expect_download() as dl:page.locator('#save-project').tap()
@@ -189,7 +189,7 @@ with sync_playwright() as pw:
  legacy=json.loads(json.dumps(saved));legacy['version']=1;legacy['patterns']=legacy['patterns'][:8];legacy['arrangement']['lanes']=legacy['arrangement']['lanes'][:2]
  for ptn in legacy['patterns']:ptn.pop('color')
  for drum in legacy['drums']:drum.pop('muted')
- page.evaluate("p=>localStorage.setItem('app-lab-drumidi-v1',JSON.stringify(p))",legacy);page.reload();migrated=project();assert migrated['version']==2 and len(migrated['patterns'])==16 and len(migrated['arrangement']['lanes'])==3;assert migrated['arrangement']['lanes'][:2]==legacy['arrangement']['lanes'];assert migrated['patterns'][0]['notes']==legacy['patterns'][0]['notes'];assert not any(d['muted'] for d in migrated['drums'])
+ page.evaluate("p=>localStorage.setItem('app-lab-drumidi-v1',JSON.stringify(p))",legacy);page.reload();migrated=project();assert migrated['version']==2 and len(migrated['patterns'])==16 and len(migrated['arrangement']['lanes'])==4;assert migrated['arrangement']['lanes'][:2]==legacy['arrangement']['lanes'];assert migrated['patterns'][0]['notes']==legacy['patterns'][0]['notes'];assert not any(d['muted'] for d in migrated['drums'])
  page.locator('#settings').tap();page.once('dialog',lambda d:d.accept());page.locator('#project-file').set_input_files({'name':'legacy.json','mimeType':'application/json','buffer':json.dumps(legacy).encode()});expect(page.locator('#project-dialog')).to_be_hidden();assert project()==migrated
  print('PASS: all 16 selectors; colors; empty-only paste/delete/reset/confirmation; blocked paste; mobile pattern long press; live global mutes; v2 JSON; v1 storage/import migration',flush=True)
 

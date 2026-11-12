@@ -9,7 +9,7 @@
     <meta name="theme-color" content="#0b0f15" />
     <meta
       name="description"
-      content="DruMidi: compose acoustic drum patterns, arrange three lanes, and export precise General MIDI."
+      content="DruMidi: compose acoustic drum patterns, arrange four lanes, and export precise General MIDI."
     />
     <title>DruMidi — Drum MIDI Creator | App Lab</title>
     <link rel="icon" href="../assets/favicon.svg" type="image/svg+xml" />
@@ -198,8 +198,10 @@
           </p>
           <div class="timeline-scroll"><div id="timeline"></div></div>
           <p class="hint arrangement-legend">
-            A · Backbone <span class="lane-b-text">B · Cymbals</span
+            <span class="lane-a-text">A · Backbone</span>
+            <span class="lane-b-text">B · Cymbals</span
             ><span class="lane-c-text">C · Fills</span>
+            <span class="lane-d-text">D · Percussion</span>
           </p>
           <div id="placement" role="status"></div>
         </section>
@@ -286,6 +288,16 @@
       <label>General MIDI percussion<select id="drum-choice"></select></label
       ><button id="confirm-drum" class="primary">Add instrument</button>
     </dialog>
+    <dialog id="drum-actions" aria-labelledby="drum-actions-title">
+      <form method="dialog">
+        <div class="dialog-heading">
+          <h2 id="drum-actions-title">Drum actions</h2>
+          <button aria-label="Close drum actions">✕</button>
+        </div>
+      </form>
+      <p id="drum-removal-info"></p>
+      <button id="remove-drum" class="primary">Remove Drum</button>
+    </dialog>
     <dialog id="clip-dialog">
       <form method="dialog">
         <div class="dialog-heading">
@@ -298,6 +310,7 @@
           <option value="0">A — Backbone</option>
           <option value="1">B — Cymbals</option>
           <option value="2">C — Fills</option>
+          <option value="3">D — Percussion</option>
         </select></label
       ><label>Start bar<select id="clip-start"></select></label>
       <div class="project-actions">

@@ -66,11 +66,12 @@
     { id: "green", name: "Green", hex: "#46b96d" },
     { id: "purple", name: "Purple", hex: "#ac83ed" },
     { id: "yellow", name: "Yellow", hex: "#e5ca48" },
-    { id: "pink", name: "Pink", hex: "#e681b7" },
     { id: "teal", name: "Teal", hex: "#39bdb8" },
     { id: "red", name: "Red", hex: "#e97171" },
   ];
-  const laneNames = ["Backbone", "Cymbals", "Fills"];
+  const laneNames = ["Backbone", "Cymbals", "Fills", "Percussion"];
+  // Retain explicitly saved legacy pink assignments without offering new ones.
+  const patternColor = (id) => palette.find((c) => c.id === id)?.hex || "#e681b7";
   const DEFAULT_NAME = "DruMidi Project";
   const fresh = () => ({
     format: "drumidi",
@@ -87,7 +88,7 @@
       color: "gray",
       notes: [],
     })),
-    arrangement: { bars: 8, lanes: [[], [], []] },
+    arrangement: { bars: 8, lanes: [[], [], [], []] },
   });
   const int = (v, min, max) => Number.isInteger(v) && v >= min && v <= max;
   const error = (message) => {
@@ -97,7 +98,7 @@
     const p = project.patterns.find((p) => p.id === pattern);
     return (
       !!p &&
-      int(lane, 0, 2) &&
+      int(lane, 0, laneNames.length - 1) &&
       int(start, 0, 7) &&
       start + p.bars <= project.arrangement.bars &&
       project.arrangement.lanes[lane].every(
@@ -147,8 +148,8 @@
       );
     if (!int(raw.bpm, 30, 300))
       error("BPM must be a whole number from 30 to 300.");
-    if (!Array.isArray(raw.drums) || !raw.drums.length || raw.drums.length > 47)
-      error("Project must contain 1–47 drum instruments.");
+    if (!Array.isArray(raw.drums) || raw.drums.length > 47)
+      error("Project must contain 0–47 drum instruments.");
     const legacy = raw.version === 1;
     const used = new Set();
     const drums = raw.drums.map((d) => {
@@ -185,6 +186,7 @@
         !int(p.bars, 1, 4) ||
         (p.color != null &&
           p.color !== "" &&
+          p.color !== "pink" &&
           !palette.some((c) => c.id === p.color)) ||
         !Array.isArray(p.notes) ||
         p.notes.length > 12032
@@ -217,10 +219,10 @@
       !a ||
       !int(a.bars, 1, 8) ||
       !Array.isArray(a.lanes) ||
-      a.lanes.length !== (legacy ? 2 : 3)
+      (legacy ? a.lanes.length !== 2 : ![3, 4].includes(a.lanes.length))
     )
       error(
-        "Arrangement must have 1–8 bars and three lanes (two in a version 1 project).",
+        "Arrangement must have 1–8 bars and four lanes (three in older version 2 projects, two in version 1).",
       );
     const project = {
       format: "drumidi",
@@ -229,7 +231,7 @@
       bpm: raw.bpm,
       drums,
       patterns,
-      arrangement: { bars: a.bars, lanes: [[], [], []] },
+      arrangement: { bars: a.bars, lanes: [[], [], [], []] },
     };
     const ids = new Set();
     a.lanes.forEach((lane, i) => {
@@ -362,6 +364,34 @@
       ...tracks.flat(),
     ]);
   }
+  function insertDrum(project, midi, after = null) {
+    const source = catalog.find((d) => d.midi === midi);
+    if (!source || project.drums.some((d) => d.midi === midi))
+      error("Choose a GM drum that is not already in the list.");
+    const drums = project.drums.slice();
+    const index = drums.findIndex((d) => d.midi === after);
+    drums.splice(index < 0 ? drums.length : index + 1, 0, {
+      ...source,
+      muted: false,
+    });
+    return validate({ ...project, drums });
+  }
+  const drumNoteCount = (project, midi) =>
+    project.patterns.reduce(
+      (count, p) => count + p.notes.filter((n) => n.drum === midi).length,
+      0,
+    );
+  function removeDrum(project, midi) {
+    if (!project.drums.some((d) => d.midi === midi)) error("Drum not found.");
+    return validate({
+      ...project,
+      drums: project.drums.filter((d) => d.midi !== midi),
+      patterns: project.patterns.map((p) => ({
+        ...p,
+        notes: p.notes.filter((n) => n.drum !== midi),
+      })),
+    });
+  }
   function copyPattern(pattern) {
     return { ...pattern, notes: pattern.notes.map((n) => ({ ...n })) };
   }
@@ -438,6 +468,10 @@
       if (note.drum === midi) note.velocity = 100;
   }
   return {
+    insertDrum,
+    removeDrum,
+    drumNoteCount,
+    patternColor,
     DEFAULT_NAME,
     projectName,
     filenameStem,

@@ -30,6 +30,7 @@ p.arrangement.lanes = [
     { id: "c1", pattern: "P3", start: 0 },
     { id: "c2", pattern: "P16", start: 7 },
   ],
+  [{ id: "d1", pattern: "P2", start: 0 }],
 ];
 assert.deepEqual(D.validate(JSON.parse(JSON.stringify(p))), p);
 assert(!D.canPlace(p, 0, "P2", 3));
@@ -117,7 +118,7 @@ assert.deepEqual(tracks[0].find((e) => e.type === 81).data, [
   Math.round(60000000 / 137) & 255,
 ]);
 tracks = parse(D.midi(p, "arrangement"));
-assert.equal(tracks.length, 4);
+assert.equal(tracks.length, 5);
 for (const t of tracks) assert.equal(t.at(-1).tick, 8 * 3840);
 assert.deepEqual(
   tracks[1].filter((e) => e.status === 153).map((e) => e.tick),
@@ -176,7 +177,7 @@ legacy.arrangement.lanes = legacy.arrangement.lanes.slice(0, 2);
 const migrated = D.validate(legacy);
 assert.equal(migrated.version, 2);
 assert.equal(migrated.patterns.length, 16);
-assert.equal(migrated.arrangement.lanes.length, 3);
+assert.equal(migrated.arrangement.lanes.length, 4);
 assert.deepEqual(
   migrated.arrangement.lanes.slice(0, 2),
   legacy.arrangement.lanes,
@@ -223,9 +224,9 @@ assert(D.events(accepted, "arrangement").some((e) => e.drum === 35));
 invalid((p) => (p.drums[0].muted = "false"));
 invalid((p) => (p.patterns[0].color = "url(evil)"));
 invalid((p) => p.patterns.pop());
-invalid((p) => p.arrangement.lanes.pop());
+invalid((p) => p.arrangement.lanes.splice(2));
 console.log(
-  "PASS: 16 patterns; v1 migration; palette/JSON; independent copies; transactional paste/references/collisions; global mute/export/note retention; three percussion tracks.",
+  "PASS: 16 patterns; v1 migration; palette/JSON; independent copies; transactional paste/references/collisions; global mute/export/note retention; four percussion tracks.",
 );
 
 assert(parse(D.midi(accepted, "pattern", 15))[1].some((e) => e.note === 35));
@@ -254,7 +255,7 @@ assert.equal(
 // Deletion retains references on all lanes and shrinks clips without moving them.
 const deletion = D.fresh();
 deletion.patterns[15] = { ...copied, id: "P16", color: "teal" };
-for (let i = 0; i < 3; i++)
+for (let i = 0; i < 4; i++)
   deletion.arrangement.lanes[i] = [
     { id: `kept-${i}`, pattern: "P16", start: 0 },
     { id: `neighbor-${i}`, pattern: "P2", start: 4 },
@@ -287,7 +288,7 @@ invalidOverlap.arrangement.lanes[1].push({
 assert.throws(() => D.deletePattern(invalidOverlap, 15));
 assert.throws(() => D.deletePattern(deletion, 16));
 console.log(
-  "PASS: empty-only paste including hidden/muted notes; empty multi-bar destinations; transactional deletion/reset; ID/color/three-lane references; arrangement revalidation.",
+  "PASS: empty-only paste including hidden/muted notes; empty multi-bar destinations; transactional deletion/reset; ID/color/four-lane references; arrangement revalidation.",
 );
 
 assert(D.fresh().patterns.every((p) => p.color === "gray"));
@@ -312,7 +313,7 @@ console.log(
   "PASS: gray defaults/missing-color normalization/legacy migration; explicit colors persist and copy; deletion resets to gray.",
 );
 
-assert.deepEqual(D.laneNames, ["Backbone", "Cymbals", "Fills"]);
+assert.deepEqual(D.laneNames, ["Backbone", "Cymbals", "Fills", "Percussion"]);
 const named = D.fresh();
 assert.equal(named.name, "DruMidi Project");
 named.name = "Rock Beat 1";
@@ -348,3 +349,48 @@ assert.equal(D.pastePattern(q, 15, copied).patterns[15].color, copied.color);
 console.log(
   "PASS: source color paste; lane label order; project naming/defaults/legacy fallback; Windows-safe filenames and MIDI/JSON naming.",
 );
+
+// Four independent lanes export with exact 64th positions and channel 10.
+assert.equal(D.palette.length, 8);
+assert(!D.palette.some((c) => c.id === "pink"));
+const four = D.fresh();
+four.patterns[0].notes = [{drum: 38, step: 1, velocity: 71}];
+four.arrangement.lanes.forEach((lane, i) => lane.push({id: `four-${i}`, pattern: "P1", start: i}));
+assert.deepEqual(D.validate(four), four);
+assert(!D.canPlace(four, 3, "P1", 3));
+assert(D.canPlace(four, 3, "P1", 4));
+assert(!D.canPlace(four, 4, "P1", 0));
+const fourTracks = parse(D.midi(four, "arrangement"));
+assert.equal(fourTracks.length, 5);
+for (let i=0; i<4; i++) {
+  assert.deepEqual(fourTracks[i+1].filter(e => e.status === 153).map(e => [e.tick,e.note,e.velocity]), [[(i*64+1)*60,38,71]]);
+  assert.equal(fourTracks[i+1].at(-1).tick,8*3840);
+}
+const three = structuredClone(four);three.arrangement.lanes.pop();
+assert.deepEqual(D.validate(three).arrangement.lanes, [...three.arrangement.lanes, []]);
+const oldPink = D.fresh();oldPink.patterns[0].color="pink";
+assert.equal(D.validate(oldPink).patterns[0].color,"pink");
+assert.equal(D.patternColor("pink"),"#e681b7");
+// Shared order is preserved transactionally; hidden notes count and are removed too.
+let ordered = D.insertDrum(four, 36, 38);
+assert.deepEqual(ordered.drums.slice(0,4).map(d => d.midi),[35,38,36,42]);
+assert.throws(() => D.insertDrum(ordered, 36, 35), /already/);
+ordered = D.insertDrum(ordered, 81, null);
+assert.equal(ordered.drums.at(-1).midi,81);
+ordered.patterns[15].notes = [{drum:38,step:255,velocity:12},{drum:36,step:23,velocity:119}];
+assert.equal(D.drumNoteCount(ordered,38),2);
+const unchanged=JSON.stringify(ordered), kept=ordered.patterns[15].notes[1];
+const without=D.removeDrum(ordered,38);
+assert.equal(JSON.stringify(ordered),unchanged);
+assert.deepEqual(without.patterns[15].notes,[kept]);
+assert.deepEqual(without.arrangement,ordered.arrangement);
+assert(without.patterns.every(p => p.notes.every(n => n.drum!==38)));
+assert.deepEqual(D.validate(JSON.parse(JSON.stringify(without))),without);
+let empty = without;
+for (const d of without.drums) empty=D.removeDrum(empty,d.midi);
+assert.deepEqual(empty.drums,[]);
+assert(empty.patterns.every(p => p.notes.length===0));
+assert.deepEqual(D.validate(empty),empty);
+assert.equal(parse(D.midi(empty,"arrangement")).length,5);
+assert.equal(D.insertDrum(empty,81).drums[0].midi,81);
+console.log("PASS: four lanes/MIDI tracks/channel/timing; three-lane restore; eight-color palette/legacy pink; ordered drum insertion, duplicates, removal isolation/hidden notes, empty list and re-add.");

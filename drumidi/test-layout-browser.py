@@ -52,7 +52,7 @@ with sync_playwright() as pw:
   page.set_viewport_size(dict(width=width,height=height));page.locator('main').evaluate('e=>e.scrollTop=0');page.wait_for_timeout(50)
   assert page.evaluate('document.documentElement.scrollWidth<=innerWidth')
   main=page.locator('main');assert main.evaluate('e=>e.scrollHeight<=e.clientHeight+2'),(width,height,main.evaluate('e=>[e.scrollHeight,e.clientHeight]'))
-  footer=page.locator('.transport').bounding_box();lane=page.locator('.lane-c').bounding_box();assert lane['y']+lane['height']<=footer['y']
+  footer=page.locator('.transport').bounding_box();lane=page.locator('.lane-d').bounding_box();assert lane['y']+lane['height']<=footer['y']
   for clip in page.locator('.clip').all():assert 44<=clip.bounding_box()['height']<=60
   a=page.locator('.lane-a .clip').first;assert a.evaluate('e=>e.style.gridColumn')=='2 / span 1'
   b=page.locator('.lane-b .clip').first;assert b.evaluate('e=>e.style.gridColumn')=='3 / span 2'
@@ -89,5 +89,5 @@ with sync_playwright() as pw:
  page.locator('#settings').tap();page.once('dialog',lambda d:d.accept());page.locator('#project-file').set_input_files(path);expect(page.locator('#project-dialog')).to_be_hidden();assert project()==saved
  page.reload();assert project()==saved
  assert not errors,errors;assert not missing,missing
- print('PASS: horizontal touch strip/P16; assigned/gray/deleted colors; compact three-lane fit and unchanged bar spans; clip touch move; frozen velocities across repeat loops; restart; immediate MIDI/JSON; cached graph/bounded footer/idle rendering; persistence and imports.')
+ print('PASS: horizontal touch strip/P16; assigned/gray/deleted colors; compact four-lane fit and unchanged bar spans; clip touch move; frozen velocities across repeat loops; restart; immediate MIDI/JSON; cached graph/bounded footer/idle rendering; persistence and imports.')
  browser.close()
