@@ -186,6 +186,7 @@ assert(migrated.drums.every((d) => d.muted === false));
 assert.deepEqual(D.validate(JSON.parse(JSON.stringify(migrated))), migrated);
 const q = D.fresh();
 q.patterns[0].bars = 4;
+q.patterns[0].color = "blue";
 q.patterns[0].notes = [{ drum: 35, step: 255, velocity: 43 }];
 q.patterns[15].color = "purple";
 const copied = D.copyPattern(q.patterns[0]);
@@ -193,7 +194,7 @@ q.patterns[0].notes[0].velocity = 99;
 assert.equal(copied.notes[0].velocity, 43);
 const pasted = D.pastePattern(q, 15, copied);
 assert.equal(pasted.patterns[15].bars, 4);
-assert.equal(pasted.patterns[15].color, "purple");
+assert.equal(pasted.patterns[15].color, "blue");
 assert.equal(pasted.patterns[15].id, "P16");
 assert.equal(pasted.patterns[15].notes[0].velocity, 43);
 q.arrangement.lanes[2] = [
@@ -309,4 +310,41 @@ assert.equal(
 );
 console.log(
   "PASS: gray defaults/missing-color normalization/legacy migration; explicit colors persist and copy; deletion resets to gray.",
+);
+
+assert.deepEqual(D.laneNames, ["Backbone", "Cymbals", "Fills"]);
+const named = D.fresh();
+assert.equal(named.name, "DruMidi Project");
+named.name = "Rock Beat 1";
+assert.equal(D.exportFilename(named, "arrangement"), "Rock Beat 1.mid");
+assert.equal(D.exportFilename(named, "pattern", 2), "Rock Beat 1-P3.mid");
+assert.equal(D.exportFilename(named, "velocity", 2), "Rock Beat 1-P3.mid");
+assert.equal(D.exportFilename(named, "pattern", 2, true), "Rock Beat 1.json");
+assert.equal(D.validate(JSON.parse(JSON.stringify(named))).name, "Rock Beat 1");
+delete named.name;
+assert.equal(D.validate(named).name, "DruMidi Project");
+assert.equal(D.validate(named, "Imported Session").name, "Imported Session");
+assert.equal(D.filenameStem("CON"), "_CON");
+assert.equal(D.filenameStem("con.txt"), "_con.txt");
+assert.equal(D.filenameStem("LPT1"), "_LPT1");
+assert.equal(D.filenameStem("Rock: Beat/1?"), "Rock_ Beat_1_");
+assert.equal(D.filenameStem(" . "), "DruMidi Project");
+assert.equal(D.filenameStem("Song...  "), "Song");
+assert.equal(
+  D.filenameStem("A" + String.fromCharCode(0, 1, 31, 127) + "B"),
+  "A____B",
+);
+assert.equal(
+  D.filenameStem(
+    "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-_+=!",
+  ),
+  "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-_+=!",
+);
+assert(D.filenameStem("x".repeat(1000)).length <= 200);
+assert(!D.filenameStem("😀".repeat(200)).endsWith("\ud83d"));
+assert.throws(() => D.validate({ ...named, name: 123 }));
+assert.throws(() => D.validate({ ...named, name: "x".repeat(1025) }));
+assert.equal(D.pastePattern(q, 15, copied).patterns[15].color, copied.color);
+console.log(
+  "PASS: source color paste; lane label order; project naming/defaults/legacy fallback; Windows-safe filenames and MIDI/JSON naming.",
 );

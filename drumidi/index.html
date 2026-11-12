@@ -25,6 +25,22 @@
         <a href="../" class="home" aria-label="Back to App Lab">‹</a>
         <h1>DruMidi</h1>
         <button
+          id="fullscreen"
+          type="button"
+          aria-label="Enter fullscreen"
+          aria-pressed="false"
+          title="Enter fullscreen"
+        >
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path
+              d="M8 3H3v5m13-5h5v5M3 16v5h5m13-5v5h-5"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+            />
+          </svg>
+        </button>
+        <button
           id="settings"
           aria-label="Project settings"
           title="Project settings"
@@ -63,14 +79,7 @@
                 aria-label="Pattern"
                 aria-haspopup="dialog"
               >
-                P1 ▾</button
-              ><button
-                id="pattern-menu"
-                type="button"
-                aria-label="Pattern actions"
-                aria-haspopup="dialog"
-              >
-                ⋯
+                P1 ▾
               </button></label
             ><label
               >Length
@@ -181,23 +190,16 @@
           </div>
           <div class="library-heading">
             <h2 class="section-title">Pattern library</h2>
-            <button
-              id="library-menu"
-              aria-label="Library pattern actions"
-              aria-haspopup="dialog"
-            >
-              ⋯
-            </button>
           </div>
           <div id="library" aria-label="Pattern library" tabindex="0"></div>
           <p class="hint arrangement-help">
-            Drag or tap patterns onto bars. Tap clips for actions.<br />Empty
-            bars are silent.
+            Tap patterns to place. Hold or right-click for pattern actions.<br />Tap
+            clips for actions. Empty bars are silent.
           </p>
           <div class="timeline-scroll"><div id="timeline"></div></div>
           <p class="hint arrangement-legend">
-            A · Backbone <span class="lane-b-text">B · Fills</span
-            ><span class="lane-c-text">C · Cymbals/Percussion</span>
+            A · Backbone <span class="lane-b-text">B · Cymbals</span
+            ><span class="lane-c-text">C · Fills</span>
           </p>
           <div id="placement" role="status"></div>
         </section>
@@ -246,6 +248,14 @@
           <button aria-label="Close project settings">✕</button>
         </div>
       </form>
+      <label class="project-name-label"
+        >Project Name<input
+          id="project-name"
+          type="text"
+          maxlength="1024"
+          autocomplete="off"
+          spellcheck="false"
+      /></label>
       <div class="project-actions">
         <button id="save-project">Save Project</button
         ><button id="load-project">Load Project</button
@@ -286,8 +296,8 @@
       <label
         >Lane<select id="clip-lane">
           <option value="0">A — Backbone</option>
-          <option value="1">B — Fills</option>
-          <option value="2">C — Cymbals/Percussion</option>
+          <option value="1">B — Cymbals</option>
+          <option value="2">C — Fills</option>
         </select></label
       ><label>Start bar<select id="clip-start"></select></label>
       <div class="project-actions">
@@ -303,6 +313,9 @@
           <button aria-label="Close pattern selector">✕</button>
         </div>
       </form>
+      <p class="hint">
+        Hold or right-click a pattern for actions. Keyboard: Shift+F10.
+      </p>
       <div id="pattern-options"></div>
     </dialog>
     <dialog id="pattern-dialog" aria-labelledby="pattern-title">

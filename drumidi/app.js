@@ -25,7 +25,7 @@
     if (raw) {
       const saved = JSON.parse(raw);
       project = D.validate(saved);
-      if (saved.version === 1) {
+      if (saved.version === 1 || saved.name !== project.name) {
         try {
           localStorage.setItem(KEY, JSON.stringify(project));
         } catch {
@@ -151,6 +151,15 @@
       },
       true,
     );
+    target.title =
+      "Long press or right-click for pattern actions. Keyboard: Shift+F10.";
+    target.addEventListener("keydown", (e) => {
+      if (e.key === "ContextMenu" || (e.shiftKey && e.key === "F10")) {
+        e.preventDefault();
+        cancel();
+        action();
+      }
+    });
     target.addEventListener("contextmenu", (e) => {
       e.preventDefault();
       cancel();
@@ -165,7 +174,7 @@
       ? "Paste is available only for empty patterns (zero notes). Delete this pattern first to paste."
       : !clipboard
         ? "Copy a pattern to enable Paste. An empty pattern has zero notes, regardless of its length."
-        : "Destination is empty. Paste will retain its ID, color and arrangement clips.";
+        : "Destination is empty. Paste copies the source color and retains the destination ID and arrangement clips.";
   }
   function openPatternMenu(index) {
     if ($("pattern-dialog").open) return;
@@ -220,14 +229,14 @@
     }
     if (
       !confirm(
-        `Replace ${project.patterns[patternTarget].id} with the copied pattern? Its color and arrangement references will be retained.`,
+        `Paste into ${project.patterns[patternTarget].id}, including the copied color? Its ID and arrangement clips will be retained.`,
       )
     )
       return;
     project = candidate;
     bar = Math.min(bar, active().bars - 1);
     $("pattern-dialog").close();
-    changed("Pattern pasted · Destination color retained");
+    changed("Pattern pasted · Copied color restored");
   };
   $("delete-pattern").onclick = () => {
     const p = project.patterns[patternTarget];
@@ -735,9 +744,6 @@
   }
   $("pattern").onclick = () => $("pattern-picker").showModal();
   longPress($("pattern"), () => openPatternMenu(selected));
-  $("pattern-menu").onclick = () => openPatternMenu(selected);
-  $("library-menu").onclick = () =>
-    openPatternMenu(project.patterns.findIndex((p) => p.id === library));
   $("length").onchange = (e) => {
     const previous = active().bars;
     active().bars = +e.target.value;
@@ -814,20 +820,76 @@
   $("export").onclick = () => {
     download(
       D.midi(project, page, selected),
-      `DruMidi-${page !== "arrangement" ? active().id : "Arrangement"}.mid`,
+      D.exportFilename(project, page, selected),
       "audio/midi",
     );
     say("MIDI exported · GM channel 10 · 960 PPQ");
   };
+  const supportsFullscreen =
+    typeof document.documentElement.requestFullscreen === "function" &&
+    typeof document.exitFullscreen === "function" &&
+    document.fullscreenEnabled !== false;
+  function updateFullscreen() {
+    const active = !!document.fullscreenElement;
+    $("fullscreen").disabled = !supportsFullscreen;
+    const label = supportsFullscreen
+      ? active
+        ? "Exit fullscreen"
+        : "Enter fullscreen"
+      : "Fullscreen unavailable in this browser";
+    $("fullscreen").setAttribute("aria-label", label);
+    $("fullscreen").title = label;
+    $("fullscreen").setAttribute("aria-pressed", String(active));
+    $("fullscreen").classList.toggle("is-fullscreen", active);
+    velocityEditor.invalidate();
+    invalidateVisuals();
+  }
+  $("fullscreen").onclick = async () => {
+    try {
+      if (document.fullscreenElement) await document.exitFullscreen();
+      else if (supportsFullscreen)
+        await document.documentElement.requestFullscreen();
+    } catch {
+      say(
+        "Fullscreen could not be changed. Your browser may block this request.",
+      );
+    }
+    updateFullscreen();
+  };
+  document.addEventListener("fullscreenchange", updateFullscreen);
+  const home = document.querySelector(".home");
+  home.addEventListener("click", async (e) => {
+    if (!document.fullscreenElement) return;
+    if (e.ctrlKey || e.metaKey || e.shiftKey || e.altKey || e.button !== 0) {
+      document.exitFullscreen().catch(() => {});
+      return;
+    }
+    e.preventDefault();
+    stop();
+    try {
+      await document.exitFullscreen();
+    } catch {
+      /* navigation also leaves document fullscreen */
+    }
+    location.assign(home.href);
+  });
   $("settings").onclick = () => {
+    $("project-name").value = project.name;
     $("storage-status").textContent =
       storageWarning || "Automatic save is up to date in this browser.";
     $("project-dialog").showModal();
   };
+  $("project-name").addEventListener("input", (e) => {
+    project.name = D.projectName(e.target.value);
+    persist();
+  });
+  $("project-name").addEventListener("blur", () => {
+    $("project-name").value = project.name;
+  });
   $("save-project").onclick = () => {
     download(
       JSON.stringify(project, null, 2),
-      "DruMidi-project.json",
+      D.exportFilename(project, page, selected, true),
       "application/json",
     );
     say("JSON project downloaded");
@@ -840,7 +902,10 @@
     try {
       if (file.size > 32 * 1024 * 1024)
         throw new Error("Project file is too large (maximum 32 MB).");
-      const candidate = D.validate(JSON.parse(await file.text()));
+      const candidate = D.validate(
+        JSON.parse(await file.text()),
+        file.name.replace(/\.json$/i, ""),
+      );
       if (
         !confirm(
           "Replace the current project with this file? Save Project first if you need a backup.",
@@ -1017,6 +1082,7 @@
     if (audio.running) frameRequest = requestAnimationFrame(draw);
   }
   render();
+  updateFullscreen();
   if (storageWarning) say(storageWarning);
   invalidateVisuals();
 })();

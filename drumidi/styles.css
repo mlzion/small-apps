@@ -804,11 +804,6 @@ header button svg {
   white-space: nowrap;
   border-left: 5px solid var(--pattern-color);
 }
-.pattern-toolbar #pattern-menu {
-  width: 28px;
-  min-width: 28px;
-  font-size: 20px;
-}
 #pattern-options {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
@@ -825,11 +820,6 @@ header button svg {
   display: flex;
   justify-content: space-between;
   align-items: center;
-}
-.library-heading button {
-  width: 36px;
-  height: 32px;
-  font-size: 22px;
 }
 .library-pattern,
 .clip,
@@ -925,10 +915,6 @@ header button svg {
   .pattern-toolbar #pattern {
     min-width: 52px;
     font-size: 13px;
-  }
-  .pattern-toolbar #pattern-menu {
-    width: 24px;
-    min-width: 24px;
   }
   .controls {
     grid-template-columns: 84px 100px 1fr;
@@ -1106,7 +1092,7 @@ header button svg {
   height: 100%;
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 4px;
 }
 #arrangement-page .arrange-toolbar {
   flex: none;
@@ -1122,10 +1108,6 @@ header button svg {
 .library-heading .section-title {
   margin: 0;
   font-size: 14px;
-}
-.library-heading button {
-  height: 28px;
-  width: 36px;
 }
 #library {
   display: flex;
@@ -1224,4 +1206,77 @@ header button svg {
 .pattern-option[aria-pressed="true"],
 .color-choice[aria-pressed="true"] {
   border-color: var(--pattern-color);
+}
+/* Phase 1.4: square bar units; each grid column still represents one full bar. */
+#arrangement-page .timeline-scroll {
+  flex: none;
+  min-height: 0;
+}
+#timeline {
+  width: max-content;
+  min-width: 0;
+  height: auto;
+  padding: 4px;
+}
+.ruler,
+.lane {
+  grid-template-columns: 32px repeat(var(--bars), 56px);
+  width: max-content;
+  gap: 3px;
+}
+.ruler {
+  height: 20px;
+}
+.lane {
+  height: 56px;
+  min-height: 56px;
+  margin-bottom: 3px;
+}
+.bar-slot {
+  width: 56px;
+  height: 56px;
+}
+.clip {
+  height: 52px;
+  padding: 4px 5px;
+}
+.library-heading {
+  min-height: 18px;
+}
+header #fullscreen {
+  width: 34px;
+  height: 40px;
+  flex: none;
+  padding: 4px;
+}
+header #fullscreen svg {
+  width: 22px;
+  height: 22px;
+}
+header #fullscreen.is-fullscreen svg {
+  transform: scale(0.78);
+}
+html:fullscreen {
+  background: #080b10;
+  overflow: hidden;
+}
+html:fullscreen .app {
+  height: 100dvh;
+}
+.project-name-label {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  margin-bottom: 16px;
+  font-size: 14px;
+}
+#project-name {
+  width: 100%;
+  min-height: 42px;
+  border: 1px solid #64768d;
+  border-radius: 8px;
+  background: #10161e;
+  color: #eff4ff;
+  padding: 9px 10px;
+  font: inherit;
 }

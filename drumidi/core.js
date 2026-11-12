@@ -70,10 +70,12 @@
     { id: "teal", name: "Teal", hex: "#39bdb8" },
     { id: "red", name: "Red", hex: "#e97171" },
   ];
-  const laneNames = ["Backbone", "Fills", "Cymbals/Percussion"];
+  const laneNames = ["Backbone", "Cymbals", "Fills"];
+  const DEFAULT_NAME = "DruMidi Project";
   const fresh = () => ({
     format: "drumidi",
     version: 2,
+    name: DEFAULT_NAME,
     bpm: 120,
     drums: [35, 38, 42, 46, 51, 50, 47, 43, 49].map((m) => ({
       ...catalog[m - 35],
@@ -107,7 +109,38 @@
       )
     );
   }
-  function validate(raw) {
+  function projectName(value, fallback = DEFAULT_NAME) {
+    if (value == null || (typeof value === "string" && !value.trim()))
+      value = fallback;
+    if (typeof value !== "string" || value.length > 1024)
+      error("Project name must be text of at most 1024 characters.");
+    return value.trim() || DEFAULT_NAME;
+  }
+  function filenameStem(name) {
+    let stem = projectName(name)
+      .replace(/[<>:"\/\\|?*\x00-\x1f\x7f]/g, "_")
+      .trim()
+      .replace(/[. ]+$/g, "");
+    if (!stem) stem = DEFAULT_NAME;
+    if (/^(con|prn|aux|nul|com[1-9¹²³]|lpt[1-9¹²³])(?:\.|$)/i.test(stem))
+      stem = "_" + stem;
+    let safe = "";
+    for (const char of stem) {
+      if (safe.length + char.length > 200) break;
+      safe += char;
+    }
+    return safe.replace(/[. ]+$/g, "") || DEFAULT_NAME;
+  }
+  function exportFilename(project, page, selected = 0, json = false) {
+    return (
+      filenameStem(project.name) +
+      (json
+        ? ".json"
+        : (page === "arrangement" ? "" : "-" + project.patterns[selected].id) +
+          ".mid")
+    );
+  }
+  function validate(raw, fallbackName = DEFAULT_NAME) {
     if (!raw || raw.format !== "drumidi" || ![1, 2].includes(raw.version))
       error(
         "Unsupported project format or version. Choose a DruMidi version 1 or 2 JSON project.",
@@ -192,6 +225,7 @@
     const project = {
       format: "drumidi",
       version: 2,
+      name: projectName(raw.name, fallbackName),
       bpm: raw.bpm,
       drums,
       patterns,
@@ -346,7 +380,7 @@
           ? {
               ...copyPattern(source),
               id: destination.id,
-              color: destination.color,
+              color: source.color,
             }
           : p,
       ),
@@ -404,6 +438,10 @@
       if (note.drum === midi) note.velocity = 100;
   }
   return {
+    DEFAULT_NAME,
+    projectName,
+    filenameStem,
+    exportFilename,
     velocityAtCurve,
     applyVelocityCurve,
     resetVelocity,
