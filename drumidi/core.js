@@ -328,9 +328,14 @@
   function copyPattern(pattern) {
     return { ...pattern, notes: pattern.notes.map((n) => ({ ...n })) };
   }
+  const isEmptyPattern = (pattern) => pattern.notes.length === 0;
   function pastePattern(project, index, source) {
     if (!int(index, 0, 15)) error("Choose a destination pattern.");
     const destination = project.patterns[index];
+    if (!isEmptyPattern(destination))
+      error(
+        "Paste is available only for empty patterns (zero notes). Delete the destination pattern first.",
+      );
     return validate({
       ...project,
       patterns: project.patterns.map((p, i) =>
@@ -344,7 +349,18 @@
       ),
     });
   }
+  function deletePattern(project, index) {
+    if (!int(index, 0, 15)) error("Choose a pattern to delete.");
+    return validate({
+      ...project,
+      patterns: project.patterns.map((p, i) =>
+        i === index ? { ...p, bars: 1, notes: [] } : p,
+      ),
+    });
+  }
   return {
+    isEmptyPattern,
+    deletePattern,
     catalog,
     palette,
     laneNames,

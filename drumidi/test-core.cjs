@@ -230,3 +230,61 @@ console.log(
 assert(parse(D.midi(accepted, "pattern", 15))[1].some((e) => e.note === 35));
 accepted.drums.find((d) => d.midi === 35).muted = true;
 assert(parse(D.midi(accepted, "pattern", 15))[1].every((e) => e.note !== 35));
+
+// A pattern is empty only when there are zero stored notes, including hidden/muted notes.
+const populated = JSON.stringify(pasted);
+assert(!D.isEmptyPattern(pasted.patterns[15]));
+assert.throws(
+  () => D.pastePattern(pasted, 15, copied),
+  /only for empty patterns/,
+);
+assert.equal(JSON.stringify(pasted), populated);
+pasted.patterns[15].bars = 1;
+pasted.drums.find((d) => d.midi === 35).muted = true;
+assert(!D.isEmptyPattern(pasted.patterns[15]));
+assert.throws(() => D.pastePattern(pasted, 15, copied));
+const emptyLong = D.fresh();
+emptyLong.patterns[15].bars = 4;
+assert(D.isEmptyPattern(emptyLong.patterns[15]));
+assert.equal(
+  D.pastePattern(emptyLong, 15, copied).patterns[15].notes[0].velocity,
+  43,
+);
+// Deletion retains references on all lanes and shrinks clips without moving them.
+const deletion = D.fresh();
+deletion.patterns[15] = { ...copied, id: "P16", color: "teal" };
+for (let i = 0; i < 3; i++)
+  deletion.arrangement.lanes[i] = [
+    { id: `kept-${i}`, pattern: "P16", start: 0 },
+    { id: `neighbor-${i}`, pattern: "P2", start: 4 },
+  ];
+const original = JSON.stringify(deletion),
+  removed = D.deletePattern(deletion, 15);
+assert.equal(JSON.stringify(deletion), original);
+assert.deepEqual(removed.patterns[15], {
+  id: "P16",
+  color: "teal",
+  bars: 1,
+  notes: [],
+});
+assert.deepEqual(removed.arrangement, deletion.arrangement);
+assert.deepEqual(
+  D.pastePattern(removed, 15, copied).arrangement,
+  deletion.arrangement,
+);
+const invalidDelete = structuredClone(deletion);
+invalidDelete.arrangement.lanes[0][1].start = 8;
+const invalidBefore = JSON.stringify(invalidDelete);
+assert.throws(() => D.deletePattern(invalidDelete, 15));
+assert.equal(JSON.stringify(invalidDelete), invalidBefore);
+const invalidOverlap = structuredClone(deletion);
+invalidOverlap.arrangement.lanes[1].push({
+  id: "overlap",
+  pattern: "P3",
+  start: 4,
+});
+assert.throws(() => D.deletePattern(invalidOverlap, 15));
+assert.throws(() => D.deletePattern(deletion, 16));
+console.log(
+  "PASS: empty-only paste including hidden/muted notes; empty multi-bar destinations; transactional deletion/reset; ID/color/three-lane references; arrangement revalidation.",
+);

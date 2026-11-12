@@ -155,13 +155,22 @@
       action();
     });
   }
+  function updatePasteAvailability() {
+    const empty = D.isEmptyPattern(project.patterns[patternTarget]);
+    $("paste-pattern").disabled = !clipboard || !empty;
+    $("paste-explanation").textContent = !empty
+      ? "Paste is available only for empty patterns (zero notes). Delete this pattern first to paste."
+      : !clipboard
+        ? "Copy a pattern to enable Paste. An empty pattern has zero notes, regardless of its length."
+        : "Destination is empty. Paste will retain its ID, color and arrangement clips.";
+  }
   function openPatternMenu(index) {
     if ($("pattern-dialog").open) return;
     $("pattern-picker").close();
     patternTarget = index;
     const p = project.patterns[index];
     $("pattern-title").textContent = `${p.id} · Pattern actions`;
-    $("paste-pattern").disabled = !clipboard;
+    updatePasteAvailability();
     $("pattern-message").textContent = clipboard
       ? `Clipboard: ${clipboard.id}, ${lengthText(clipboard.bars)}`
       : "Copy a pattern to enable Paste.";
@@ -192,7 +201,7 @@
   }
   $("copy-pattern").onclick = () => {
     clipboard = D.copyPattern(project.patterns[patternTarget]);
-    $("paste-pattern").disabled = false;
+    updatePasteAvailability();
     $("pattern-message").textContent =
       `Copied ${clipboard.id}, including length, notes and velocities.`;
   };
@@ -217,17 +226,30 @@
     $("pattern-dialog").close();
     changed("Pattern pasted · Destination color retained");
   };
-  $("clear-pattern").onclick = () => {
+  $("delete-pattern").onclick = () => {
     const p = project.patterns[patternTarget];
+    let candidate;
+    try {
+      candidate = D.deletePattern(project, patternTarget);
+    } catch {
+      $("pattern-message").textContent =
+        "Cannot delete: the resulting arrangement would contain overlaps or invalid boundaries.";
+      return;
+    }
+    const referenced = project.arrangement.lanes.some((lane) =>
+      lane.some((c) => c.pattern === p.id),
+    );
     if (
+      (!D.isEmptyPattern(p) || referenced) &&
       !confirm(
-        `Clear all notes in ${p.id}? Its length, color and arrangement references will be retained.`,
+        `Delete all notes in ${p.id} and reset it to one bar? Its ID, color and arrangement clips will be retained.`,
       )
     )
       return;
-    p.notes = [];
+    project = candidate;
+    bar = Math.min(bar, active().bars - 1);
     $("pattern-dialog").close();
-    changed(`${p.id} cleared`);
+    changed(`${p.id} deleted · Reset to one bar · Clips retained`);
   };
   $("change-color").onclick = () => {
     $("color-palette").hidden = !$("color-palette").hidden;

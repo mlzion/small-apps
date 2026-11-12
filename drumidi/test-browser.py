@@ -143,14 +143,16 @@ with sync_playwright() as pw:
  for i in range(16):
   choose(i);expect(page.locator('#pattern')).to_have_text(f'P{i+1} ▾')
  choose(0);page.locator('#pattern-menu').tap();page.locator('#copy-pattern').tap();page.get_by_label('Close pattern actions').tap()
- choose(15);page.locator('#pattern-menu').tap();page.locator('#change-color').tap();page.get_by_role('button',name='Purple',exact=True).tap();page.get_by_label('Close pattern actions').tap()
+ choose(15);page.locator('#length').select_option('3');page.locator('#pattern-menu').tap();page.locator('#change-color').tap();page.get_by_role('button',name='Purple',exact=True).tap();page.get_by_label('Close pattern actions').tap()
  page.locator('#pattern-menu').tap();page.once('dialog',lambda d:d.dismiss());page.locator('#paste-pattern').tap();assert project()['patterns'][15]['notes']==[]
  page.once('dialog',lambda d:d.accept());page.locator('#paste-pattern').tap();assert project()['patterns'][15]['notes']==project()['patterns'][0]['notes'];assert project()['patterns'][15]['bars']==4;assert project()['patterns'][15]['color']=='purple'
  assert page.locator('#pattern').evaluate("e=>getComputedStyle(e).getPropertyValue('--pattern-color').trim()")=='#ac83ed'
- page.locator('#pattern-menu').tap();page.once('dialog',lambda d:d.dismiss());page.locator('#clear-pattern').tap();assert project()['patterns'][15]['notes']
- page.once('dialog',lambda d:d.accept());page.locator('#clear-pattern').tap();assert project()['patterns'][15]['notes']==[];assert project()['patterns'][15]['bars']==4;assert project()['patterns'][15]['color']=='purple'
+ page.locator('#pattern-menu').tap();expect(page.locator('#paste-pattern')).to_be_disabled();expect(page.locator('#paste-explanation')).to_contain_text('zero notes');page.locator('#copy-pattern').tap();expect(page.locator('#paste-pattern')).to_be_disabled();page.once('dialog',lambda d:d.dismiss());page.locator('#delete-pattern').tap();assert project()['patterns'][15]['notes']
+ page.once('dialog',lambda d:d.accept());page.locator('#delete-pattern').tap();assert project()['patterns'][15]['notes']==[];assert project()['patterns'][15]['bars']==1;assert project()['patterns'][15]['color']=='purple'
+ # Empty unreferenced patterns reset without confirmation, regardless of length.
+ page.locator('#length').select_option('3');page.locator('#pattern-menu').tap();page.locator('#delete-pattern').tap();assert project()['patterns'][15]['bars']==1
  # Paste cannot expand a referenced pattern into a collision or beyond the arrangement.
- choose(1);page.locator('#pattern-menu').tap();before=project();page.locator('#paste-pattern').tap();expect(page.locator('#pattern-message')).to_contain_text('Cannot paste');assert project()==before;page.get_by_label('Close pattern actions').tap()
+ choose(0);page.locator('#pattern-menu').tap();page.locator('#copy-pattern').tap();page.get_by_label('Close pattern actions').tap();choose(1);page.locator('#pattern-menu').tap();expect(page.locator('#paste-pattern')).to_be_disabled();refs=project()['arrangement'];before=project();page.once('dialog',lambda d:d.dismiss());page.locator('#delete-pattern').tap();assert project()==before;page.once('dialog',lambda d:d.accept());page.locator('#delete-pattern').tap();assert project()['arrangement']==refs;assert project()['patterns'][1]['bars']==1;page.locator('#pattern-menu').tap();expect(page.locator('#paste-pattern')).to_be_enabled();before=project();page.locator('#paste-pattern').tap();expect(page.locator('#pattern-message')).to_contain_text('Cannot paste');assert project()==before;page.get_by_label('Close pattern actions').tap()
  # Touch long press on the selector, selection-dialog entries and library blocks; movement cancels.
  def hold(target):
   target.scroll_into_view_if_needed();box=target.bounding_box();cdp.send('Input.dispatchTouchEvent',{'type':'touchStart','touchPoints':[{'x':box['x']+box['width']/2,'y':box['y']+box['height']/2,'id':1}]});page.wait_for_timeout(650)
@@ -162,7 +164,8 @@ with sync_playwright() as pw:
  page.locator('#pattern').tap();hold(page.locator('#pattern-options button').nth(15));expect(page.locator('#pattern-title')).to_contain_text('P16');page.get_by_label('Close pattern actions').tap()
  page.locator('#arrangement-tab').tap();expect(page.locator('.library-pattern')).to_have_count(16);hold(page.locator('.library-pattern').nth(15));page.get_by_label('Close pattern actions').tap()
  place('P16','C',5);clip=page.locator('.lane-c .clip').last;assert clip.evaluate("e=>getComputedStyle(e).getPropertyValue('--pattern-color').trim()")=='#ac83ed'
- page.locator('#library-menu').tap();expect(page.locator('#pattern-title')).to_contain_text('P16');page.get_by_label('Close pattern actions').tap()
+ page.locator('#library-menu').tap();expect(page.locator('#pattern-title')).to_contain_text('P16');refs=project()['arrangement'];page.once('dialog',lambda d:d.dismiss());page.locator('#delete-pattern').tap();expect(page.locator('#pattern-dialog')).to_be_visible();page.once('dialog',lambda d:d.accept());page.locator('#delete-pattern').tap();assert project()['arrangement']==refs;assert project()['patterns'][15]['bars']==1
+ page.locator('#library-menu').tap();page.once('dialog',lambda d:d.accept());page.locator('#paste-pattern').tap();assert project()['arrangement']==refs;assert project()['patterns'][15]['bars']==4;assert project()['patterns'][15]['color']=='purple'
  # Global live mutes preserve playback, silence scheduled/active sources and are excluded from MIDI.
  page.evaluate("() => {const original=DrumAudio.prototype.hit;DrumAudio.prototype.hit=function(n,t){window.currentDrum=n.drum;return original.call(this,n,t);};}")
  page.locator('#pattern-tab').tap();choose(0);notes_before=project()['patterns'][0]['notes'];page.get_by_role('button',name='Start',exact=True).tap();page.wait_for_function('probe.hits.some(h=>h.drum===35)')
@@ -186,7 +189,7 @@ with sync_playwright() as pw:
  for drum in legacy['drums']:drum.pop('muted')
  page.evaluate("p=>localStorage.setItem('app-lab-drumidi-v1',JSON.stringify(p))",legacy);page.reload();migrated=project();assert migrated['version']==2 and len(migrated['patterns'])==16 and len(migrated['arrangement']['lanes'])==3;assert migrated['arrangement']['lanes'][:2]==legacy['arrangement']['lanes'];assert migrated['patterns'][0]['notes']==legacy['patterns'][0]['notes'];assert not any(d['muted'] for d in migrated['drums'])
  page.locator('#settings').tap();page.once('dialog',lambda d:d.accept());page.locator('#project-file').set_input_files({'name':'legacy.json','mimeType':'application/json','buffer':json.dumps(legacy).encode()});expect(page.locator('#project-dialog')).to_be_hidden();assert project()==migrated
- print('PASS: all 16 selectors; colors; copy/paste/clear/confirmation; blocked paste; mobile pattern long press; live global mutes; v2 JSON; v1 storage/import migration',flush=True)
+ print('PASS: all 16 selectors; colors; empty-only paste/delete/reset/confirmation; blocked paste; mobile pattern long press; live global mutes; v2 JSON; v1 storage/import migration',flush=True)
 
  assert not errors,errors;assert not missing,missing
  print('PASS: 4-bar editing/64ths; mixed lengths; three independent lanes; overlap/bounds; clip touch/copy/move/delete/long-press/desktop drag; real acoustic samples; start/stop/page reset; MIDI downloads; JSON roundtrip/invalid import/confirmation; auto persistence; six layouts; both hosting roots; all 47 sample decodes.')

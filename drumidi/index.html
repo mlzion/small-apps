@@ -247,11 +247,13 @@
       </form>
       <div class="project-actions">
         <button id="copy-pattern">Copy</button
-        ><button id="paste-pattern">Paste</button
-        ><button id="clear-pattern">Clear</button
+        ><button id="paste-pattern" aria-describedby="paste-explanation">
+          Paste</button
+        ><button id="delete-pattern">Delete</button
         ><button id="change-color" aria-expanded="false">Change Color</button>
       </div>
       <div id="color-palette" aria-label="Pattern colors" hidden></div>
+      <p id="paste-explanation"></p>
       <p id="pattern-message" role="status"></p>
     </dialog>
     <input
