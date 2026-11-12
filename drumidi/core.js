@@ -60,6 +60,7 @@
     velocity: /hat|Ride/.test(name) ? 78 : /Kick|Snare/.test(name) ? 106 : 94,
   }));
   const palette = [
+    { id: "gray", name: "Light Gray", hex: "#c7cdd5" },
     { id: "blue", name: "Blue", hex: "#229bea" },
     { id: "orange", name: "Orange", hex: "#e99a38" },
     { id: "green", name: "Green", hex: "#46b96d" },
@@ -81,7 +82,7 @@
     patterns: Array.from({ length: 16 }, (_, i) => ({
       id: `P${i + 1}`,
       bars: 1,
-      color: palette[i % palette.length].id,
+      color: "gray",
       notes: [],
     })),
     arrangement: { bars: 8, lanes: [[], [], []] },
@@ -149,7 +150,9 @@
         !p ||
         p.id !== `P${i + 1}` ||
         !int(p.bars, 1, 4) ||
-        (!legacy && !palette.some((c) => c.id === p.color)) ||
+        (p.color != null &&
+          p.color !== "" &&
+          !palette.some((c) => c.id === p.color)) ||
         !Array.isArray(p.notes) ||
         p.notes.length > 12032
       )
@@ -171,7 +174,7 @@
       return {
         id: p.id,
         bars: p.bars,
-        color: legacy ? palette[i % palette.length].id : p.color,
+        color: p.color || "gray",
         notes,
       };
     });
@@ -354,7 +357,7 @@
     return validate({
       ...project,
       patterns: project.patterns.map((p, i) =>
-        i === index ? { ...p, bars: 1, notes: [] } : p,
+        i === index ? { ...p, bars: 1, color: "gray", notes: [] } : p,
       ),
     });
   }
