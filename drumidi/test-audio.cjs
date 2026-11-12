@@ -98,3 +98,65 @@ audio.stop();
 console.log(
   "PASS: simultaneous/64th scheduling; loop seam; velocity gain and tuning; start/stop/reset; live global mutes; hi-hat choke; stalled-clock recovery.",
 );
+// Live velocity edits preserve scheduler position and source identity, including
+// already scheduled hits. Non-selected drums keep their gain and note velocity.
+audio.context.currentTime = 0;
+audio.start(notes, 1, 300);
+const anchor = audio.anchor,
+  next = audio.next,
+  records = [...audio.sources],
+  oldCount = sources.length;
+const kick = records.find((r) => r.drum === 35),
+  originalKickGain = kick.gain.gain.value;
+const edited = notes.map((n) => ({
+  ...n,
+  velocity: n.drum === 38 ? 20 : n.velocity,
+}));
+audio.updateVelocities(edited, 38);
+assert.equal(audio.anchor, anchor);
+assert.equal(audio.next, next);
+assert(audio.running);
+assert.equal(sources.length, oldCount);
+assert.equal(kick.gain.gain.value, originalKickGain);
+assert(
+  audio.byStep
+    .get(0)
+    .filter((n) => n.drum === 38)
+    .every((n) => n.velocity === 20),
+);
+assert(
+  [...audio.sources]
+    .filter((r) => r.drum === 38)
+    .every((r) => Math.abs(r.gain.gain.value - (20 / 127) ** 1.35) < 1e-9),
+);
+// Exercise the real AudioParam path for active tails and future queued samples.
+for (const record of audio.sources) {
+  record.gain.gain.calls = [];
+  for (const method of [
+    "cancelScheduledValues",
+    "setValueAtTime",
+    "linearRampToValueAtTime",
+  ])
+    record.gain.gain[method] = (...args) =>
+      record.gain.gain.calls.push([method, ...args]);
+}
+audio.context.currentTime = 0.045;
+audio.updateVelocities(notes, 38);
+const snare = [...audio.sources].filter((r) => r.drum === 38);
+assert(
+  snare
+    .find((r) => r.time < 0.045)
+    .gain.gain.calls.some((c) => c[0] === "linearRampToValueAtTime"),
+);
+assert(
+  snare
+    .find((r) => r.time > 0.045)
+    .gain.gain.calls.some(
+      (c) =>
+        c[0] === "setValueAtTime" && Math.abs(c[1] - (41 / 127) ** 1.35) < 1e-9,
+    ),
+);
+audio.stop();
+console.log(
+  "PASS: live velocity edits update future events, queued hits and active tails without resetting loop or changing other instruments.",
+);

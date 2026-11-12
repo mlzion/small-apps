@@ -15,7 +15,8 @@
     busy = false,
     storageWarning = "",
     clipboard = null,
-    patternTarget = 0;
+    patternTarget = 0,
+    velocityDrum = null;
   const say = (message) => {
     $("status").textContent = message;
   };
@@ -59,7 +60,7 @@
   const lengthText = (bars) => `${bars} bar${bars === 1 ? "" : "s"}`;
   const active = () => project.patterns[selected];
   const bars = () =>
-    page === "pattern" ? active().bars : project.arrangement.bars;
+    page !== "arrangement" ? active().bars : project.arrangement.bars;
   const allEvents = (includeMuted = false) =>
     D.events(project, page, selected, includeMuted);
   const laneLetter = (lane) => String.fromCharCode(65 + lane);
@@ -74,7 +75,7 @@
     $("play").setAttribute("aria-pressed", String(isPlaying));
     $("bpm").value = project.bpm;
     $("playback-label").textContent =
-      page === "pattern" ? active().id : "A + B + C · Arrangement";
+      page !== "arrangement" ? active().id : "A + B + C · Arrangement";
     $("playback-meta").textContent =
       `${lengthText(bars())} · ${project.bpm} BPM`;
   }
@@ -566,9 +567,63 @@
     $("clip-error").textContent = "";
     $("clip-dialog").showModal();
   }
+  const velocityEditor = new VelocityEditor($("velocity-graph"), (points) => {
+    D.applyVelocityCurve(active(), velocityDrum, points);
+    velocityEdited("Velocity curve saved");
+  });
+  function velocityEdited(message) {
+    audio.updateVelocities(allEvents(true), velocityDrum);
+    cachedEvents = allEvents();
+    persist();
+    say(storageWarning || message + " · Playback continues");
+  }
+  function renderVelocity() {
+    $("velocity-pattern").value = selected;
+    const used = project.drums.filter((d) =>
+      active().notes.some((n) => n.drum === d.midi),
+    );
+    if (!used.some((d) => d.midi === velocityDrum))
+      velocityDrum = used[0]?.midi ?? null;
+    $("velocity-drum").replaceChildren(
+      ...used.map((d) => option(d.midi, d.name + (d.muted ? " (muted)" : ""))),
+    );
+    if (!used.length) $("velocity-drum").append(option("", "No drum hits"));
+    else $("velocity-drum").value = velocityDrum;
+    $("velocity-drum").disabled = !used.length;
+    $("velocity-reset").disabled = !used.length;
+    const notes = active().notes.filter((n) => n.drum === velocityDrum),
+      visible = notes.filter((n) => n.step < active().bars * 64);
+    $("velocity-info").textContent = used.length
+      ? `${visible.length} hits · ${lengthText(active().bars)} · Only ${used.find((d) => d.midi === velocityDrum).name} changes${notes.length > visible.length ? ` · ${notes.length - visible.length} hidden-bar notes kept` : ""}`
+      : "Add drum hits in Pattern, then shape their velocities here.";
+    $("velocity-empty").hidden = visible.length > 0;
+    $("velocity-empty").textContent = used.length
+      ? "No hits in active bars"
+      : "No notes yet";
+    velocityEditor.setData(active(), velocityDrum);
+  }
+  $("velocity-pattern").append(
+    ...project.patterns.map((p, i) => option(i, p.id)),
+  );
+  $("velocity-pattern").onchange = (e) => {
+    selectPattern(+e.target.value);
+    play();
+  };
+  $("velocity-drum").onchange = (e) => {
+    velocityDrum = +e.target.value;
+    renderVelocity();
+  };
+  $("velocity-reset").onclick = () => {
+    if (velocityDrum === null) return;
+    D.resetVelocity(active(), velocityDrum);
+    velocityEditor.cache.delete(active().id + ":" + velocityDrum);
+    velocityEdited("Selected drum reset to velocity 100");
+    renderVelocity();
+  };
   function render() {
     renderPattern();
     renderArrangement();
+    renderVelocity();
     transport();
     cachedEvents = allEvents();
   }
@@ -602,19 +657,16 @@
   function setPage(next) {
     stop();
     page = next;
-    $("pattern-page").hidden = page !== "pattern";
-    $("arrangement-page").hidden = page !== "arrangement";
-    $("pattern-tab").setAttribute("aria-pressed", String(page === "pattern"));
-    $("arrangement-tab").setAttribute(
-      "aria-pressed",
-      String(page === "arrangement"),
-    );
+    for (const name of ["pattern", "velocity", "arrangement"]) {
+      $(name + "-page").hidden = page !== name;
+      $(name + "-tab").setAttribute("aria-pressed", String(page === name));
+    }
     render();
     say(
       "Stopped · " +
-        (page === "pattern"
-          ? "Selected pattern"
-          : "All three arrangement lanes"),
+        (page === "arrangement"
+          ? "All three arrangement lanes"
+          : "Selected pattern"),
     );
   }
   function download(data, name, type) {
@@ -634,6 +686,7 @@
   );
   $("pattern-tab").onclick = () => setPage("pattern");
   $("arrangement-tab").onclick = () => setPage("arrangement");
+  $("velocity-tab").onclick = () => setPage("velocity");
   function selectPattern(index) {
     stop();
     selected = index;
@@ -721,7 +774,7 @@
   $("export").onclick = () => {
     download(
       D.midi(project, page, selected),
-      `DruMidi-${page === "pattern" ? active().id : "Arrangement"}.mid`,
+      `DruMidi-${page !== "arrangement" ? active().id : "Arrangement"}.mid`,
       "audio/midi",
     );
     say("MIDI exported · GM channel 10 · 960 PPQ");
@@ -757,6 +810,7 @@
       stop();
       project = candidate;
       clipboard = null;
+      velocityEditor.clearCache();
       selected = bar = position = 0;
       drum = project.drums[0].midi;
       $("project-dialog").close();
@@ -775,6 +829,7 @@
     )
       return;
     clipboard = null;
+    velocityEditor.clearCache();
     project = D.fresh();
     selected = bar = position = 0;
     drum = 35;
@@ -894,6 +949,8 @@
     ctx.lineTo(head + 7, 1);
     ctx.lineTo(head, 11);
     ctx.fill();
+    if (page === "velocity")
+      velocityEditor.draw(audio.position(), audio.running);
     requestAnimationFrame(draw);
   }
   render();

@@ -230,7 +230,7 @@
           (n) => n.step < p.bars * 64 && (includeMuted || !muted.has(n.drum)),
         )
         .map((n) => ({ ...n, step: n.step + offset, lane }));
-    if (page === "pattern")
+    if (page !== "arrangement")
       return expand(project.patterns[selected], 0, 0).sort(
         (a, b) => a.step - b.step,
       );
@@ -265,7 +265,7 @@
   ];
   function midi(project, page, selected = 0) {
     const bars =
-        page === "pattern"
+        page !== "arrangement"
           ? project.patterns[selected].bars
           : project.arrangement.bars,
       end = bars * 3840,
@@ -307,7 +307,7 @@
     };
     const ev = events(project, page, selected),
       tracks = [track("Tempo", [], true)];
-    if (page === "pattern")
+    if (page !== "arrangement")
       tracks.push(track(project.patterns[selected].id, ev));
     else
       laneNames
@@ -358,7 +358,52 @@
       ),
     });
   }
+  // Three-point C1 cubic Hermite interpolation. Harmonic middle slope preserves
+  // monotonicity on each side; extrema flatten naturally instead of overshooting.
+  function velocityAtCurve(points, x) {
+    const [left, middle, right] = points;
+    const h0 = middle.x,
+      h1 = 1 - middle.x;
+    if (!(h0 > 0 && h1 > 0)) error("Middle point must be inside the pattern.");
+    const d0 = (middle.y - left.y) / h0,
+      d1 = (right.y - middle.y) / h1;
+    const w0 = 2 * h1 + h0,
+      w1 = h1 + 2 * h0;
+    const slope = d0 * d1 > 0 ? (w0 + w1) / (w0 / d0 + w1 / d1) : 0;
+    x = Math.max(0, Math.min(1, x));
+    const first = x <= middle.x,
+      a = first ? left : middle,
+      b = first ? middle : right;
+    const h = first ? h0 : h1,
+      t = (x - a.x) / h;
+    const m0 = first ? d0 : slope,
+      m1 = first ? slope : d1;
+    return Math.max(
+      1,
+      Math.min(
+        127,
+        (2 * t ** 3 - 3 * t * t + 1) * a.y +
+          (t ** 3 - 2 * t * t + t) * h * m0 +
+          (-2 * t ** 3 + 3 * t * t) * b.y +
+          (t ** 3 - t * t) * h * m1,
+      ),
+    );
+  }
+  function applyVelocityCurve(pattern, midi, points) {
+    for (const note of pattern.notes)
+      if (note.drum === midi && note.step < pattern.bars * 64)
+        note.velocity = Math.round(
+          velocityAtCurve(points, note.step / (pattern.bars * 64)),
+        );
+  }
+  function resetVelocity(pattern, midi) {
+    for (const note of pattern.notes)
+      if (note.drum === midi) note.velocity = 100;
+  }
   return {
+    velocityAtCurve,
+    applyVelocityCurve,
+    resetVelocity,
     isEmptyPattern,
     deletePattern,
     catalog,
