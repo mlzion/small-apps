@@ -1,0 +1,248 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1, viewport-fit=cover"
+    />
+    <meta name="theme-color" content="#11101d" />
+    <meta
+      name="description"
+      content="A pocket chord progression composer. Pick, place, play and export MIDI."
+    />
+    <title>ChordMidi — Chord Progression Composer</title>
+    <link rel="icon" href="../assets/favicon.svg" type="image/svg+xml" />
+    <link rel="stylesheet" href="styles.css" />
+    <script defer src="presets.js"></script>
+    <script defer src="core.js"></script>
+    <script defer src="audio.js"></script>
+    <script defer src="app.js"></script>
+  </head>
+  <body>
+    <div class="app">
+      <header>
+        <a class="icon home" href="../" aria-label="App Lab home">☰</a>
+        <div class="brand">
+          <h1>Chord<span>Midi</span></h1>
+          <p>Chord Progression Composer <small>v0.1</small></p>
+        </div>
+        <button class="icon" id="fullscreen" aria-label="Toggle fullscreen">
+          ⛶</button
+        ><button class="icon gear" id="setup" aria-label="Setup">
+          <svg
+            viewBox="0 0 24 24"
+            aria-hidden="true"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+          >
+            <circle cx="12" cy="12" r="7" />
+            <circle cx="12" cy="12" r="2.5" />
+            <path d="M12 1v4" transform="rotate(0 12 12)" />
+            <path d="M12 1v4" transform="rotate(45 12 12)" />
+            <path d="M12 1v4" transform="rotate(90 12 12)" />
+            <path d="M12 1v4" transform="rotate(135 12 12)" />
+            <path d="M12 1v4" transform="rotate(180 12 12)" />
+            <path d="M12 1v4" transform="rotate(225 12 12)" />
+            <path d="M12 1v4" transform="rotate(270 12 12)" />
+            <path d="M12 1v4" transform="rotate(315 12 12)" />
+          </svg>
+        </button>
+      </header>
+      <main>
+        <section class="panel builder" aria-label="Chord builder">
+          <div class="builder-heading">
+            <span class="eyebrow">BUILD A CHORD</span>
+            <div class="lane-tabs" aria-label="Chord builder lane">
+              <button id="rh" aria-pressed="true">RH</button
+              ><button id="lh" aria-pressed="false">LH</button>
+            </div>
+          </div>
+          <div id="wheels" class="wheels"></div>
+          <div class="drop-row">
+            <button id="drop" class="accent">
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <path fill="currentColor" d="M6 3v18l15-9z" />
+              </svg>
+              Drop
+            </button>
+            <div class="chord-readout">
+              <strong id="chord-name"></strong><span id="chord-notes"></span>
+            </div>
+          </div>
+          <p class="hint">
+            ◇ Diatonic to key · Drop auditions · RH / LH retain their own
+            voicings
+          </p>
+        </section>
+        <section class="panel arrangement" aria-labelledby="arrangement-title">
+          <div class="arrangement-heading">
+            <h2 id="arrangement-title">Arrangement</h2>
+            <div class="bar-control">
+              Bars
+              <span class="stepper"
+                ><button id="less-bars" aria-label="Fewer bars">−</button
+                ><output id="bar-count">4</output
+                ><button id="more-bars" aria-label="More bars">+</button></span
+              >
+            </div>
+            <label
+              ><span class="meter-label">Meter</span
+              ><select id="meter" aria-label="Time signature">
+                <option>2/4</option>
+                <option>3/4</option>
+                <option selected>4/4</option>
+                <option>6/8</option>
+              </select></label
+            >
+          </div>
+          <div class="timeline-layout">
+            <div class="lane-labels">
+              <span class="ruler-label">BAR</span
+              ><button class="lane-label rh" data-lane="0">
+                RH <span>Chords</span></button
+              ><button class="lane-label lh" data-lane="1">
+                LH <span>Chords</span></button
+              ><button class="lane-label passing" data-lane="2">
+                Passing <span>Notes</span>
+              </button>
+            </div>
+            <div
+              class="timeline-scroll"
+              id="timeline-scroll"
+              tabindex="0"
+              aria-label="Arrangement timeline; scroll horizontally"
+            >
+              <div id="timeline">
+                <div id="ruler"></div>
+                <div id="lanes"></div>
+                <div id="cursor" aria-hidden="true"></div>
+              </div>
+            </div>
+          </div>
+          <div class="note-controls">
+            <span class="note-dot"></span
+            ><label
+              >Passing
+              <select id="note-source" aria-label="Passing note source">
+                <option value="scale">Scale notes</option>
+                <option value="chord">RH chord tones</option>
+              </select></label
+            ><select id="passing-note" aria-label="Passing note"></select
+            ><select id="note-octave" aria-label="Passing note octave"></select>
+          </div>
+          <div class="edit-row">
+            <p id="selection-info">
+              Tap a pad to place. Tap an event to select.
+            </p>
+            <button id="copy" disabled>▣ Copy</button
+            ><button id="paste" disabled aria-pressed="false">▤ Paste</button>
+          </div>
+          <p class="hint">
+            Swipe grid to scroll · Hold an empty pad, then drag to extend<br />Drag
+            an event’s right edge to resize · Hold an event to delete
+          </p>
+        </section>
+        <section class="panel instrument">
+          <label for="instrument"
+            >Instrument <span class="muted">(SF2)</span></label
+          ><select id="instrument"></select>
+          <p id="audio-status">
+            TimGM6mb · Customize your instrument library in Setup
+          </p>
+        </section>
+        <p id="status" role="status" aria-live="polite">
+          Ready. Pick a chord and drop into a progression.
+        </p>
+      </main>
+      <footer class="transport" aria-label="Transport">
+        <div class="transport-buttons">
+          <button id="rewind" aria-label="Return to start">
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path fill="currentColor" d="M4 4h3v16H4zM20 4 8 12l12 8z" />
+            </svg></button
+          ><button id="stop" aria-label="Stop">■</button
+          ><button
+            id="play"
+            class="play"
+            aria-label="Play"
+            aria-pressed="false"
+          >
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path fill="currentColor" d="M6 3v18l15-9z" />
+            </svg></button
+          ><button id="loop" aria-label="Loop" aria-pressed="true">↻</button>
+        </div>
+        <label class="tempo"
+          >BPM<input
+            id="bpm"
+            aria-label="BPM"
+            type="number"
+            min="30"
+            max="300"
+            value="120"
+            inputmode="numeric" /></label
+        ><button id="metronome" aria-label="Metronome" aria-pressed="false">
+          ♩<span>Click</span>
+        </button>
+      </footer>
+    </div>
+    <dialog id="setup-dialog" aria-labelledby="setup-title">
+      <div class="dialog-heading">
+        <h2 id="setup-title">Project setup</h2>
+        <button id="close-setup" aria-label="Close setup">×</button>
+      </div>
+      <label class="project-name"
+        >Project name<input
+          id="project-name"
+          maxlength="160"
+          autocomplete="off"
+      /></label>
+      <div class="project-actions">
+        <button id="new-project">New Project</button
+        ><button id="save-project">Save Project</button
+        ><button id="load-project">Load Project</button
+        ><button id="export-midi" class="accent">Export MIDI</button>
+      </div>
+      <details id="instrument-settings" class="instrument-settings">
+        <summary>Instruments <small id="enabled-count"></small></summary>
+        <div class="library-toolbar">
+          <p>Choose the sounds shown in the main selector.</p>
+          <button id="restore-instruments" type="button">
+            Restore Defaults
+          </button>
+        </div>
+        <div
+          id="instrument-categories"
+          aria-label="General MIDI instrument categories"
+        ></div>
+        <p id="library-status" role="status" aria-live="polite">
+          Instrument choices apply across projects in this browser.
+        </p>
+      </details>
+      <input
+        hidden
+        type="file"
+        id="project-file"
+        accept=".json,application/json"
+      />
+      <p id="storage-status" role="status">
+        Projects autosave in this browser. Save Project downloads a JSON backup.
+      </p>
+      <p class="hint">
+        MIDI contains three tracks, preview instrument text, tempo and meter. No
+        program changes.<br /><a
+          href="soundfont/ATTRIBUTION.txt"
+          target="_blank"
+          rel="noopener"
+          >Soundfont credits</a
+        >
+        ·
+        <a href="soundfont/LICENSE.txt" target="_blank" rel="noopener"
+          >GPL v2 license</a
+        >
+      </p>
+    </dialog>
+  </body>
+</html>
