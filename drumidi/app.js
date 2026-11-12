@@ -12,6 +12,7 @@
     position = 0,
     library = "P1",
     clipTarget = null,
+    drumTarget = null,
     busy = false,
     storageWarning = "",
     clipboard = null,
@@ -25,7 +26,11 @@
     if (raw) {
       const saved = JSON.parse(raw);
       project = D.validate(saved);
-      if (saved.version === 1 || saved.name !== project.name) {
+      if (
+        saved.version === 1 ||
+        saved.name !== project.name ||
+        saved.arrangement.lanes.length !== D.laneNames.length
+      ) {
         try {
           localStorage.setItem(KEY, JSON.stringify(project));
         } catch {
@@ -64,7 +69,7 @@
   const allEvents = (includeMuted = false) =>
     D.events(project, page, selected, includeMuted);
   const laneLetter = (lane) => String.fromCharCode(65 + lane);
-  const color = (p) => D.palette.find((c) => c.id === p.color).hex;
+  const color = (p) => D.patternColor(p.color);
   function transport() {
     const isPlaying = audio.running || busy;
     if ($("play").dataset.playing !== String(isPlaying)) {
@@ -75,7 +80,7 @@
     $("play").setAttribute("aria-pressed", String(isPlaying));
     $("bpm").value = project.bpm;
     $("playback-label").textContent =
-      page !== "arrangement" ? active().id : "A + B + C · Arrangement";
+      page !== "arrangement" ? active().id : "A + B + C + D · Arrangement";
     $("playback-meta").textContent =
       `${lengthText(bars())} · ${project.bpm} BPM`;
     invalidateVisuals();
@@ -115,7 +120,7 @@
       : '<ellipse cx="16" cy="7" rx="12" ry="4" fill="none" stroke="currentColor" stroke-width="2"/><path d="M4 7v17q12 8 24 0V7M9 13v9m14-9v9m-7-7v10" fill="none" stroke="currentColor" stroke-width="2"/>';
     return svg;
   }
-  function longPress(target, action) {
+  function longPress(target, action, kind = "pattern") {
     let timer,
       x,
       y,
@@ -152,7 +157,7 @@
       true,
     );
     target.title =
-      "Long press or right-click for pattern actions. Keyboard: Shift+F10.";
+      `Long press or right-click for ${kind} actions. Keyboard: Shift+F10.`;
     target.addEventListener("keydown", (e) => {
       if (e.key === "ContextMenu" || (e.shiftKey && e.key === "F10")) {
         e.preventDefault();
@@ -270,6 +275,37 @@
       String(!$("color-palette").hidden),
     );
   };
+  function openDrumMenu(midi) {
+    drumTarget = midi;
+    const d = project.drums.find((d) => d.midi === midi);
+    $("drum-actions-title").textContent = d.name;
+    const count = D.drumNoteCount(project, midi);
+    $("drum-removal-info").textContent = count
+      ? `${count} notes across all patterns will be deleted, including hidden bars.`
+      : "Remove this empty instrument from the shared drum list.";
+    $("drum-actions").showModal();
+  }
+  $("remove-drum").onclick = () => {
+    const midi = drumTarget,
+      index = project.drums.findIndex((d) => d.midi === midi);
+    if (index < 0) return;
+    const name = project.drums[index].name,
+      count = D.drumNoteCount(project, midi);
+    if (
+      count &&
+      !confirm(
+        `Remove ${name}? This deletes ${count} notes across all patterns, including hidden bars. Other instruments are kept.`,
+      )
+    )
+      return;
+    project = D.removeDrum(project, midi);
+    if (drum === midi)
+      drum = project.drums[Math.min(index, project.drums.length - 1)]?.midi ?? null;
+    for (const p of project.patterns)
+      velocityEditor.cache.delete(p.id + ":" + midi);
+    $("drum-actions").close();
+    changed(`${name} removed · ${count} notes deleted`);
+  };
   function toggleMute(midi) {
     const d = project.drums.find((d) => d.midi === midi);
     d.muted = !d.muted;
@@ -317,6 +353,8 @@
     const grid = $("drum-grid"),
       scroll = grid.scrollTop;
     grid.replaceChildren();
+    if (!project.drums.some((d) => d.midi === drum))
+      drum = project.drums[0]?.midi ?? null;
     for (const d of project.drums) {
       const row = el("div", "drum-row"),
         label = button(
@@ -341,7 +379,8 @@
         ),
       );
       if (d.muted) label.append(el("small", "mute-indicator", "MUTE"));
-      label.title = `GM ${d.midi} · Default velocity ${d.velocity} · ${d.muted ? "Muted: tap to unmute" : "Tap to mute"}`;
+      longPress(label, () => openDrumMenu(d.midi), "drum");
+      label.title = `Hold or right-click to remove · Shift+F10 · GM ${d.midi} · Default velocity ${d.velocity} · ${d.muted ? "Muted: tap to unmute" : "Tap to mute"}`;
       row.append(label);
       const cells = el("div", "cells");
       for (let i = 0; i < 8; i++) {
@@ -379,15 +418,22 @@
       row.append(cells);
       grid.append(row);
     }
+    if (!project.drums.length)
+      grid.append(el("p", "hint empty-drums", "No drums. Use Add Drum to begin."));
     grid.scrollTop = scroll;
     renderSubdivisions();
   }
   function renderSubdivisions() {
     const d = project.drums.find((d) => d.midi === drum) || project.drums[0];
+    $("subdivisions").replaceChildren();
+    if (!d) {
+      drum = null;
+      $("selection-title").textContent = "Add a drum to edit subdivisions";
+      return;
+    }
     drum = d.midi;
     $("selection-title").textContent =
       `${d.name.replace("Acoustic Kick", "Kick")} — Bar ${bar + 1}, Position ${position + 1}`;
-    $("subdivisions").replaceChildren();
     for (let i = 0; i < 8; i++) {
       const step = bar * 64 + position * 8 + i,
         note = active().notes.find((n) => n.drum === drum && n.step === step),
@@ -539,7 +585,7 @@
     });
   }
   function locate(id) {
-    for (let lane = 0; lane < 3; lane++) {
+    for (let lane = 0; lane < D.laneNames.length; lane++) {
       const clip = project.arrangement.lanes[lane].find((c) => c.id === id);
       if (clip) return { clip, lane };
     }
@@ -714,7 +760,7 @@
     say(
       "Stopped · " +
         (page === "arrangement"
-          ? "All three arrangement lanes"
+          ? "All four arrangement lanes"
           : "Selected pattern"),
     );
   }
@@ -794,11 +840,18 @@
   $("confirm-drum").onclick = () => {
     const d = D.catalog.find((d) => d.midi === +$("drum-choice").value);
     if (!d) return;
-    project.drums.push({ ...d, muted: false });
+    try {
+      project = D.insertDrum(project, d.midi, drum);
+    } catch (e) {
+      say(e.message);
+      return;
+    }
     drum = d.midi;
     $("drum-dialog").close();
     changed(`${d.name} added`);
-    $("drum-grid").scrollTop = $("drum-grid").scrollHeight;
+    $("drum-grid")
+      .querySelector(`[data-midi="${drum}"]`)
+      .scrollIntoView({ block: "nearest" });
   };
   $("play").onclick = play;
   function bpm(value) {
@@ -917,7 +970,7 @@
       clipboard = null;
       velocityEditor.clearCache();
       selected = bar = position = 0;
-      drum = project.drums[0].midi;
+      drum = project.drums[0]?.midi ?? null;
       $("project-dialog").close();
       changed("Complete JSON project restored");
     } catch (err) {
@@ -1021,9 +1074,9 @@
       pixel = usable / 64,
       head = left + usable * 0.47;
     ctx.font = "bold 11px system-ui";
-    for (let lane = 0; lane < 3; lane++) {
-      const laneY = h * (0.12 + lane * 0.29);
-      ctx.fillStyle = ["#057deb", "#a75e13", "#23854e"][lane];
+    for (let lane = 0; lane < D.laneNames.length; lane++) {
+      const laneY = h * (0.03 + lane * 0.24);
+      ctx.fillStyle = ["#057deb", "#a75e13", "#23854e", "#655183"][lane];
       ctx.beginPath();
       ctx.roundRect(0, laneY, 23, 22, 4);
       ctx.fill();
@@ -1057,8 +1110,8 @@
       if (x < left || x > right) continue;
       const notes = rhythmByStep.get(((step % total) + total) % total) || [];
       for (const note of notes) {
-        const y = h * (0.16 + note.lane * 0.29) + note.row * h * 0.035;
-        ctx.fillStyle = ["#22b7f4", "#ffb75c", "#68df93"][note.lane];
+        const y = h * (0.08 + note.lane * 0.24) + note.row * h * 0.03;
+        ctx.fillStyle = ["#22b7f4", "#ffb75c", "#68df93", "#b9a1df"][note.lane];
         ctx.beginPath();
         ctx.arc(x, y, 2.4 + note.velocity / 127, 0, Math.PI * 2);
         ctx.fill();

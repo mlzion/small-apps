@@ -1280,3 +1280,53 @@ html:fullscreen .app {
   padding: 9px 10px;
   font: inherit;
 }
+
+/* Phase 1.5: four shared musical lanes; keep square bar units and touch targets. */
+.lane-a-text {
+  color: #3cbdff;
+}
+.lane-d .lane-label,
+.lane-d-text {
+  color: #b9a1df;
+}
+.arrangement-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0 8px;
+  white-space: normal;
+}
+.arrangement-legend .lane-b-text,
+.arrangement-legend .lane-c-text,
+.arrangement-legend .lane-d-text {
+  margin-left: 0;
+}
+.empty-drums {
+  padding: 10px;
+}
+.drum-name {
+  user-select: none;
+  -webkit-touch-callout: none;
+}
+/* Short portrait windows retain square cells by trimming nonmusical chrome. */
+@media (max-width: 599px) and (max-height: 800px) {
+  #arrangement-page .arrangement-help {
+    font-size: 9px;
+    line-height: 1.2;
+  }
+  #arrangement-page {
+    gap: 2px;
+  }
+  #rhythm {
+    height: 90px;
+  }
+  header {
+    height: 48px;
+  }
+  main {
+    padding-top: 2px;
+    padding-bottom: 2px;
+  }
+  .library-heading {
+    min-height: 16px;
+  }
+}

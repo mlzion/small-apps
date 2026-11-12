@@ -70,7 +70,7 @@ with sync_playwright() as pw:
  fixture=touch.evaluate('''()=>{const p=DruMidi.fresh();p.patterns[0]={id:'P1',bars:2,color:'orange',notes:[{drum:35,step:0,velocity:82},{drum:38,step:127,velocity:68}]};p.patterns[1].color='green';p.patterns[2].notes=[{drum:42,step:0,velocity:90}];p.arrangement.lanes=[[{id:'a',pattern:'P1',start:0}],[{id:'b',pattern:'P3',start:2}],[{id:'c',pattern:'P2',start:4}]];localStorage.setItem('app-lab-drumidi-v1',JSON.stringify(p));return p;}''');touch.reload()
  def color(target):return target.evaluate("e=>getComputedStyle(e).getPropertyValue('--pattern-color').trim()")
  touch.locator('#pattern').click(button='right');touch.locator('#copy-pattern').tap();touch.get_by_label('Close pattern actions').tap();touch.locator('#pattern').tap();touch.locator('#pattern-options button').nth(1).tap();assert color(touch.locator('#pattern'))=='#46b96d'
- touch.locator('#pattern').click(button='right');touch.once('dialog',lambda d:d.accept());touch.locator('#paste-pattern').tap();actual=project(touch);assert actual['patterns'][1]['color']=='orange' and actual['patterns'][1]['notes']==fixture['patterns'][0]['notes'];assert actual['arrangement']==fixture['arrangement'];assert color(touch.locator('#pattern'))=='#e99a38'
+ touch.locator('#pattern').click(button='right');touch.once('dialog',lambda d:d.accept());touch.locator('#paste-pattern').tap();actual=project(touch);assert actual['patterns'][1]['color']=='orange' and actual['patterns'][1]['notes']==fixture['patterns'][0]['notes'];assert actual['arrangement']['lanes'][:3]==fixture['arrangement']['lanes'] and actual['arrangement']['lanes'][3]==[];assert color(touch.locator('#pattern'))=='#e99a38'
  touch.locator('#pattern').tap();assert color(touch.locator('#pattern-options button').nth(1))=='#e99a38';touch.get_by_label('Close pattern selector').tap()
  cdp=mobile.new_cdp_session(touch)
  def hold(target):
@@ -90,7 +90,7 @@ with sync_playwright() as pw:
   drop=touch.locator('.bar-slot').first.bounding_box();assert 54<=drop['width']<=60 and abs(drop['width']-drop['height'])<1
   bar2=touch.locator('.lane-c .clip').bounding_box();assert abs(bar2['width']-(2*drop['width']+3))<1
   touch.screenshot(path=f'/tmp/drumidi-interface-{width}.png')
- assert project(touch)['arrangement']==fixture['arrangement']
+ assert project(touch)['arrangement']['lanes'][:3]==fixture['arrangement']['lanes'] and project(touch)['arrangement']['lanes'][3]==[]
  assert not errors,errors;assert not missing,missing
- print('PASS: project names/defaults/legacy file and local migration; Windows filenames; source color paste across selectors/clips; unchanged lane arrays/MIDI order with new labels; right-click/long-press without ellipses; square 56 px bars and all three lanes at six sizes; both hosting roots; no errors/missing assets.')
+ print('PASS: project names/defaults/legacy file and local migration; Windows filenames; source color paste across selectors/clips; unchanged lane arrays/MIDI order with new labels; right-click/long-press without ellipses; square 56 px bars and all four lanes at six sizes; both hosting roots; no errors/missing assets.')
  browser.close()
