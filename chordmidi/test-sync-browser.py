@@ -88,7 +88,7 @@ with sync_playwright() as pw:
     before=preview_count();page.locator('#copy').tap();page.locator('#paste').tap();page.locator('#lane-0 .pad[data-start="2"]').tap()
     assert preview_count()==before and project()['events'][-1]['pitches']==[45,52,57]
     # Existing replacement workflow: wheels and Drop never overwrite the block.
-    saved_events=project()['events'];page.locator('#wheel-degree').focus();page.keyboard.press('ArrowDown');page.locator('#drop').tap()
+    saved_events=project()['events'];page.locator('#wheel-degree').focus();page.keyboard.press('ArrowDown');page.keyboard.press('ArrowDown');page.locator('#drop').tap()
     page.wait_for_function('before=>played.filter(n=>n.preview).length===before+3',arg=before)
     assert page.evaluate('played.slice(-3).map(n=>n.pitch)')==[50,53,57]
     assert page.evaluate('played.slice(-3).every(n=>n.duration===1.2)')

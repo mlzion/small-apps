@@ -76,6 +76,7 @@ with sync_playwright() as pw:
   target=page.locator('#wheel-'+id);box=target.bounding_box();x=box['x']+box['width']/2;y=box['y']+box['height']/2
   touch('touchStart',x,y);page.wait_for_timeout(80);touch('touchMove',x,y+42);touch('touchEnd');page.wait_for_timeout(200);assert int(target.get_attribute('aria-valuenow'))>=0
  page.wait_for_timeout(500)
+ wheel('quality','End')
  # Real SF2 decoding, every GM preset and zone sample, audio scheduling and note-off.
  page.locator('#drop').tap()
  try:page.wait_for_function('probe.hits.length>=3',timeout=20000)

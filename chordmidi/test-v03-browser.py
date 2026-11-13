@@ -65,7 +65,7 @@ with sync_playwright() as pw:
     page.evaluate('played=[]');tap(page.locator('#drop'));page.wait_for_function('played.length===3');assert page.evaluate('played.map(n=>n.pitch)')==[61,68,76];song()
     tap(page.locator('#copy'));tap(page.locator('#paste'));tap(page.locator('#lane-0 .pad[data-start="10"]'))
     assert project()['events'][-1]['pitches']==[61,68,76];assert (project()['events'][-1]['key'],project()['events'][-1]['mode'])==(9,'Minor')
-    before_edit=project()['events'];wheel('degree','ArrowDown');page.evaluate('played=[]');tap(page.locator('#drop'));page.wait_for_function('played.length===3')
+    before_edit=project()['events'];wheel('degree','ArrowDown');wheel('degree','ArrowDown');page.evaluate('played=[]');tap(page.locator('#drop'));page.wait_for_function('played.length===3')
     assert page.evaluate('played.map(n=>n.pitch)')==[71,74,77];assert project()['events']==before_edit;song()
     # Native touch long press deletes only the requested original, without preview.
     target=page.locator('.event[data-id="'+custom['id']+'"]');target.evaluate('e=>e.scrollIntoView({block:"center",inline:"center"})');box=target.bounding_box();x=box['x']+5;y=box['y']+20

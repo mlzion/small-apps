@@ -1026,3 +1026,27 @@ summary:focus-visible {
   flex: 1;
   min-height: 44px;
 }
+
+/* Scale membership follows the song, while the center always stays distinct. */
+#wheel-degree .in-scale {
+  color: #88c6ff;
+}
+#wheel-degree .out-of-scale {
+  color: #aaa9b3;
+}
+#wheel-degree .in-scale.selected {
+  color: white;
+  background: linear-gradient(#246fbe, #194e9b);
+  border-color: #8dc5ff;
+  box-shadow: inset 0 0 6px #96cbff88;
+}
+#wheel-degree .out-of-scale.selected {
+  color: white;
+  background: linear-gradient(#62616e, #42414e);
+  border-color: #cbc9d4;
+  box-shadow: inset 0 0 6px #ccc8;
+}
+#wheel-quality .unavailable {
+  color: #9d98a6;
+  text-decoration: line-through;
+}

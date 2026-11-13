@@ -184,6 +184,36 @@
       (third === 3 ? roman.toLowerCase() : roman) + (fifth === 6 ? "°" : "")
     );
   }
+  // rootOffset is relative to the original key, never a replacement for the
+  // legacy seven-degree field. Missing rootOffset keeps old JSON semantics.
+  function chromaticRoots(key, mode) {
+    const sc = scale(key, mode),
+      letters = "CDEFGAB",
+      start = letters.indexOf(keys[key][0]);
+    // Chromatic alterations: bII, bIII, #IV, bVI and bVII; actual
+    // scale spellings take precedence (including minor and B# / Cb).
+    const chromaticLetters = [0, 1, 1, 2, 2, 3, 3, 4, 5, 5, 6, 6];
+    return Array.from({ length: 12 }, (_, offset) => {
+      const pc = mod(key + offset, 12),
+        degree = scales[mode].indexOf(offset);
+      const name =
+        degree >= 0
+          ? sc[degree].name
+          : spell(pc, letters[(start + chromaticLetters[offset]) % 7]);
+      return {
+        offset,
+        pc,
+        degree,
+        name,
+        label: degree >= 0 ? `${degreeName(key, mode, degree)} ${name}` : name,
+      };
+    });
+  }
+  const rootInfo = (key, mode, b) =>
+    chromaticRoots(key, mode)[b.rootOffset ?? scales[mode][b.degree]];
+  const qualityAvailable = (key, mode, b, quality = b.quality) =>
+    !qualities.find((q) => q.id === quality).steps ||
+    rootInfo(key, mode, b).degree >= 0;
   function noteLabel(pitch, name) {
     const natural = { C: 0, D: 2, E: 4, F: 5, G: 7, A: 9, B: 11 }[name[0]];
     const accidental = Array.from(name.slice(1)).reduce(
@@ -195,16 +225,26 @@
   function chord(key, mode, b) {
     const q = qualities.find((q) => q.id === b.quality),
       s = scales[mode],
-      sc = scale(key, mode);
+      info = rootInfo(key, mode, b),
+      degree = info.degree;
     if (q.inversionCount === 1 && b.inversion !== 0)
       throw Error("Octave 1–8 supports root position only.");
+    if (!qualityAvailable(key, mode, b))
+      return {
+        pitches: [],
+        names: [],
+        noteLabels: [],
+        available: false,
+        name: `${info.name} · Choose an explicit quality`,
+        label: `${info.name} (choose quality)`,
+      };
     const at = (i) => s[i % 7] + 12 * Math.floor(i / 7);
-    const root = 12 * (b.octave + 1) + key + s[b.degree];
+    const root = 12 * (b.octave + 1) + key + info.offset;
     let intervals = q.steps
-      ? q.steps.map((i) => at(b.degree + i) - at(b.degree))
+      ? q.steps.map((i) => at(degree + i) - at(degree))
       : q.intervals;
     const letters = "CDEFGAB",
-      start = letters.indexOf(sc[b.degree].name[0]);
+      start = letters.indexOf(info.name[0]);
     const names = intervals.map((v, i) =>
       spell(
         mod(root + v, 12),
@@ -234,11 +274,12 @@
             }[intervals.join(",")] || q.full
           : q.full;
     return {
+      available: true,
       pitches,
       names,
       noteLabels: pitches.map((pitch, i) => noteLabel(pitch, names[i])),
-      name: `${sc[b.degree].name} ${full}`,
-      label: `${sc[b.degree].name} ${q.id === "diatonic" ? { major: "Maj", minor: "min", diminished: "dim" }[triad] : q.name.replace(" ◇", "")}`,
+      name: `${info.name} ${full}`,
+      label: `${info.name} ${q.id === "diatonic" ? { major: "Maj", minor: "min", diminished: "dim" }[triad] : q.name.replace(" ◇", "")}`,
     };
   }
   const builder = (octave = 4) => ({
@@ -307,6 +348,7 @@
     });
     return {
       ...generated,
+      available: true,
       context,
       pitches,
       names,
@@ -344,6 +386,7 @@
     return (
       q &&
       int(b.degree, 0, 6) &&
+      (b.rootOffset === undefined || int(b.rootOffset, 0, 11)) &&
       // Transposition may move template registers beyond the normal 1–6 UI.
       // Allow a full MIDI span in either direction; actual snapshots stay 0–127.
       int(b.octave, -10, 17) &&
@@ -388,7 +431,7 @@
         0,
         pn.source === "scale"
           ? 6
-          : builderChord(p, p.builders[0]).pitches.length - 1,
+          : Math.max(0, builderChord(p, p.builders[0]).pitches.length - 1),
       ) ||
       !int(pn.octave, -10, 17) ||
       !validContext(pn.context) ||
@@ -436,9 +479,15 @@
       context = c.context;
     if (lane === 2) {
       const n = passingOptions(p)[p.passing.index] || passingOptions(p)[0];
+      if (!n && !p.passing.voicing)
+        throw Error(
+          "Choose an explicit RH chord quality for chord-tone passing notes.",
+        );
       c = p.passing.voicing || { pitches: [n.pitch], label: n.label };
       context = passingContext(p);
     }
+    if (!c.pitches.length)
+      throw Error("Choose an explicit chord quality for a chromatic root.");
     return {
       id: globalThis.crypto?.randomUUID?.() || `${Date.now()}-${Math.random()}`,
       lane,
@@ -511,10 +560,13 @@
     original.builders.forEach((b, i) =>
       checked(builderChord(original, b).pitches, `${lanes[i]} builder preview`),
     );
-    const oldPassing = original.passing.voicing || {
-      pitches: [passingOptions(original)[original.passing.index].pitch],
-    };
-    const movedPassing = checked(oldPassing.pitches, "Passing-note preview");
+    const passingNote = passingOptions(original)[original.passing.index];
+    const oldPassing =
+      original.passing.voicing ||
+      (passingNote ? { pitches: [passingNote.pitch] } : null);
+    const movedPassing = oldPassing
+      ? checked(oldPassing.pitches, "Passing-note preview")
+      : null;
     const next = JSON.parse(JSON.stringify(original));
     next.key = destination;
     const shiftedContext = (c) => ({
@@ -610,7 +662,7 @@
     // A selected custom note remains exact even if its source template cannot
     // represent it. Optional preview metadata also follows the same interval.
     const generated = passingOptions(next)[next.passing.index];
-    if (!generated || generated.pitch !== movedPassing[0])
+    if (movedPassing && (!generated || generated.pitch !== movedPassing[0]))
       next.passing.voicing = {
         pitches: movedPassing,
         label: labelNote(
@@ -718,6 +770,9 @@
     totalSteps,
     scale,
     degreeName,
+    chromaticRoots,
+    rootInfo,
+    qualityAvailable,
     chord,
     contextFor,
     passingContext,
