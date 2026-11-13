@@ -54,6 +54,50 @@ with sync_playwright() as pw:
                         assert ('out-of-scale' in option.get_attribute('class'))==(not expected)
                     assert page.evaluate('b=>ChordMidi.builderChord(JSON.parse(localStorage.getItem("app-lab-chordmidi-v1")),b).pitches[0]',b)==12*(b['octave']+1)+key+offset
                     checks+=1
+    def block(event):return page.locator('.event[data-id="'+event['id']+'"]')
+    def check_blocks(expected_project):
+        scale=[(expected_project['key']+n)%12 for n in page.evaluate('mode=>ChordMidi.scales[mode]',expected_project['mode'])]
+        for event in expected_project['events']:
+            borrowed=False
+            if event['lane']<2:
+                offset=event['builder'].get('rootOffset',page.evaluate('([mode,degree])=>ChordMidi.scales[mode][degree]',[event['mode'],event['builder']['degree']]))
+                borrowed=(event['key']+offset)%12 not in scale
+            assert ('borrowed' in block(event).get_attribute('class'))==borrowed
+            background=block(event).evaluate('e=>getComputedStyle(e).backgroundImage')
+            if borrowed:assert '98, 97, 110' in background and '66, 65, 78' in background
+            elif event['lane']==0:assert '171, 54, 219' in background
+            elif event['lane']==1:assert '50, 125, 224' in background
+            else:assert '114, 238, 141' in background
+    # Every root in both hands, multiple song scales, inverted/custom pitches,
+    # foreign original contexts, legacy degrees and a chromatic passing note.
+    for key in [0,2,5,9]:
+        for mode in ['Major','Minor']:
+            fixture=page.evaluate("""([key,mode])=>{
+                const p=ChordMidi.fresh();p.key=key;p.mode=mode;
+                for(let lane=0;lane<2;lane++)for(let rootOffset=0;rootOffset<12;rootOffset++){
+                    Object.assign(p.builders[lane],{rootOffset,quality:'major',inversion:1});
+                    const e=ChordMidi.makeEvent(p,lane,rootOffset,1);
+                    // Force bass/individual notes to disagree with root classification.
+                    if(!ChordMidi.scales[mode].includes(rootOffset))e.pitches=[60+key];
+                    p.events.push(e);
+                }
+                const old=ChordMidi.fresh();old.key=(key+1)%12;old.builders[0].degree=4;
+                const legacy=ChordMidi.makeEvent(old,0,14);legacy.pitches=[60+key];p.events.push(legacy);
+                const note=ChordMidi.makeEvent(p,2,13);note.pitches=[60+(key+1)%12];p.events.push(note);
+                return p;
+            }""",[key,mode]);load(fixture);check_blocks(fixture)
+            baseline=page.evaluate('k=>Array.from(ChordMidi.midi(JSON.parse(localStorage.getItem(k))))',KEY)
+            event=next(e for e in fixture['events'] if e['lane']==0 and 'borrowed' in block(e).get_attribute('class'))
+            tap(block(event));expect(block(event)).to_have_class('event selected borrowed')
+            assert block(event).evaluate('e=>getComputedStyle(e).outlineStyle')=='solid'
+            assert block(event).evaluate('e=>getComputedStyle(e).outlineColor')=='rgb(255, 255, 255)'
+            check_blocks(project());assert project()['events']==fixture['events']
+            assert page.evaluate('k=>Array.from(ChordMidi.midi(JSON.parse(localStorage.getItem(k))))',KEY)==baseline
+            # A normal edit still works with the gray class and selected outline.
+            block(event).focus();page.keyboard.press('Shift+ArrowRight');assert next(e for e in project()['events'] if e['id']==event['id'])['duration']==2
+            check_blocks(project());before_transpose=project();open_transpose((key+2)%12,'up');tap(page.locator('#apply-transpose'));transposed=project();check_blocks(transposed)
+            for old,new in zip(before_transpose['events'],transposed['events']):assert new['pitches']==[n+2 for n in old['pitches']]
+            page.reload();check_blocks(project())
     # Legacy serialized degree 4 is G (offset 7), not chromatic E.
     legacy=page.evaluate('()=>{const p=ChordMidi.fresh();p.builders[0].degree=4;p.events=[ChordMidi.makeEvent(p,0,0,2)];return p;}');load(legacy)
     expect(page.locator('#wheel-degree')).to_have_attribute('aria-valuenow','7');assert project()['events'][0]['pitches']==[67,71,74]
@@ -79,6 +123,9 @@ with sync_playwright() as pw:
     tap(page.locator('#lh'));quality('major');wheel('degree','Home')
     for _ in range(8):wheel('degree','ArrowDown')
     tap(page.locator('#lane-1 .pad[data-start="2"]'));lh=project()['events'][-1];assert lh['pitches']==[56,60,63] and lh['label']=='A♭ Major'
+    check_blocks(project())
+    assert 'borrowed' not in block(rh).get_attribute('class')  # F minor: Ab does not make its F root chromatic.
+    assert 'borrowed' in block(lh).get_attribute('class')
     tap(page.locator('#rh'));expect(page.locator('#wheel-degree')).to_have_attribute('aria-valuenow','5');assert project()['builders'][0]['inversion']==1
     # Center selection is clear on both blue scale roots and gray non-scale roots.
     for width in [320,360,393]:
@@ -97,7 +144,7 @@ with sync_playwright() as pw:
     page.evaluate('notes=[]');tap(page.locator('#play'));page.wait_for_function('notes.filter(n=>!n.preview).length>=7');assert sorted(page.evaluate('notes.filter(n=>!n.preview).slice(0,7).map(n=>n.pitch)'))==sorted([68,72,77,56,60,63,72]);tap(page.locator('#stop'))
     before=project();open_transpose(2,'up');tap(page.locator('#apply-transpose'));after=project()
     for old,new in zip(before['events'],after['events']):assert new['pitches']==[p+2 for p in old['pitches']];assert new['id']==old['id'];assert new['start']==old['start'];assert new['duration']==old['duration']
-    assert after['events'][0]['label']=='G Minor' and after['events'][1]['label']=='B♭ Major'
+    assert after['events'][0]['label']=='G Minor' and after['events'][1]['label']=='B♭ Major';check_blocks(after)
     # Context-specific stored chords still use song-scale colors, not a foreign scale.
     foreign=page.evaluate('()=>{const p=ChordMidi.fresh();p.key=2;p.mode="Minor";p.builders[0].rootOffset=1;p.builders[0].quality="major";return ChordMidi.makeEvent(p,0,6);}');after['events'].append(foreign);load(after);tap(page.locator('.event[data-id="'+foreign['id']+'"]'));expect(page.locator('#builder-context')).to_contain_text('Builder D Minor')
     for option in page.locator('#wheel-degree .wheel-option').all():
@@ -110,7 +157,7 @@ with sync_playwright() as pw:
     with page.expect_download() as dl:tap(page.locator('#export-midi'))
     data=Path(dl.value.path()).read_bytes();assert data==bytes(page.evaluate('k=>Array.from(ChordMidi.midi(JSON.parse(localStorage.getItem(k))))',KEY));assert int.from_bytes(data[10:12],'big')==3
     page.once('dialog',lambda d:d.accept());tap(page.locator('#new-project'));tap(page.locator('#setup'));page.once('dialog',lambda d:d.accept());page.locator('#project-file').set_input_files(path);expect(page.locator('#setup-dialog')).to_be_hidden();assert project()==saved
-    page.reload();assert project()==saved;locked(True)
+    page.reload();assert project()==saved;locked(True);check_blocks(saved)
     assert not errors,errors;assert not missing,missing
-    print(f'PASS: {checks} UI root/hand cases across multiple keys/modes, exact blue/gray song-scale colors, unavailable-quality guards and recovery, legacy degree selection, locked song settings, borrowed chords/inversions, SF2 tap/Drop/all-lane playback, transposition, foreign contexts, JSON/MIDI/load/reload and 320/360/393 px visual checks.')
+    print(f'PASS: {checks} UI root/hand cases across multiple keys/modes, exact blue/gray song-scale colors and gray RH/LH blocks from stored roots after transpose/load, selection/editing, unavailable-quality guards and recovery, legacy degree selection, locked song settings, borrowed chords/inversions, SF2 tap/Drop/all-lane playback, transposition, foreign contexts, JSON/MIDI/load/reload and 320/360/393 px visual checks.')
     browser.close()

@@ -450,6 +450,14 @@
       el.className = "event" + (e.id === selected ? " selected" : "");
       el.dataset.id = e.id;
       el.dataset.lane = e.lane;
+      if (e.lane < 2) {
+        // Use the stored musical root, never the bass/inverted/custom pitches.
+        const root = D.rootInfo(e.key, e.mode, e.builder).pc;
+        el.classList.toggle(
+          "borrowed",
+          !D.scale(project.key, project.mode).some((note) => note.pc === root),
+        );
+      }
       el.style.left = e.start * 32 + "px";
       el.style.width = e.duration * 32 - 4 + "px";
       el.tabIndex = 0;
