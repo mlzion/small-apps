@@ -49,7 +49,8 @@ with sync_playwright() as pw:
     assert page.evaluate('played.every(n=>n.program===24 && n.preview)')
     assert page.evaluate('!engine.running && engine.offset===0')
     assert page.evaluate('played.every(n=>n.time-n.renderTime<.01 && n.duration===.8)')
-    assert project()==fixture
+    assert project()['key']==fixture['key'] and project()['mode']==fixture['mode'] and project()['events']==fixture['events']
+    selection_state=project()
     # Hot sequential auditions cut only the preceding preview, with a de-click fade.
     for lane,pitches in [(1,[45,52,57]),(0,[61,65,73]),(1,[45,52,57])]:
         page.evaluate('window.previousPreview=[...engine.auditionSources].map(v=>v.source)')
@@ -57,14 +58,14 @@ with sync_playwright() as pw:
         assert page.evaluate('played.slice(-3).map(n=>n.pitch)')==pitches
         assert page.evaluate('previousPreview.every(s=>s.stopCalls.at(-1)<=engine.context.currentTime+.006)')
         assert page.evaluate('!engine.running && engine.offset===0')
-    assert project()==fixture
+    assert project()==selection_state
     assert page.evaluate('k=>Array.from(ChordMidi.midi(JSON.parse(localStorage.getItem(k))))',KEY)==baseline_midi
     # Freeze the audible position, then preview while paused without moving it.
     page.locator('#play').tap();page.wait_for_function('engine.running');page.wait_for_timeout(350);page.locator('#play').tap()
     page.wait_for_function('!engine.running');frozen=page.evaluate('engine.offset');assert frozen>0
     before=preview_count();chord(0).tap();page.wait_for_function('before=>played.filter(n=>n.preview).length===before+3',arg=before)
     page.wait_for_timeout(100);assert page.evaluate('engine.offset')==frozen
-    assert page.evaluate('!engine.running') and project()==fixture
+    assert page.evaluate('!engine.running') and project()==selection_state
     page.locator('#stop').tap()
     # Short taps may audition; movement, cancellation and deletion may not.
     cdp=c.new_cdp_session(page)
@@ -119,6 +120,7 @@ with sync_playwright() as pw:
         t.evaluate('played=[];clicks=[]');t.locator('#play').tap();t.wait_for_function('engine.running')
         if i:
             t.evaluate('window.simulatedOutputDelay=.08')
+            t.wait_for_function('Math.abs(engine.outputTime()-(engine.context.currentTime-.08-engine.graphLatency))<.001',timeout=5000)
         graph=t.evaluate('engine.graphLatency');assert 0<graph<.1,graph
         anchor,step,total=t.evaluate('[engine.anchor,engine.stepSeconds,engine.total]')
         sample_start();duration=cycles*total*step+.2 if cycles else .6;t.wait_for_timeout(duration*1000)

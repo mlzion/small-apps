@@ -265,13 +265,89 @@
     events: [],
   });
   const int = (v, a, b) => Number.isInteger(v) && v >= a && v <= b;
+  const validContext = (c) =>
+    c === undefined ||
+    (!!c && int(c.key, 0, 11) && ["Major", "Minor"].includes(c.mode));
+  const validVoicing = (v, max) =>
+    v === undefined ||
+    (!!v &&
+      Array.isArray(v.pitches) &&
+      v.pitches.length >= 1 &&
+      v.pitches.length <= max &&
+      v.pitches.every((n) => int(n, 0, 127)) &&
+      new Set(v.pitches).size === v.pitches.length &&
+      typeof v.label === "string" &&
+      v.label.length <= 100);
+  function basicSettings(settings) {
+    const { context, voicing, ...basic } = settings;
+    return basic;
+  }
+  const contextFor = (p, settings) =>
+    settings.context || { key: p.key, mode: p.mode };
+  const passingContext = (p) =>
+    p.passing.source === "chord"
+      ? contextFor(p, p.builders[0])
+      : contextFor(p, p.passing);
+  function builderChord(p, b) {
+    const context = contextFor(p, b),
+      generated = chord(context.key, context.mode, b);
+    if (!b.voicing) return { ...generated, context, templateMatches: true };
+    const pitches = b.voicing.pitches.slice();
+    const templateMatches =
+      pitches.length === generated.pitches.length &&
+      pitches.every((n, i) => n === generated.pitches[i]);
+    const notes = scale(context.key, context.mode);
+    const names = pitches.map((pitch) => {
+      const original = generated.pitches.findIndex(
+        (n) => n % 12 === pitch % 12,
+      );
+      return original >= 0
+        ? generated.names[original]
+        : notes.find((n) => n.pc === pitch % 12)?.name || keys[pitch % 12];
+    });
+    return {
+      ...generated,
+      context,
+      pitches,
+      names,
+      noteLabels: pitches.map((pitch, i) => noteLabel(pitch, names[i])),
+      label: b.voicing.label,
+      name: templateMatches
+        ? generated.name
+        : `${b.voicing.label} (stored voicing)`,
+      templateMatches,
+    };
+  }
+  function restoreBuilder(p, e) {
+    const b = basicSettings(e.builder);
+    if (e.key !== p.key || e.mode !== p.mode)
+      b.context = { key: e.key, mode: e.mode };
+    const generated = chord(e.key, e.mode, b).pitches;
+    if (
+      generated.length !== e.pitches.length ||
+      generated.some((n, i) => n !== e.pitches[i])
+    )
+      b.voicing = { pitches: e.pitches.slice(), label: e.label };
+    return b;
+  }
+  function restorePassing(p, e) {
+    const passing = basicSettings(e.passing);
+    if (passing.source === "scale" && (e.key !== p.key || e.mode !== p.mode))
+      passing.context = { key: e.key, mode: e.mode };
+    const candidate = passingOptions({ ...p, passing })[passing.index];
+    if (!candidate || candidate.pitch !== e.pitches[0])
+      passing.voicing = { pitches: e.pitches.slice(), label: e.label };
+    return passing;
+  }
   function validBuilder(b) {
     const q = qualities.find((q) => q.id === b?.quality);
     return (
       q &&
       int(b.degree, 0, 6) &&
       int(b.octave, 1, 6) &&
-      int(b.inversion, 0, inversionCount(q.id) - 1)
+      int(b.inversion, 0, inversionCount(q.id) - 1) &&
+      validContext(b.context) &&
+      validVoicing(b.voicing, 4)
     );
   }
   function validate(p) {
@@ -310,9 +386,11 @@
         0,
         pn.source === "scale"
           ? 6
-          : chord(p.key, p.mode, p.builders[0]).pitches.length - 1,
+          : builderChord(p, p.builders[0]).pitches.length - 1,
       ) ||
       !int(pn.octave, 1, 6) ||
+      !validContext(pn.context) ||
+      !validVoicing(pn.voicing, 1) ||
       !Array.isArray(p.events) ||
       p.events.length > 4096
     )
@@ -352,12 +430,12 @@
   }
   function makeEvent(p, lane, start, duration = 1) {
     const b = p.builders[lane === 1 ? 1 : 0];
-    let c = chord(p.key, p.mode, b),
-      passing = { ...p.passing };
+    let c = builderChord(p, b),
+      context = c.context;
     if (lane === 2) {
-      const options = passingOptions(p),
-        n = options[passing.index] || options[0];
-      c = { pitches: [n.pitch], label: n.label };
+      const n = passingOptions(p)[p.passing.index] || passingOptions(p)[0];
+      c = p.passing.voicing || { pitches: [n.pitch], label: n.label };
+      context = passingContext(p);
     }
     return {
       id: globalThis.crypto?.randomUUID?.() || `${Date.now()}-${Math.random()}`,
@@ -366,25 +444,33 @@
       duration,
       pitches: c.pitches.slice(),
       label: c.label,
-      key: p.key,
-      mode: p.mode,
+      key: context.key,
+      mode: context.mode,
       ...(lane === 2
-        ? { passing, sourceBuilder: { ...p.builders[0] } }
-        : { builder: { ...b } }),
+        ? {
+            passing: basicSettings(p.passing),
+            sourceBuilder: basicSettings(p.builders[0]),
+          }
+        : { builder: basicSettings(b) }),
     };
   }
   function passingOptions(p) {
-    const o = p.passing.octave;
+    const o = p.passing.octave,
+      context = passingContext(p);
     if (p.passing.source === "scale")
-      return scale(p.key, p.mode).map((n, i) => {
-        const pitch = 12 * (o + 1) + p.key + scales[p.mode][i];
+      return scale(context.key, context.mode).map((n, i) => {
+        const pitch = 12 * (o + 1) + context.key + scales[context.mode][i];
         return { pitch, label: noteLabel(pitch, n.name) };
       });
-    const c = chord(p.key, p.mode, { ...p.builders[0], octave: o });
-    return c.pitches.map((pitch, i) => ({
-      pitch,
-      label: noteLabel(pitch, c.names[i]),
-    }));
+    const b = p.builders[0],
+      c = builderChord(p, b),
+      shift = 12 * (o - b.octave);
+    return c.pitches.map((original, i) => {
+      let pitch = original + shift;
+      while (pitch > 127) pitch -= 12;
+      while (pitch < 0) pitch += 12;
+      return { pitch, label: noteLabel(pitch, c.names[i]) };
+    });
   }
   const vlq = (v) => {
     const a = [v & 127];
@@ -484,6 +570,11 @@
     scale,
     degreeName,
     chord,
+    contextFor,
+    passingContext,
+    builderChord,
+    restoreBuilder,
+    restorePassing,
     fresh,
     validate,
     makeEvent,
