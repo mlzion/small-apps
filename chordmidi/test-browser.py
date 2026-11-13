@@ -48,7 +48,7 @@ with sync_playwright() as pw:
  page.locator('#passing-note').select_option('2');pad(2,2).tap();assert project()['events'][2]['pitches']==[64]
  page.locator('#rh').tap();wheel('key','ArrowDown');assert project()['events'][0]['pitches']==[60,64,67]
  # Tap selection restores original builder, copy/paste is a snapshot with original duration/pitches.
- page.locator('.event[data-lane="0"]').tap();expect(page.locator('#wheel-key')).to_have_attribute('aria-valuetext','C♯');expect(page.locator('#builder-context')).to_contain_text('Builder C Major');page.locator('#copy').tap();wheel('key','ArrowDown');page.locator('#paste').tap();pad(1,4).tap();assert project()['events'][-1]['pitches']==[60,64,67]
+ page.locator('.event[data-lane="0"]').tap();expect(page.locator('#wheel-key')).to_have_attribute('aria-valuetext','C');expect(page.locator('#wheel-key')).to_have_attribute('aria-disabled','true');page.locator('#copy').tap();wheel('key','ArrowDown');page.locator('#paste').tap();pad(1,4).tap();assert project()['events'][-1]['pitches']==[60,64,67]
  # Hold empty pad + horizontal drag extends duration; right edge resize.
  target=pad(0,3);box=target.bounding_box();x=box['x']+16;y=box['y']+35
  touch('touchStart',x,y);page.wait_for_timeout(300);touch('touchMove',x+64,y);touch('touchEnd');assert project()['events'][-1]['duration']==3, (project()['events'],page.locator('#status').inner_text())
@@ -76,6 +76,7 @@ with sync_playwright() as pw:
   target=page.locator('#wheel-'+id);box=target.bounding_box();x=box['x']+box['width']/2;y=box['y']+box['height']/2
   touch('touchStart',x,y);page.wait_for_timeout(80);touch('touchMove',x,y+42);touch('touchEnd');page.wait_for_timeout(200);assert int(target.get_attribute('aria-valuenow'))>=0
  page.wait_for_timeout(500)
+ wheel('quality','End')
  # Real SF2 decoding, every GM preset and zone sample, audio scheduling and note-off.
  page.locator('#drop').tap()
  try:page.wait_for_function('probe.hits.length>=3',timeout=20000)
@@ -155,7 +156,7 @@ with sync_playwright() as pw:
   assert op.evaluate('octaveNotes.map(n=>n.pitch)')==pitches
   expect(op.locator('#chord-notes')).to_contain_text(label);expect(op.locator('#wheel-inversion')).to_have_attribute('aria-valuemax','0')
  stored=oproject()['events'];op.locator('#rh').tap();owheel('key','Home');owheel('key','ArrowDown');owheel('degree','End')
- expect(op.locator('#chord-notes')).to_contain_text('B♯4 – B♯5');expect(op.locator('#chord-notes')).to_contain_text('72, 84')
+ expect(op.locator('#wheel-key')).to_have_attribute('aria-valuetext','C');expect(op.locator('#chord-notes')).to_contain_text('B4 – B5');expect(op.locator('#chord-notes')).to_contain_text('71, 83')
  owheel('mode','End');expect(op.locator('#chord-notes')).to_contain_text('B4 – B5');expect(op.locator('#chord-notes')).to_contain_text('71, 83')
  assert oproject()['events']==stored
  op.evaluate('octaveNotes=[]');op.locator('#play').tap();op.wait_for_function('octaveNotes.filter(n=>!n.preview).length===4')

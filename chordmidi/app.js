@@ -58,12 +58,13 @@
     audio.stop();
     busy = false;
     $("play").disabled = false;
-    $("drop").disabled = false;
+    $("drop").disabled = !D.builderChord(project, b()).pitches.length;
     transport();
   }
   function changed(message) {
     stop();
     persist();
+    renderWheelLocks();
     if (message && !warning) say(message);
   }
   function transport() {
@@ -77,11 +78,31 @@
   }
   const b = () => project.builders[activeLane];
   const current = () => project.events.find((e) => e.id === selected);
+  const songLocked = () => project.events.length > 0;
+  const isSongWheel = (conf) => conf.id === "key" || conf.id === "mode";
+  const octaves = (current) =>
+    Array.from(new Set([1, 2, 3, 4, 5, 6, current]))
+      .sort((a, b) => a - b)
+      .map(String);
+  function renderWheelLocks() {
+    for (const id of ["key", "mode"]) {
+      const el = $("wheel-" + id),
+        locked = songLocked();
+      el.classList.toggle("locked", locked);
+      el.setAttribute("aria-disabled", String(locked));
+      el.setAttribute("aria-readonly", String(locked));
+      el.title = locked
+        ? "Song Key/Mode are locked while notes exist. Use Setup → Transpose."
+        : "";
+    }
+    $("transpose").disabled = !songLocked();
+    renderContextHint();
+  }
   function normalize() {
     b().inversion = Math.min(b().inversion, D.inversionCount(b().quality) - 1);
     project.passing.index = Math.min(
       project.passing.index,
-      D.passingOptions(project).length - 1,
+      Math.max(0, D.passingOptions(project).length - 1),
     );
   }
   const configs = [
@@ -102,19 +123,31 @@
     {
       id: "degree",
       name: "Interval",
-      options: () =>
-        Array.from(
-          { length: 7 },
-          (_, i) =>
-            `${D.degreeName(D.contextFor(project, b()).key, D.contextFor(project, b()).mode, i)} ${D.scale(D.contextFor(project, b()).key, D.contextFor(project, b()).mode)[i].name}`,
-        ),
-      value: () => b().degree,
-      set: (v) => (b().degree = v),
+      options: () => {
+        const c = D.contextFor(project, b());
+        return D.chromaticRoots(c.key, c.mode).map((r) => r.label);
+      },
+      value: () => {
+        const c = D.contextFor(project, b());
+        return D.rootInfo(c.key, c.mode, b()).offset;
+      },
+      set: (v) => {
+        const c = D.contextFor(project, b()),
+          root = D.chromaticRoots(c.key, c.mode)[v];
+        b().rootOffset = v;
+        b().degree = Math.max(0, root.degree);
+      },
     },
     {
       id: "quality",
       name: "Chord",
-      options: () => D.qualities.map((q) => q.name),
+      options: () => {
+        const c = D.contextFor(project, b());
+        return D.qualities.map(
+          (q) =>
+            q.name + (D.qualityAvailable(c.key, c.mode, b(), q.id) ? "" : " ×"),
+        );
+      },
       value: () => D.qualities.findIndex((q) => q.id === b().quality),
       set: (v) => (b().quality = D.qualities[v].id),
     },
@@ -128,9 +161,9 @@
     {
       id: "octave",
       name: "Octave",
-      options: () => ["1", "2", "3", "4", "5", "6"],
-      value: () => b().octave - 1,
-      set: (v) => (b().octave = v + 1),
+      options: () => octaves(b().octave),
+      value: () => octaves(b().octave).indexOf(String(b().octave)),
+      set: (v) => (b().octave = +octaves(b().octave)[v]),
     },
   ];
   for (const conf of configs) {
@@ -149,8 +182,21 @@
     let gesture = null,
       lastWheel = 0;
     const move = (value) => {
+      if (isSongWheel(conf) && songLocked()) {
+        say("Song Key/Mode are locked. Use Setup → Transpose.");
+        return;
+      }
       const n = conf.options().length;
       if (n === 1) return;
+      if (conf.id === "quality") {
+        const c = D.contextFor(project, b());
+        const step = value === 0 || value > conf.value() ? 1 : -1;
+        for (let count = 0; count < n; count++) {
+          const q = D.qualities[((value % n) + n) % n];
+          if (D.qualityAvailable(c.key, c.mode, b(), q.id)) break;
+          value += step;
+        }
+      }
       if (conf.id === "key" || conf.id === "mode") {
         for (const settings of [...project.builders, project.passing]) {
           delete settings.context;
@@ -186,6 +232,10 @@
     });
     el.addEventListener("pointerdown", (e) => {
       if (e.button !== 0) return;
+      if (isSongWheel(conf) && songLocked()) {
+        e.preventDefault();
+        return;
+      }
       el.setPointerCapture(e.pointerId);
       gesture = {
         y: e.clientY,
@@ -235,6 +285,29 @@
           d.classList.add("blank");
           d.textContent = " ";
         } else d.textContent = opts[(i + offset + n) % n];
+        if (conf.id === "degree") {
+          const context = D.contextFor(project, b()),
+            root = D.chromaticRoots(context.key, context.mode)[
+              (i + offset + n) % n
+            ];
+          const diatonic = D.scale(project.key, project.mode).some(
+            (note) => note.pc === root.pc,
+          );
+          d.classList.add(diatonic ? "in-scale" : "out-of-scale");
+          d.dataset.pc = String(root.pc);
+          d.title = diatonic ? "In song scale" : "Outside song scale";
+        }
+        if (conf.id === "quality") {
+          const context = D.contextFor(project, b());
+          const unavailable = !D.qualityAvailable(
+            context.key,
+            context.mode,
+            b(),
+            D.qualities[(i + offset + n) % n].id,
+          );
+          d.classList.toggle("unavailable", unavailable);
+          d.setAttribute("aria-disabled", String(unavailable));
+        }
         el.append(d);
       }
       el.setAttribute("aria-valuemin", "0");
@@ -245,17 +318,13 @@
     const c = D.builderChord(project, b());
     $("chord-name").textContent =
       `${c.name} · ${D.inversions[b().inversion]} · Oct ${b().octave}`;
-    $("chord-notes").textContent =
-      (b().quality === "octave" || b().voicing ? c.noteLabels : c.names).join(
-        " – ",
-      ) + `   /   MIDI ${c.pitches.join(", ")}`;
-    const foreign =
-      c.context.key !== project.key || c.context.mode !== project.mode;
-    $("builder-context").textContent = !c.templateMatches
-      ? `Stored voicing; wheels show its template. Builder ${D.keys[c.context.key]} ${c.context.mode} · Song ${D.keys[project.key]} ${project.mode}.`
-      : foreign
-        ? `Builder ${D.keys[c.context.key]} ${c.context.mode} · Song ${D.keys[project.key]} ${project.mode}. Key/Mode wheel edits use the song key.`
-        : "◇ Diatonic to key · Drop auditions · RH / LH retain their own voicings";
+    $("chord-notes").textContent = !c.pitches.length
+      ? "Select an explicit quality to audition or place this root."
+      : (b().quality === "octave" || b().voicing ? c.noteLabels : c.names).join(
+          " – ",
+        ) + `   /   MIDI ${c.pitches.join(", ")}`;
+    $("drop").disabled = busy || !c.pitches.length;
+    renderWheelLocks();
     $("rh").setAttribute("aria-pressed", String(activeLane === 0));
     $("lh").setAttribute("aria-pressed", String(activeLane === 1));
     document
@@ -265,6 +334,18 @@
       );
     renderPassing();
     editButtons();
+  }
+  function renderContextHint() {
+    const c = D.builderChord(project, b());
+    const foreign =
+      c.context.key !== project.key || c.context.mode !== project.mode;
+    $("builder-context").textContent = !c.pitches.length
+      ? "Outside the original scale: choose an explicit chord quality. ◇ and other scale-derived qualities are unavailable."
+      : !c.templateMatches
+        ? `Stored voicing; wheels show its template. Builder ${D.keys[c.context.key]} ${c.context.mode} · Song ${D.keys[project.key]} ${project.mode}.`
+        : foreign
+          ? `Builder ${D.keys[c.context.key]} ${c.context.mode} · Song ${D.keys[project.key]} ${project.mode}. ${songLocked() ? "Use Setup → Transpose for a new song key." : "Key/Mode wheel edits use the song key."}`
+          : "◇ Diatonic to key · Drop auditions · RH / LH retain their own voicings";
   }
   function renderPassing() {
     const scaleContext = D.contextFor(project, project.passing),
@@ -279,6 +360,9 @@
     $("note-source").options[1].textContent =
       "RH chord tones" + suffix(rhContext);
     $("note-source").value = project.passing.source;
+    $("note-octave").replaceChildren(
+      ...octaves(project.passing.octave).map((v) => new Option("Oct " + v, v)),
+    );
     $("note-octave").value = project.passing.octave;
     $("passing-note").replaceChildren(
       ...D.passingOptions(project).map(
@@ -291,6 +375,7 @@
       );
       $("passing-note").value = "stored";
     } else $("passing-note").value = project.passing.index;
+    $("passing-note").disabled = !$("passing-note").options.length;
   }
   function switchLane(i) {
     activeLane = i;
@@ -305,8 +390,6 @@
         else $("passing-note").focus();
       }),
   );
-  for (let i = 1; i <= 6; i++)
-    $("note-octave").append(new Option("Oct " + i, String(i)));
   $("note-source").onchange = () => {
     delete project.passing.context;
     delete project.passing.voicing;
@@ -367,6 +450,14 @@
       el.className = "event" + (e.id === selected ? " selected" : "");
       el.dataset.id = e.id;
       el.dataset.lane = e.lane;
+      if (e.lane < 2) {
+        // Use the stored musical root, never the bass/inverted/custom pitches.
+        const root = D.rootInfo(e.key, e.mode, e.builder).pc;
+        el.classList.toggle(
+          "borrowed",
+          !D.scale(project.key, project.mode).some((note) => note.pc === root),
+        );
+      }
       el.style.left = e.start * 32 + "px";
       el.style.width = e.duration * 32 - 4 + "px";
       el.tabIndex = 0;
@@ -471,7 +562,26 @@
             lane,
             start,
           }
-        : D.makeEvent(project, lane, start, duration);
+        : (() => {
+            let note;
+            try {
+              note = D.makeEvent(project, lane, start, duration);
+            } catch (error) {
+              return { error: error.message };
+            }
+            if (!note.pitches.every((p) => p >= 0 && p <= 127)) return null;
+            return note;
+          })();
+    if (e?.error) {
+      say(e.error);
+      return;
+    }
+    if (!e) {
+      say(
+        "The builder is outside MIDI 0–127. Choose another octave before placing.",
+      );
+      return;
+    }
     if (e.start + e.duration > D.totalSteps(project)) {
       say(
         "This event would extend past the arrangement. Choose an earlier pad or add bars.",
@@ -785,7 +895,7 @@
     } finally {
       busy = false;
       $("play").disabled = false;
-      $("drop").disabled = false;
+      $("drop").disabled = !D.builderChord(project, b()).pitches.length;
       transport();
     }
   }
@@ -806,6 +916,16 @@
   }
   $("drop").onclick = () => {
     const c = D.builderChord(project, b());
+    if (!c.pitches.length) {
+      say("Choose an explicit chord quality for a chromatic root.");
+      return;
+    }
+    if (!c.pitches.every((p) => p >= 0 && p <= 127)) {
+      say(
+        "The builder is outside MIDI 0–127. Choose another octave before Drop.",
+      );
+      return;
+    }
     auditionChord(c.pitches, c.name, 1.2);
   };
   $("play").onclick = () => {
@@ -900,6 +1020,58 @@
     name();
     download(D.midi(project), stem() + ".mid", "audio/midi");
     say("MIDI downloaded · three separate tracks");
+  };
+  for (const [i, key] of D.keys.entries())
+    $("transpose-key").append(new Option(key, String(i)));
+  function transposePreview() {
+    const destination = +$("transpose-key").value,
+      direction = $("transpose-direction").value;
+    const shift = D.transposeShift(project.key, destination, direction);
+    $("transpose-preview").textContent =
+      `${D.keys[destination]} ${project.mode} · ${shift >= 0 ? "+" : ""}${shift} semitones`;
+    try {
+      D.transpose(project, destination, direction);
+      $("transpose-error").textContent = "";
+      $("apply-transpose").disabled = false;
+    } catch (error) {
+      $("transpose-error").textContent = error.message;
+      $("apply-transpose").disabled = true;
+    }
+  }
+  $("transpose").onclick = () => {
+    if (!songLocked()) return;
+    $("transpose-current").textContent =
+      `${D.keys[project.key]} ${project.mode}`;
+    $("transpose-key").value = String(project.key);
+    $("transpose-direction").value = "shortest";
+    transposePreview();
+    $("transpose-dialog").showModal();
+  };
+  $("transpose-key").onchange = transposePreview;
+  $("transpose-direction").onchange = transposePreview;
+  $("cancel-transpose").onclick = () => $("transpose-dialog").close();
+  $("transpose-form").onsubmit = (event) => {
+    event.preventDefault();
+    try {
+      const next = D.transpose(
+        project,
+        +$("transpose-key").value,
+        $("transpose-direction").value,
+      );
+      stop();
+      project = next;
+      pasting = false;
+      persist();
+      render();
+      $("transpose-dialog").close();
+      $("setup-dialog").close();
+      say(
+        "Arrangement transposed · " + D.keys[project.key] + " " + project.mode,
+      );
+    } catch (error) {
+      $("transpose-error").textContent = error.message;
+      $("apply-transpose").disabled = true;
+    }
   };
   function replace(p) {
     stop();
