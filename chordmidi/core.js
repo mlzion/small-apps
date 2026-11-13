@@ -344,7 +344,9 @@
     return (
       q &&
       int(b.degree, 0, 6) &&
-      int(b.octave, 1, 6) &&
+      // Transposition may move template registers beyond the normal 1–6 UI.
+      // Allow a full MIDI span in either direction; actual snapshots stay 0–127.
+      int(b.octave, -10, 17) &&
       int(b.inversion, 0, inversionCount(q.id) - 1) &&
       validContext(b.context) &&
       validVoicing(b.voicing, 4)
@@ -388,7 +390,7 @@
           ? 6
           : builderChord(p, p.builders[0]).pitches.length - 1,
       ) ||
-      !int(pn.octave, 1, 6) ||
+      !int(pn.octave, -10, 17) ||
       !validContext(pn.context) ||
       !validVoicing(pn.voicing, 1) ||
       !Array.isArray(p.events) ||
@@ -419,7 +421,7 @@
           ? e.passing &&
             ["scale", "chord"].includes(e.passing.source) &&
             int(e.passing.index, 0, 6) &&
-            int(e.passing.octave, 1, 6) &&
+            int(e.passing.octave, -10, 17) &&
             (e.sourceBuilder === undefined || validBuilder(e.sourceBuilder))
           : validBuilder(e.builder))
       )
@@ -471,6 +473,153 @@
       while (pitch < 0) pitch += 12;
       return { pitch, label: noteLabel(pitch, c.names[i]) };
     });
+  }
+  function transposeShift(from, to, direction = "shortest") {
+    if (
+      !int(from, 0, 11) ||
+      !int(to, 0, 11) ||
+      !["shortest", "up", "down"].includes(direction)
+    )
+      throw Error("Choose a destination key and direction.");
+    const up = mod(to - from, 12);
+    return direction === "up"
+      ? up
+      : direction === "down"
+        ? up === 0
+          ? 0
+          : up - 12
+        : up > 6
+          ? up - 12
+          : up;
+  }
+  function transpose(p, destination, direction = "shortest") {
+    const original = validate(p);
+    if (!original.events.length)
+      throw Error("Place a chord or passing note before transposing.");
+    const shift = transposeShift(original.key, destination, direction);
+    if (shift === 0) return original;
+    const checked = (pitches, where) =>
+      pitches.map((pitch) => {
+        const moved = pitch + shift;
+        if (!int(moved, 0, 127))
+          throw Error(
+            `${where} would contain MIDI ${moved}, outside 0–127. Choose another key/direction or adjust its register.`,
+          );
+        return moved;
+      });
+    original.events.forEach((e) => checked(e.pitches, lanes[e.lane]));
+    original.builders.forEach((b, i) =>
+      checked(builderChord(original, b).pitches, `${lanes[i]} builder preview`),
+    );
+    const oldPassing = original.passing.voicing || {
+      pitches: [passingOptions(original)[original.passing.index].pitch],
+    };
+    const movedPassing = checked(oldPassing.pitches, "Passing-note preview");
+    const next = JSON.parse(JSON.stringify(original));
+    next.key = destination;
+    const shiftedContext = (c) => ({
+      key: mod(c.key + shift, 12),
+      mode: c.mode,
+    });
+    const shiftSettings = (settings, context, where) => {
+      const moved = JSON.parse(JSON.stringify(settings)),
+        to = shiftedContext(context);
+      moved.octave += (context.key + shift - to.key) / 12;
+      if (moved.context) moved.context = to;
+      if (moved.voicing)
+        moved.voicing.pitches = checked(moved.voicing.pitches, where);
+      return moved;
+    };
+    // Template registers can cross 1–6, or sit outside playable registers for
+    // custom voicings. Actual pitches are always checked; never wrap or clamp.
+    const labelChord = (pitches, context, b) => {
+      const settings = { ...b, context, voicing: { pitches, label: "" } };
+      const view = builderChord(next, settings);
+      return view.templateMatches
+        ? chord(context.key, context.mode, b).label
+        : `Stored ${view.noteLabels.join("–")}`;
+    };
+    const labelNote = (pitch, context, b) => {
+      if (b)
+        return builderChord(next, {
+          ...b,
+          context,
+          voicing: { pitches: [pitch], label: "" },
+        }).noteLabels[0];
+      const name =
+        scale(context.key, context.mode).find((n) => n.pc === mod(pitch, 12))
+          ?.name || keys[mod(pitch, 12)];
+      return noteLabel(pitch, name);
+    };
+    next.builders = original.builders.map((b, i) => {
+      const context = contextFor(original, b),
+        moved = shiftSettings(b, context, `${lanes[i]} builder snapshot`);
+      if (moved.voicing)
+        moved.voicing.label = labelChord(
+          moved.voicing.pitches,
+          shiftedContext(context),
+          moved,
+        );
+      return moved;
+    });
+    const pc = passingContext(original);
+    next.passing = shiftSettings(original.passing, pc, "Passing-note snapshot");
+    if (next.passing.voicing)
+      next.passing.voicing.label = labelNote(
+        movedPassing[0],
+        shiftedContext(pc),
+        next.passing.source === "chord" ? next.builders[0] : null,
+      );
+    next.events = original.events.map((e) => {
+      const context = { key: e.key, mode: e.mode },
+        to = shiftedContext(context),
+        moved = JSON.parse(JSON.stringify(e));
+      moved.key = to.key;
+      moved.pitches = checked(e.pitches, lanes[e.lane]);
+      if (e.lane < 2) {
+        moved.builder = shiftSettings(e.builder, context, "Chord snapshot");
+        moved.label = labelChord(moved.pitches, to, moved.builder);
+        if (moved.builder.voicing) moved.builder.voicing.label = moved.label;
+      } else {
+        moved.passing = shiftSettings(
+          e.passing,
+          context,
+          "Passing-note snapshot",
+        );
+        if (e.sourceBuilder)
+          moved.sourceBuilder = shiftSettings(
+            e.sourceBuilder,
+            context,
+            "Passing source snapshot",
+          );
+        if (moved.sourceBuilder?.voicing)
+          moved.sourceBuilder.voicing.label = labelChord(
+            moved.sourceBuilder.voicing.pitches,
+            to,
+            moved.sourceBuilder,
+          );
+        moved.label = labelNote(
+          moved.pitches[0],
+          to,
+          moved.passing.source === "chord" ? moved.sourceBuilder : null,
+        );
+        if (moved.passing.voicing) moved.passing.voicing.label = moved.label;
+      }
+      return moved;
+    });
+    // A selected custom note remains exact even if its source template cannot
+    // represent it. Optional preview metadata also follows the same interval.
+    const generated = passingOptions(next)[next.passing.index];
+    if (!generated || generated.pitch !== movedPassing[0])
+      next.passing.voicing = {
+        pitches: movedPassing,
+        label: labelNote(
+          movedPassing[0],
+          shiftedContext(pc),
+          next.passing.source === "chord" ? next.builders[0] : null,
+        ),
+      };
+    return validate(next);
   }
   const vlq = (v) => {
     const a = [v & 127];
@@ -581,5 +730,7 @@
     passingOptions,
     midi,
     noteSpans,
+    transposeShift,
+    transpose,
   };
 });

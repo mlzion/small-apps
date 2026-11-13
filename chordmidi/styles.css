@@ -975,3 +975,54 @@ summary:focus-visible {
   padding: 5px 0;
   background: #211a30;
 }
+
+.wheel.locked {
+  cursor: default;
+}
+.wheel.locked::after {
+  content: "🔒";
+  position: absolute;
+  right: 4px;
+  top: 3px;
+  font-size: 9px;
+  line-height: 1;
+  opacity: 0.6;
+  filter: grayscale(1);
+  pointer-events: none;
+}
+#transpose {
+  grid-column: 1 / -1;
+}
+#transpose-dialog {
+  max-height: calc(100dvh - 28px);
+  overflow-y: auto;
+}
+#transpose-form label {
+  display: block;
+  font-size: 12px;
+  margin: 16px 0 6px;
+}
+#transpose-form select {
+  width: 100%;
+  min-height: 44px;
+}
+#transpose-preview {
+  font-size: 15px;
+  font-weight: 650;
+  margin-top: 18px;
+}
+#transpose-error {
+  font-size: 12px;
+  line-height: 1.5;
+  color: #ffc3cd;
+  margin-top: 10px;
+}
+.transpose-actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 20px;
+}
+.transpose-actions button {
+  flex: 1;
+  min-height: 44px;
+}

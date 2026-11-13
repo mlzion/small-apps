@@ -84,16 +84,14 @@ with sync_playwright() as pw:
     page.once('dialog',lambda d:d.accept());page.locator('#new-project').tap();tap(page.locator('#setup'));page.once('dialog',lambda d:d.accept());page.locator('#project-file').set_input_files(path);expect(page.locator('#setup-dialog')).to_be_hidden()
     assert project()==saved;page.reload();page.evaluate(HOOK);song();expect(page.locator('#builder-context')).to_contain_text('Builder A Minor')
     tap(page.locator('#drop'));page.wait_for_function('played.length===3');assert page.evaluate('played.map(n=>n.pitch)')==[71,74,77]
-    # Deliberate song-wheel changes keep the old non-transposing behavior; they
-    # remove local editor contexts but never clear or transpose arranged events.
-    before_key_change=project()['events'];wheel('key','ArrowDown');wheel('mode','End');song(8,'Minor')
-    assert project()['events']==before_key_change
-    assert all('context' not in b and 'voicing' not in b for b in project()['builders']);assert 'context' not in project()['passing']
-    tap(page.locator('.event[data-id="'+events[0]['id']+'"]'));song(8,'Minor');assert project()['events']==before_key_change
+    # Nonempty song wheels now lock; selection still preserves foreign contexts.
+    before_key_change=project();wheel('key','ArrowDown');wheel('mode','End');song()
+    assert project()==before_key_change
+    tap(page.locator('.event[data-id="'+events[0]['id']+'"]'));song();assert project()['events']==before_key_change['events']
     for width in [320,360,393]:
         page.set_viewport_size({'width':width,'height':800});assert page.evaluate('document.documentElement.scrollWidth<=innerWidth')
     page.screenshot(path='/tmp/chordmidi-v03-context-393.png',full_page=True)
-    print('PASS: same/foreign key and mode, rapid RH/LH audition, exact stored pitches, passing-note contexts, global wheels unchanged, custom voicing warning/Drop, copy/paste/manual replacement, persistent builder context, JSON/MIDI and deliberate non-transposing Key/Mode edits on narrow portrait.',flush=True)
+    print('PASS: same/foreign key and mode, rapid RH/LH audition, exact stored pitches, passing-note contexts, global wheels unchanged, custom voicing warning/Drop, copy/paste/manual replacement, persistent builder context, JSON/MIDI and locked Key/Mode edit attempts on narrow portrait.',flush=True)
     # Real SF2 arrangement with intentionally bouncing timestamp estimates. The
     # true output offset is fixed; only the browser's estimate is perturbed.
     jitter=context();jp=jitter.new_page();jp.goto(URL)

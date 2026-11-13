@@ -64,6 +64,7 @@
   function changed(message) {
     stop();
     persist();
+    renderWheelLocks();
     if (message && !warning) say(message);
   }
   function transport() {
@@ -77,6 +78,26 @@
   }
   const b = () => project.builders[activeLane];
   const current = () => project.events.find((e) => e.id === selected);
+  const songLocked = () => project.events.length > 0;
+  const isSongWheel = (conf) => conf.id === "key" || conf.id === "mode";
+  const octaves = (current) =>
+    Array.from(new Set([1, 2, 3, 4, 5, 6, current]))
+      .sort((a, b) => a - b)
+      .map(String);
+  function renderWheelLocks() {
+    for (const id of ["key", "mode"]) {
+      const el = $("wheel-" + id),
+        locked = songLocked();
+      el.classList.toggle("locked", locked);
+      el.setAttribute("aria-disabled", String(locked));
+      el.setAttribute("aria-readonly", String(locked));
+      el.title = locked
+        ? "Song Key/Mode are locked while notes exist. Use Setup → Transpose."
+        : "";
+    }
+    $("transpose").disabled = !songLocked();
+    renderContextHint();
+  }
   function normalize() {
     b().inversion = Math.min(b().inversion, D.inversionCount(b().quality) - 1);
     project.passing.index = Math.min(
@@ -128,9 +149,9 @@
     {
       id: "octave",
       name: "Octave",
-      options: () => ["1", "2", "3", "4", "5", "6"],
-      value: () => b().octave - 1,
-      set: (v) => (b().octave = v + 1),
+      options: () => octaves(b().octave),
+      value: () => octaves(b().octave).indexOf(String(b().octave)),
+      set: (v) => (b().octave = +octaves(b().octave)[v]),
     },
   ];
   for (const conf of configs) {
@@ -149,6 +170,10 @@
     let gesture = null,
       lastWheel = 0;
     const move = (value) => {
+      if (isSongWheel(conf) && songLocked()) {
+        say("Song Key/Mode are locked. Use Setup → Transpose.");
+        return;
+      }
       const n = conf.options().length;
       if (n === 1) return;
       if (conf.id === "key" || conf.id === "mode") {
@@ -186,6 +211,10 @@
     });
     el.addEventListener("pointerdown", (e) => {
       if (e.button !== 0) return;
+      if (isSongWheel(conf) && songLocked()) {
+        e.preventDefault();
+        return;
+      }
       el.setPointerCapture(e.pointerId);
       gesture = {
         y: e.clientY,
@@ -249,13 +278,7 @@
       (b().quality === "octave" || b().voicing ? c.noteLabels : c.names).join(
         " – ",
       ) + `   /   MIDI ${c.pitches.join(", ")}`;
-    const foreign =
-      c.context.key !== project.key || c.context.mode !== project.mode;
-    $("builder-context").textContent = !c.templateMatches
-      ? `Stored voicing; wheels show its template. Builder ${D.keys[c.context.key]} ${c.context.mode} · Song ${D.keys[project.key]} ${project.mode}.`
-      : foreign
-        ? `Builder ${D.keys[c.context.key]} ${c.context.mode} · Song ${D.keys[project.key]} ${project.mode}. Key/Mode wheel edits use the song key.`
-        : "◇ Diatonic to key · Drop auditions · RH / LH retain their own voicings";
+    renderWheelLocks();
     $("rh").setAttribute("aria-pressed", String(activeLane === 0));
     $("lh").setAttribute("aria-pressed", String(activeLane === 1));
     document
@@ -265,6 +288,16 @@
       );
     renderPassing();
     editButtons();
+  }
+  function renderContextHint() {
+    const c = D.builderChord(project, b());
+    const foreign =
+      c.context.key !== project.key || c.context.mode !== project.mode;
+    $("builder-context").textContent = !c.templateMatches
+      ? `Stored voicing; wheels show its template. Builder ${D.keys[c.context.key]} ${c.context.mode} · Song ${D.keys[project.key]} ${project.mode}.`
+      : foreign
+        ? `Builder ${D.keys[c.context.key]} ${c.context.mode} · Song ${D.keys[project.key]} ${project.mode}. ${songLocked() ? "Use Setup → Transpose for a new song key." : "Key/Mode wheel edits use the song key."}`
+        : "◇ Diatonic to key · Drop auditions · RH / LH retain their own voicings";
   }
   function renderPassing() {
     const scaleContext = D.contextFor(project, project.passing),
@@ -279,6 +312,9 @@
     $("note-source").options[1].textContent =
       "RH chord tones" + suffix(rhContext);
     $("note-source").value = project.passing.source;
+    $("note-octave").replaceChildren(
+      ...octaves(project.passing.octave).map((v) => new Option("Oct " + v, v)),
+    );
     $("note-octave").value = project.passing.octave;
     $("passing-note").replaceChildren(
       ...D.passingOptions(project).map(
@@ -305,8 +341,6 @@
         else $("passing-note").focus();
       }),
   );
-  for (let i = 1; i <= 6; i++)
-    $("note-octave").append(new Option("Oct " + i, String(i)));
   $("note-source").onchange = () => {
     delete project.passing.context;
     delete project.passing.voicing;
@@ -471,7 +505,17 @@
             lane,
             start,
           }
-        : D.makeEvent(project, lane, start, duration);
+        : (() => {
+            const note = D.makeEvent(project, lane, start, duration);
+            if (!note.pitches.every((p) => p >= 0 && p <= 127)) return null;
+            return note;
+          })();
+    if (!e) {
+      say(
+        "The builder is outside MIDI 0–127. Choose another octave before placing.",
+      );
+      return;
+    }
     if (e.start + e.duration > D.totalSteps(project)) {
       say(
         "This event would extend past the arrangement. Choose an earlier pad or add bars.",
@@ -806,6 +850,12 @@
   }
   $("drop").onclick = () => {
     const c = D.builderChord(project, b());
+    if (!c.pitches.every((p) => p >= 0 && p <= 127)) {
+      say(
+        "The builder is outside MIDI 0–127. Choose another octave before Drop.",
+      );
+      return;
+    }
     auditionChord(c.pitches, c.name, 1.2);
   };
   $("play").onclick = () => {
@@ -900,6 +950,58 @@
     name();
     download(D.midi(project), stem() + ".mid", "audio/midi");
     say("MIDI downloaded · three separate tracks");
+  };
+  for (const [i, key] of D.keys.entries())
+    $("transpose-key").append(new Option(key, String(i)));
+  function transposePreview() {
+    const destination = +$("transpose-key").value,
+      direction = $("transpose-direction").value;
+    const shift = D.transposeShift(project.key, destination, direction);
+    $("transpose-preview").textContent =
+      `${D.keys[destination]} ${project.mode} · ${shift >= 0 ? "+" : ""}${shift} semitones`;
+    try {
+      D.transpose(project, destination, direction);
+      $("transpose-error").textContent = "";
+      $("apply-transpose").disabled = false;
+    } catch (error) {
+      $("transpose-error").textContent = error.message;
+      $("apply-transpose").disabled = true;
+    }
+  }
+  $("transpose").onclick = () => {
+    if (!songLocked()) return;
+    $("transpose-current").textContent =
+      `${D.keys[project.key]} ${project.mode}`;
+    $("transpose-key").value = String(project.key);
+    $("transpose-direction").value = "shortest";
+    transposePreview();
+    $("transpose-dialog").showModal();
+  };
+  $("transpose-key").onchange = transposePreview;
+  $("transpose-direction").onchange = transposePreview;
+  $("cancel-transpose").onclick = () => $("transpose-dialog").close();
+  $("transpose-form").onsubmit = (event) => {
+    event.preventDefault();
+    try {
+      const next = D.transpose(
+        project,
+        +$("transpose-key").value,
+        $("transpose-direction").value,
+      );
+      stop();
+      project = next;
+      pasting = false;
+      persist();
+      render();
+      $("transpose-dialog").close();
+      $("setup-dialog").close();
+      say(
+        "Arrangement transposed · " + D.keys[project.key] + " " + project.mode,
+      );
+    } catch (error) {
+      $("transpose-error").textContent = error.message;
+      $("apply-transpose").disabled = true;
+    }
   };
   function replace(p) {
     stop();

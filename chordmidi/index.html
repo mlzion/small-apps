@@ -25,7 +25,7 @@
         <a class="icon home" href="../" aria-label="App Lab home">☰</a>
         <div class="brand">
           <h1>Chord<span>Midi</span></h1>
-          <p>Chord Progression Composer <small>v0.3</small></p>
+          <p>Chord Progression Composer <small>v0.4</small></p>
         </div>
         <button class="icon" id="fullscreen" aria-label="Toggle fullscreen">
           ⛶</button
@@ -204,6 +204,7 @@
         ><button id="save-project">Save Project</button
         ><button id="load-project">Load Project</button
         ><button id="export-midi" class="accent">Export MIDI</button>
+        <button id="transpose" type="button" disabled>Transpose</button>
       </div>
       <details id="instrument-settings" class="instrument-settings">
         <summary>Instruments <small id="enabled-count"></small></summary>
@@ -243,6 +244,30 @@
           >GPL v2 license</a
         >
       </p>
+    </dialog>
+    <dialog id="transpose-dialog" aria-labelledby="transpose-title">
+      <form id="transpose-form">
+        <h2 id="transpose-title">Transpose arrangement</h2>
+        <p class="hint">
+          Current song: <strong id="transpose-current"></strong>
+        </p>
+        <label for="transpose-key">Destination key</label
+        ><select id="transpose-key"></select>
+        <label for="transpose-direction">Direction</label
+        ><select id="transpose-direction">
+          <option value="shortest">Shortest</option>
+          <option value="up">Up</option>
+          <option value="down">Down</option>
+        </select>
+        <p id="transpose-preview" role="status"></p>
+        <p id="transpose-error" role="alert"></p>
+        <div class="transpose-actions">
+          <button id="cancel-transpose" type="button">Cancel</button
+          ><button id="apply-transpose" type="submit" class="accent">
+            Apply
+          </button>
+        </div>
+      </form>
     </dialog>
   </body>
 </html>
