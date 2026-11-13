@@ -156,6 +156,7 @@ class ChordAudio {
     this.auditionSources = new Set();
     this.auditionGeneration = 0;
     this.graphLatency = 0;
+    this.outputClock = null;
     this.running = false;
     this.offset = 0;
     this.generation = 0;
@@ -216,7 +217,7 @@ class ChordAudio {
       // at an unmeasured graph delay on that browser.
     }
   }
-  outputTime(now = performance.now()) {
+  rawOutputTime(now = performance.now()) {
     const c = this.context;
     let time;
     try {
@@ -238,7 +239,41 @@ class ChordAudio {
         Number.isFinite(value) && value >= 0 ? value : 0;
       time = c.currentTime - latency(c.baseLatency) - latency(c.outputLatency);
     }
-    return Math.max(0, Math.min(c.currentTime, time) - this.graphLatency);
+    // Retain negative startup time here so the latency observation is complete.
+    return Math.min(c.currentTime, time) - this.graphLatency;
+  }
+  outputTime(now = performance.now()) {
+    const observed = this.rawOutputTime(now),
+      render = this.context.currentTime;
+    const delay = Math.max(0, render - observed);
+    let clock = this.outputClock;
+    if (!clock || clock.context !== this.context || render < clock.render) {
+      clock = this.outputClock = {
+        context: this.context,
+        render,
+        delay,
+        samples: [{ render, delay }],
+      };
+    } else if (render > clock.render) {
+      const advance = render - clock.render;
+      clock.samples.push({ render, delay });
+      if (clock.samples.length > 5) clock.samples.shift();
+      const sorted = clock.samples.map((s) => s.delay).sort((a, b) => a - b);
+      const middle = Math.floor(sorted.length / 2);
+      const target =
+        sorted.length % 2
+          ? sorted[middle]
+          : (sorted[middle - 1] + sorted[middle]) / 2;
+      // Track absolute output latency, not a maximum cursor position. A short
+      // median rejects timestamp spikes; phase correction uses the observed
+      // sample cadence. Bounding delay slew to 1/8 of audio-clock advance keeps
+      // the presentation clock moving at 7/8..9/8 speed, without added delay.
+      const span = Math.max(advance, render - clock.samples[0].render);
+      const correction = (target - clock.delay) * Math.min(1, advance / span);
+      clock.delay += Math.max(-advance / 8, Math.min(advance / 8, correction));
+      clock.render = render;
+    }
+    return Math.max(0, render - clock.delay);
   }
   async audition(pitches, program, duration = 0.8) {
     this.cancelAudition();

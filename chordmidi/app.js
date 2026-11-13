@@ -106,7 +106,7 @@
         Array.from(
           { length: 7 },
           (_, i) =>
-            `${D.degreeName(project.key, project.mode, i)} ${D.scale(project.key, project.mode)[i].name}`,
+            `${D.degreeName(D.contextFor(project, b()).key, D.contextFor(project, b()).mode, i)} ${D.scale(D.contextFor(project, b()).key, D.contextFor(project, b()).mode)[i].name}`,
         ),
       value: () => b().degree,
       set: (v) => (b().degree = v),
@@ -151,6 +151,12 @@
     const move = (value) => {
       const n = conf.options().length;
       if (n === 1) return;
+      if (conf.id === "key" || conf.id === "mode") {
+        for (const settings of [...project.builders, project.passing]) {
+          delete settings.context;
+          delete settings.voicing;
+        }
+      } else delete b().voicing;
       conf.set(((value % n) + n) % n);
       normalize();
       changed();
@@ -236,12 +242,20 @@
       el.setAttribute("aria-valuenow", String(i));
       el.setAttribute("aria-valuetext", opts[i]);
     }
-    const c = D.chord(project.key, project.mode, b());
+    const c = D.builderChord(project, b());
     $("chord-name").textContent =
       `${c.name} · ${D.inversions[b().inversion]} · Oct ${b().octave}`;
     $("chord-notes").textContent =
-      (b().quality === "octave" ? c.noteLabels : c.names).join(" – ") +
-      `   /   MIDI ${c.pitches.join(", ")}`;
+      (b().quality === "octave" || b().voicing ? c.noteLabels : c.names).join(
+        " – ",
+      ) + `   /   MIDI ${c.pitches.join(", ")}`;
+    const foreign =
+      c.context.key !== project.key || c.context.mode !== project.mode;
+    $("builder-context").textContent = !c.templateMatches
+      ? `Stored voicing; wheels show its template. Builder ${D.keys[c.context.key]} ${c.context.mode} · Song ${D.keys[project.key]} ${project.mode}.`
+      : foreign
+        ? `Builder ${D.keys[c.context.key]} ${c.context.mode} · Song ${D.keys[project.key]} ${project.mode}. Key/Mode wheel edits use the song key.`
+        : "◇ Diatonic to key · Drop auditions · RH / LH retain their own voicings";
     $("rh").setAttribute("aria-pressed", String(activeLane === 0));
     $("lh").setAttribute("aria-pressed", String(activeLane === 1));
     document
@@ -250,8 +264,20 @@
         el.setAttribute("aria-pressed", String(i === activeLane)),
       );
     renderPassing();
+    editButtons();
   }
   function renderPassing() {
+    const scaleContext = D.contextFor(project, project.passing),
+      rhContext = D.contextFor(project, project.builders[0]);
+    const suffix = (c) =>
+      c.key !== project.key || c.mode !== project.mode
+        ? ` · ${D.keys[c.key]} ${c.mode}`
+        : "";
+    $("note-source").options[0].textContent =
+      "Scale notes" +
+      (project.passing.source === "scale" ? suffix(scaleContext) : "");
+    $("note-source").options[1].textContent =
+      "RH chord tones" + suffix(rhContext);
     $("note-source").value = project.passing.source;
     $("note-octave").value = project.passing.octave;
     $("passing-note").replaceChildren(
@@ -259,7 +285,12 @@
         (n, i) => new Option(n.label, String(i)),
       ),
     );
-    $("passing-note").value = project.passing.index;
+    if (project.passing.voicing) {
+      $("passing-note").append(
+        new Option("Stored " + project.passing.voicing.label, "stored"),
+      );
+      $("passing-note").value = "stored";
+    } else $("passing-note").value = project.passing.index;
   }
   function switchLane(i) {
     activeLane = i;
@@ -277,16 +308,22 @@
   for (let i = 1; i <= 6; i++)
     $("note-octave").append(new Option("Oct " + i, String(i)));
   $("note-source").onchange = () => {
+    delete project.passing.context;
+    delete project.passing.voicing;
     project.passing.source = $("note-source").value;
     project.passing.index = 0;
     changed();
     renderPassing();
   };
   $("passing-note").onchange = () => {
+    if ($("passing-note").value === "stored") return;
+    delete project.passing.voicing;
     project.passing.index = +$("passing-note").value;
     changed();
+    renderPassing();
   };
   $("note-octave").onchange = () => {
+    delete project.passing.voicing;
     project.passing.octave = +$("note-octave").value;
     changed();
     renderPassing();
@@ -299,20 +336,22 @@
     $("selection-info").textContent = pasting
       ? "Tap an empty pad to paste copied pitches and length."
       : e
-        ? `${e.label} · ${e.duration}/8 · ${D.lanes[e.lane]}`
+        ? `${e.label} · ${e.duration}/8 · ${D.lanes[e.lane]}${e.key !== project.key || e.mode !== project.mode ? ` · Created in ${D.keys[e.key]} ${e.mode}; song ${D.keys[project.key]} ${project.mode}` : ""}`
         : "Tap a pad to place. Tap an event to select.";
   }
   function selectEvent(e) {
     selected = e.id;
-    project.key = e.key;
-    project.mode = e.mode;
     if (e.lane < 2) {
       activeLane = e.lane;
-      project.builders[activeLane] = { ...e.builder };
+      project.builders[activeLane] = D.restoreBuilder(project, e);
     } else {
-      project.passing = { ...e.passing };
-      if (e.passing.source === "chord" && e.sourceBuilder)
-        project.builders[0] = { ...e.sourceBuilder };
+      if (e.passing.source === "chord" && e.sourceBuilder) {
+        const { context, voicing, ...source } = e.sourceBuilder;
+        if (e.key !== project.key || e.mode !== project.mode)
+          source.context = { key: e.key, mode: e.mode };
+        project.builders[0] = source;
+      }
+      project.passing = D.restorePassing(project, e);
     }
     normalize();
     persist();
@@ -766,7 +805,7 @@
     }
   }
   $("drop").onclick = () => {
-    const c = D.chord(project.key, project.mode, b());
+    const c = D.builderChord(project, b());
     auditionChord(c.pitches, c.name, 1.2);
   };
   $("play").onclick = () => {

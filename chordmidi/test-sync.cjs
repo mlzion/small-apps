@@ -81,28 +81,28 @@ mapping.context.getOutputTimestamp = () => ({
   contextTime: 9.8,
   performanceTime: wall - 50,
 });
-close(mapping.outputTime(), 9.844);
+close(Math.max(0, mapping.rawOutputTime()), 9.844);
 mapping.context.getOutputTimestamp = () => ({
   contextTime: 0,
   performanceTime: 0,
 });
-close(mapping.outputTime(), 9.921);
+close(Math.max(0, mapping.rawOutputTime()), 9.921);
 mapping.context.getOutputTimestamp = () => {
   throw Error("unsupported");
 };
-close(mapping.outputTime(), 9.921);
+close(Math.max(0, mapping.rawOutputTime()), 9.921);
 delete mapping.context.getOutputTimestamp;
 mapping.context.baseLatency = NaN;
 mapping.context.outputLatency = -1;
-close(mapping.outputTime(), 9.994);
+close(Math.max(0, mapping.rawOutputTime()), 9.994);
 mapping.context.getOutputTimestamp = () => ({
   contextTime: 100,
   performanceTime: wall,
 });
-close(mapping.outputTime(), 9.994);
+close(Math.max(0, mapping.rawOutputTime()), 9.994);
 mapping.context.currentTime = 0.001;
 delete mapping.context.getOutputTimestamp;
-close(mapping.outputTime(), 0);
+close(Math.max(0, mapping.rawOutputTime()), 0);
 // All beat/bar edges, note onsets/durations, and three loop seams at five tempos
 // and all meters, with output timestamps updating less often than animation.
 for (const bpm of [30, 60, 120, 137, 300])
