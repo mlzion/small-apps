@@ -19,3 +19,5 @@ DruMidi brings the gallery to eleven cards and eight launch links. See [drumidi/
 ChordMidi brings the gallery to twelve cards and nine launch links. See [chordmidi/README.md](../chordmidi/README.md) for music-model, real-SF2 audio, gesture, MIDI, persistence and portrait checks.
 
 PicturePaint makes ten gallery launch links. See [picturepaint/README.md](../picturepaint/README.md) for region detection, gradient/export/project round trips, mobile gesture automation, existing-app smoke checks, and outstanding physical-device checks.
+
+Galactix makes eleven gallery launch links, with MIDI Lab the only planned card. See [space-shooter/README.md](../space-shooter/README.md) for simulation and input lifecycle checks plus the outstanding portrait-phone checks.
