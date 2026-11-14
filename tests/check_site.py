@@ -50,7 +50,7 @@ with sync_playwright() as p:
         url = "http://app-lab.test" + prefix
         page.goto(url)
         expect(page.locator(".app-grid > .app-card")).to_have_count(12)
-        expect(page.locator(".launch-link")).to_have_count(9)
+        expect(page.locator(".launch-link")).to_have_count(10)
         expect(page.locator(".app-card:has(.coming-soon) a, .app-card:has(.coming-soon) button")).to_have_count(0)
         expect(page.locator("#year")).to_have_text(page.evaluate("String(new Date().getFullYear())"))
         for width, columns in ((320, 1), (375, 1), (640, 1), (768, 2), (1000, 2), (1024, 3), (1440, 3)):
