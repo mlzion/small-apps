@@ -46,7 +46,7 @@ with sync_playwright() as p:
     for prefix in ('/', '/small-apps/'):
         page.goto(ORIGIN + prefix)
         page.evaluate("localStorage.setItem('galactix.best.v01','1234')")
-        page.get_by_role('link', name='Launch Space Shooter').click()
+        page.get_by_role('link', name='Launch Galactix').click()
         expect(page).to_have_url(ORIGIN + prefix + 'space-shooter/')
         expect(page.locator('#level-select option')).to_have_count(20)
         expect(page.locator('#best')).to_have_text('BEST 01234')
