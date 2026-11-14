@@ -79,8 +79,9 @@ with sync_playwright() as p:
  expect(page.locator('#drawing-title')).to_have_text('hidden');expect(page.locator('#outlines')).to_have_text('Show outlines')
  page.locator('#open-file').set_input_files({'name':'restored.picturepaint','mimeType':'application/json','buffer':project.encode()})
  expect(page.locator('#drawing-title')).to_have_text('restored');expect(page.locator('#save')).to_be_enabled();assert pixel(100,120)[:3]==[232,116,97];assert pixel(290,120)[2]>10;tap(100,120);page.locator('#undo').click();assert pixel(100,120)[:3]==[232,116,97]
- # Open regions and malformed projects fail safely, preserving the active painting.
- tap(395,235);expect(page.locator('#status')).to_contain_text('reaches the picture edge')
+ # Edge-connected regions can be painted; malformed projects preserve the active painting.
+ tap(395,235);assert pixel(395,235)[:3] != [255]*3
+ page.locator('#undo').click();assert pixel(395,235)[:3] == [255]*3
  page.locator('#open-file').set_input_files({'name':'invalid.picturepaint','mimeType':'application/json','buffer':b'{"format":"wrong"}'})
  expect(page.locator('#status')).to_contain_text('invalid');expect(page.locator('#dimensions')).to_have_text('400 × 240')
  for width,height in [(320,812),(375,812),(768,1024),(1024,768),(1440,900)]:
@@ -96,4 +97,4 @@ with sync_playwright() as p:
  for app in ['calculator','breakout','falling-blocks','d-fuze','celphonica','synth-lab','laserbreak','drumidi','chordmidi']:
   smoke=ctx.new_page();smoke.goto('http://app-lab.test/small-apps/'+app+'/');smoke.wait_for_timeout(150);assert smoke.locator('body').inner_text().strip();smoke.close()
  assert not errors,errors;assert not missing,missing
- browser.close();print('PASS: lazy library, worker, antialiased irregular/neighbor fills, six gradient angles, zoomed fill, history, outlines, JPG, project round trip, malformed input, edge protection, five viewport sizes, mobile tap/pinch/pan and Pages paths')
+ browser.close();print('PASS: lazy library, worker, antialiased irregular/neighbor fills, six gradient angles, zoomed fill, history, outlines, JPG, project round trip, malformed input, edge-connected fill, five viewport sizes, mobile tap/pinch/pan and Pages paths')
