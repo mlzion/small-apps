@@ -34,10 +34,10 @@ orientation.matches=true;orientation.dispatch('change');assert.equal(node('#orie
 orientation.matches=false;orientation.dispatch('change');assert.equal(node('#orientation-overlay').hidden,true);assert.equal(node('#menu').hidden,false,'returning to portrait requires explicit resume');
 node('#action').onclick();document.hidden=true;document.dispatch('visibilitychange');assert.equal(node('#menu').hidden,false);document.hidden=false;node('#action').onclick();
 node('#pause').onclick();node('#restart').onclick();assert.equal(current.time,0);assert.equal(current.lives,3);
-for(let level=1;level<=10;level++){
-  assert.equal(current.level,level);current.state='cleared';current.score=100;frames(2);assert.match(node('#action').textContent,level===10?/Fly again/:/Next sector/);node('#action').onclick();
+for(let level=1;level<=20;level++){
+  assert.equal(current.level,level);current.state='cleared';current.score=100;frames(2);assert.match(node('#action').textContent,level===20?/Fly again/:/Next sector/);node('#action').onclick();
 }
 assert.equal(current.level,1);assert.equal(node('#score').textContent,'00000','new mission resets accumulated score');
 node('#pause').onclick();node('#action').onclick();current.state='lost';frames(2);assert.match(node('#action').textContent,/Retry/);node('#action').onclick();assert.equal(current.lives,3);
 current.state='lost';frames(2);node('#level-select').value='7';node('#level-select').onchange();node('#action').onclick();assert.equal(current.level,7);assert.equal(node('#score').textContent,'00000','test selection starts fresh');
-console.log('PASS: multitouch ownership/cancellation, blur/visibility pause, rotation lockout/resume, restart, ten-sector progression, retry and test-level selection (DOM doubles)');
+console.log('PASS: multitouch ownership/cancellation, blur/visibility pause, rotation lockout/resume, restart, twenty-sector progression, retry and test-level selection (DOM doubles)');
