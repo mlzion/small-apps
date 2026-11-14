@@ -1,143 +1,144 @@
-# Galactix v0.3
+# Galactix v0.4
 
-A standalone, buildless portrait arcade shooter at `space-shooter/`, launched from App Lab's **Galactix** card. v0.3 builds on merged v0.2 (PR #46), expands the campaign to **30 selectable sectors**, adds mixed-formation bosses and new dive patterns, and extends the original synthesized audio. Ship geometry, starfield, original enemies, portrait layout and controls are retained. The only shared-file edit updates this app's gallery description to v0.3/thirty sectors. Other App Lab projects are unchanged.
+A standalone portrait arcade shooter, built on merged v0.3 (PR #47), now with **40 sectors**, progressive weapon unlocks, delayed stronger bosses, and continuous synthesized background audio. Original ship geometry, space motif, smooth relative controls, ordinary enemy families, attack patterns, accuracy scoring and best scores are retained.
 
-No external libraries, assets, requests, server, build step or service worker are needed. All module/asset URLs are relative and work at a domain root and GitHub Pages **`/small-apps/`**.
+All application code, tests and documentation are in `space-shooter/`. The only shared-file edit updates Galactix's gallery description to v0.4/forty sectors. No other App Lab applications, dependencies or hosting configuration changed. There are no external libraries, audio files, images, runtime requests, build step or server requirements. Relative script/navigation paths support GitHub Pages **`/small-apps/`** and a domain root.
 
-## Controls and session
+## Controls and progression
 
-- Move with the lower-left relative trackpad while holding the independent right FIRE button with another finger. Lift and reposition without teleporting. Independent pointer ownership/capture handles extra fingers, interrupted touches and capture loss.
-- Small trackpad errors use adaptive damping (~28ms, dropping to 6ms for a dodge). Large moves immediately retain the original 520 logical-pixels/second cap. The filter runs on simulation time; keyboard movement remains direct. Desktop: arrows/WASD plus Space; P pauses/resumes.
-- The ship stays in the lower half of the upper field, above the control area. Landscape blocks and pauses play. Portrait requires explicit Resume. Blur, hidden pages and app switching stop held inputs and audio. Native portrait locking is attempted where available, with the rotate overlay as fallback.
-- Pause offers Resume or Restart Sector. Three hull points, the original 1.8-second damage grace period and a fresh hull each sector are retained. Loss retries the same sector, discarding that sector's score while preserving completed-sector points. Selecting any test level starts a new score run. **Sector 30** ends the campaign.
-- A new sector/retry resets hull, shield, weapon timers, projectiles and accuracy attempts. The existing `galactix.best.v01` best-score and `galactix.sound.v02` Sound On/Off keys are retained. Missing/blocked storage does not prevent play. Sound starts muted unless previously enabled.
+- Drag the lower-left relative trackpad with one thumb and hold the independent right FIRE button with another. Lift and reposition without teleporting. Small-motion damping and the responsive 520 logical-pixels/second dodge cap are unchanged. Extra fingers, cancelled touches and capture loss do not leave held controls behind.
+- Keyboard: arrows/WASD to move, Space to fire, P to pause/resume. Gameplay focuses the canvas, and Space's native button behavior is suppressed during flight, including reward announcements, so a held/released fire key cannot accidentally activate Pause.
+- Portrait only. Landscape covers and pauses the game. Returning to portrait requires Resume. Blur/hidden pages stop gameplay and audio. Pause can also freeze an in-progress reward announcement; Resume continues its remaining time. Restart/retry starts a fresh hull at the same sector.
+- A regular new campaign starts at **sector 1** and advances sequentially through **40**. Sector 40 ends with a special campaign victory screen and expanded fanfare. Best scores retain `galactix.best.v01`; unavailable storage never prevents play.
+- **Assignment correction honored:** the existing development selector remains visible on every menu, including Pause, with all **40 sectors**. Selecting a sector starts a new test run with earlier bosses' weapon unlocks already initialized. For example, 20 starts with Rapid/Spread/Double unlocked, 21 additionally unlocks Laser, and 26+ unlocks Mine. A jump starts with a normal weapon, not a free consumable; its drop pool has the appropriate earlier unlocks. Selecting 1 resets to a fresh campaign.
 
-## Weapons, shields and accuracy
+Learned unlocks persist across retries within the current campaign. Restart/retry starts with the normal weapon and cannot claim the same unlock twice. Completing a sector carries the current offensive weapon's remaining time or charge into the next sector, so a weapon awarded by the last boss kill is still ready there. Shield/hull reset as in earlier releases. Menus and celebrations do not consume weapon time.
 
-Normal cooldown remains `0.285 / (1 + 0.18 × (sector − 1) / 19)` through sector 20: 0.285s at sector 1, ~0.242s at sector 20. Sectors 21–30 retain sector 20's cadence. Rapid Fire halves the current cooldown; fixed-step remainders keep cadence steady.
+## One offensive weapon slot
 
-Every emitted firing action increments the sector's attempt counter. Dual Spread emits **two projectiles but counts as one action**. Any successful hit, including a nonlethal armor/boss hit, resets the counter for future actions. Each action snapshots its multiplier at emission; delayed projectiles and both spread shots retain that shared snapshot. A first hit cannot promote a second projectile already in flight.
+Only **one** offensive power-up can be equipped. Any offensive pickup replaces the current weapon immediately, even if it has a lower rank. The previous timer/charge is discarded. Recollecting the same kind refreshes it. Replacement cancels any active laser or undetonated player mine; already-emitted ordinary projectiles retain their flight and accuracy snapshots. A shield never changes the offensive slot or cancels its effect. Expiring/consuming a weapon returns to normal single shots.
 
-| Attempt since the previous hit | Destruction multiplier |
-| --- | --- |
-| 1 | 100% |
-| 2 | 85% |
-| 3 | 70% |
-| 4 | 55% |
-| 5+ | 40% |
+| Rank | Weapon / icon color | Effect | Unlock boss | Random drops begin |
+| --- | --- | --- | --- | --- |
+| Defensive | Green shield silhouette | Absorbs one hit, original 1.8s grace and protective ring | Available initially | 1 |
+| 1 | Yellow lightning · Rapid Fire | Half the normal cooldown, 8 seconds | 5 | 6 |
+| 2 | Blue V · Dual Spread | Two angled shots, **5° total** (±2.5°), 10 seconds | 10 | 11 |
+| 3 | Purple twin bars · Double Barrel | Two parallel shots, 10 seconds | 15 | 16 |
+| 4 | Orange ray · Laser | One activation, continuous-looking 0.25s beam, at most 3 kills | 20 | 21 |
+| 5 | Pink circular mine · Mine | One launched proximity/fused blast, at most 4 kills | 25 | 26 |
 
-The killing projectile's multiplier applies to base destruction points, rounded to whole points. Nonlethal hits award no points. This also applies to bosses: an attempt-5 killing shot against the final 2,000-point boss awards 800. **Sector-clear bonuses remain separate: 250 per surviving hull point.**
+Laser and Mine automatically activate on the **next firing action**, consume their charge, and return the slot to normal. Rapid Fire cannot stack with any other offensive weapon. The normal v0.3 cadence remains 0.285s in sector 1, gradually reaching ~0.242s in sector 20, then holding steady through 40. Parallel/spread emissions still count as a single firing action.
 
-| Pickup | Effect | Bounded drop rule per sector |
-| --- | --- | --- |
-| Green shield silhouette | Absorbs one hit, then breaks; original protection/grace behavior | Guaranteed halfway through total target destruction count |
-| Yellow lightning bolt | Rapid Fire for 8 seconds | One 65% seeded chance at the first quarter |
-| Blue upward-opening V | Dual Spread for 10 seconds, **5° total** (±2.5°) | One 55% seeded chance at the third quarter |
+The original ship gains the active weapon's yellow/blue/purple/orange/pink tint and soft glow. Timed weapons flash their own color six times in the final two seconds, then restore normal colors. Charged specials stay colored until used. Shield alone does not tint the ship. Hostile shots render above glows for visibility. All six pickup icons share matching Canvas discs, scale and gentle animation, with no external assets.
 
-All three use the existing matching glowing, bobbing Canvas discs and fall at 68 logical pixels/second. At most three pickups spawn in a sector. Missed pickups leave the field. Weapon effects stack independently; recollection refreshes to 8/10 seconds rather than accumulating time. Timers freeze on pause, expire explicitly in the HUD, and only affect subsequent firing actions. Already-emitted projectiles survive expiration. The shield has no duration and keeps its existing blue ring.
+### Laser and mine damage rules
 
-### Weapon color feedback
+Both specials deal **two HP damage once per target per activation**. Scouts and 2-HP ordinary enemies can be destroyed in one hit; a healthy boss loses only two HP. Neither effect repeatedly damages a boss while overlapping it. The limits count **destructions**, not nonlethal hits: a beam can damage a healthy boss and destroy up to three other ships, and a mine can damage a healthy boss and destroy up to four. Once the kill budget is exhausted, no further targets take damage. A weakened boss killed by a special counts toward the budget and immediately starts the boss announcement, stopping the rest of that activation.
 
-Rapid Fire adds a soft **yellow** hull tint/glow; Dual Spread adds **blue**. Together they blend gently between those colors. During a weapon's final two seconds its own color flashes six times, falling back to the remaining weapon's color or original blue-gray hull. Timing uses simulation state, so it freezes with the game. Original ship geometry, shading and cockpit remain recognizable; hostile projectiles render above the subtle glows/ring for visibility. A shield alone does not change the hull color.
+Laser is an 8px-wide upward beam anchored to the moving player. Targets intersecting the beam are checked from nearest to furthest. The beam lasts exactly 0.25 simulation seconds from emission; a hit set prevents repeated damage. Its orange/white ray has a distinct synthesized sound.
 
-## Enemies and campaign balance
+A player mine travels upward at 210 logical pixels/second. After a brief arming period, it detonates near enemies, or at its fuse/upper-field limit. Its visible pink blast has a **72px radius**; enemy body overlap counts. Damage is applied once, nearest targets first, up to four destructions. Deployment and explosion have distinct sounds. It does not repeatedly tick damage or remain as a permanent hazard.
 
-| Ordinary enemy | HP | Base points | Behavior |
+### Accuracy and bonuses
+
+Unchanged accuracy tiers: attempt 1 **100%**, 2 **85%**, 3 **70%**, 4 **55%**, 5+ **40%**. Any successful enemy hit, including nonlethal boss/armor damage, resets the counter for future firing actions. Each firing action retains an immutable snapshot for every projectile or area target it hits. Delayed shots, spread, parallel barrels, beams and mine explosions cannot promote later hits from the same action after an earlier hit resets the counter.
+
+The killing action's snapshot multiplies the enemy's base points. Nonlethal damage awards no destruction points. For example, an attempt-5 mine destroying four scouts awards 40 + 40 + 40 + 40. **Clear bonuses (250 per surviving hull point) and later-boss reward bonuses remain separate from accuracy.**
+
+## Unlock celebrations
+
+On defeating bosses 5/10/15/20/25 for the first time in a campaign:
+
+1. The boss explodes and the destruction/unlock cue plays.
+2. Gameplay freezes immediately for **1.5 seconds**.
+3. A centered **NEW POWER-UP ACHIEVED!** banner shows the new name, Canvas icon and color.
+4. The weapon is equipped immediately, replacing the old slot, with its full time/charge.
+5. Play resumes automatically, requiring a **fresh fire press**. Captured touches, held Space and keyboard auto-repeat cannot spend the charge during or across the announcement.
+
+Enemies, projectiles, player movement, pickup positions, weapon timers, invulnerability clocks and simulation RNG stay frozen. Pure visual explosion particles may finish fading without advancing gameplay. Pause/rotation/hidden pages also freeze the announcement timer. Learned unlocks are recorded once per campaign; retrying an already-defeated early boss shows a boss-defeated message without another unlock grant.
+
+Bosses **30/35/40** instead show **BOSS DEFEATED!**, with a fixed **2,500 / 2,750 / 3,000** score bonus. If the boss was the last target, its announcement finishes **before** the usual sector-complete transition or final campaign victory. Reward sounds yield to the later victory fanfare without overlapping; a pending victory is queued rather than dropped.
+
+## Stronger, delayed bosses
+
+No boss is present at the start of its sector. Once **ceil(ordinary enemy count / 2)** ordinary ships have been destroyed, the boss enters from above over ~2.2 seconds, with a short warning and dedicated entrance sound. It takes the rear-center position, behind surviving ships, and must be destroyed to finish. Ordinary enemies continue their attacks. The compact boss health bar remains.
+
+| Sector | HP | Base points | Major character |
 | --- | --- | --- | --- |
-| 1 · Blue-gray scout | 1 | 100 | Formation sway, basic dive and vertical shots |
-| 2 · Purple armor | 2 | 200 | 10% faster solo dives, 8% faster bullets, 1.5× fire selection weight and 1.35× dive selection weight |
-| 3 · Cyan looper | 2 | 300 | Curved lane approach, upper-field loops from sector 13, 1.8× dive selection weight |
+| 5 | 6 | 750 | Fast sweeping arc, single pulse |
+| 10 | 10 | 1,200 | Alternating side feints |
+| 15 | 14 | 1,800 | Looping/weaving sweep, twin major shots |
+| 20 | 18 | 2,500 | Stronger lance/weave |
+| 25 | 22 | 3,300 | Deeper weave, drifting mines |
+| 30 | 26 | 4,200 | Paired mine deployments |
+| 35 | 30 | 5,200 | Faster high weave, wide three-shot major fan |
+| 40 | 35 | 6,500 | Three health phases, sharper weave/fans, mines from phase 2 |
 
-All twenty existing v0.2 sector configurations are preserved exactly, including normal firing cadence and ordinary formation sizes/counts. A captured v0.2 fixture tests that contract. Boss integration on fifth sectors adds one rear-center target and shifts ordinary rows down 20px to keep the boss clear of the back row. Normal attacking formations remain bounded at 28 ordinary enemies after sector 10.
+Bosses sway faster than ordinary ships and have faster major movement, shorter cooldowns and increasingly elaborate attacks. Major attacks retain brief colored warning rings and locked targeting. The final boss changes phase below 66% and 33% health; movement phases are captured at launch so taking damage does not teleport an active dive. Its broad shot fans leave gaps. Boss palettes/details distinguish each rank. Damage flashes armor, adds small deterministic sparks below two-thirds health, and increases low-health feedback. Destruction adds a larger 70-particle burst, kept within the mobile particle cap.
 
-| Sectors | Attack vocabulary |
-| --- | --- |
-| 1–10 | Existing formation/scout/armored attacks, with bosses every fifth sector |
-| 11–12 | Existing curved looper dives |
-| 13–14 | Existing upper-field oval loops |
-| 15–18 | Existing synchronized two-enemy dives, gradual pressure increases |
-| 19–20 | Existing synchronized three-enemy dives |
-| 21–23 | Mix in launch-targeted kamikaze attacks |
-| 24–26 | Add three-enemy single-file columns |
-| 27–29 | Four-enemy columns and gradually more frequent kamikazes |
-| 30 | Five-enemy columns, all earlier patterns, final boss |
+### Enemy mines
 
-Difficulty after 20 emphasizes behavior. From sector 20 to 30, ordinary dive speed rises **205→219**, bullet speed **215→230**, and global ordinary shot interval changes **0.95→0.87s**, with small equal increments per sector. Armor/looper counts, ordinary formation size and player cadence stay at sector-20 values. Kamikaze selection chance rises from 18% at 21 to 37.8% at 30. Column selection begins at 18% at 24 and reaches 30% at 30; remaining selections retain classic curved/looping/coordinated patterns.
+Later bosses can deploy at most **two** spiked coral/orange drifting mines, distinct from the player's pink round mine and from bullets. They descend toward the player, split into separated left/right lanes, then **stop and show a solid blast-radius warning for one second** before exploding. Their 50px blasts leave a wide central escape corridor. Shield and hit grace apply normally. Mines are hazards to dodge, not extra targets required for sector completion. Deployment, warning and detonation have distinct cues.
 
-Classic group attacks retain fixed separated lanes (pairs at x=84/276, triples at x=48/180/312 in a 360px logical world), 0.75s amber warnings and no continuous homing. Later sectors permit one major attacking group at a time, including boss dives. Independent ordinary and boss firing remains possible, with a shared hard cap of **14 live hostile projectiles**. Representative seeded combat tests reached a peak of **five**, rather than approaching the safety cap.
+From sector 34, occasional field mines also join non-boss intervals. Boss 40 introduces mines in phase 2. All sources share the same two-mine cap and lane ownership; extra requests are skipped, not stacked into an unavoidable zone.
 
-### Kamikaze · sector 21+
+## Forty-sector balance and drops
 
-A coral warning ring and target reticle announce the attack for **0.9s**, followed by a 0.45s upper-field wind-up while the warning remains visible. At the start of the actual rush, the enemy snapshots the player's position once and accelerates along a straight ray through that point (70 initial speed, 380 acceleration, 430 speed cap). It never steers toward later player movement. Tests demonstrate more than a second between target lock and arrival in the tested dodge scenario, a safe immediate dodge, and a real hit if the player stays put. Survivors exit the field and return smoothly to their original formation slot.
+All first-30 v0.3 ordinary-sector configuration values are preserved against a captured fixture. Explicit v0.4 changes apply throughout: the new weapon/drop progression, delayed stronger bosses and audio/warning redesign. The original scout/armor/looper HP/base values, curved loops, fixed coordinated lanes, non-homing kamikazes and staggered single-file paths remain.
 
-### Single-file column · sector 24+
+Sectors 31–33 gradually favor kamikaze/column attacks. Sectors 34–35 mix in mine pressure; 36–39 increase established combinations and coordination. Sector 40 combines those patterns with the phased final boss. From sector 30 to 40, ordinary dive speed increases only **219→230**, bullet speed **230→240**, and the global shot interval **0.87→0.82s**. The ordinary formation stays capped at 28 ships. Later major dives share an attack budget and all hostile bullets share a 14-live-projectile safety cap. Representative seeded three-minute simulations peaked at six hostile bullets, plus at most two mines.
 
-Three to five ships queue from one available upper formation row, nearest ship first, after a **0.9s cyan warning**. Using one row prevents approach paths crossing at the join. The leader locks one target position at launch; all followers share that snapshot and the same curved centerline. Each first joins the staging point above the player zone, then follows the leader with a fixed **~0.45–0.53s delay**, adjusted to preserve at least 62px vertical separation on the shared descent. Approaches also retain more than a collision diameter of separation in the tested cases. The path passes through the locked target and curves out below the field; survivors return to their own original slots.
+**Dashed trajectories and target reticles are removed.** Preparing enemies retain short, color-coded local warning rings; no full predicted flight paths are drawn. Enemy mine blast-radius rings remain because they warn about a local explosion, not a flight path.
 
-If no upper row has at least three available ships, the scheduler uses a classic attack instead of an overlapping or undersized column. Loops, kamikazes, columns and later boss dives share the major-attack budget; a second group does not stack onto an already active late-sector group. Enemies can still fire and return through the upper formation area.
+Pickups are deterministic and bounded:
 
-## Bosses in the formation
+- Before the first unlock, shield is the only available pickup: one guaranteed at half the ordinary destruction count.
+- Sectors 6–15 have one extra random opportunity; 16–25 have two; 26–40 have three, with gradually increasing probabilities.
+- The pool is captured when a sector starts, containing only already-unlocked weapons from **earlier** bosses. A current-sector unlock cannot leak into its random pool.
+- Extra opportunities can also produce shields. At most **four pickups spawn per sector**, and no more than **three are on screen**. The guaranteed shield can replace an older floating pickup if necessary.
+- Loot spawns inside reachable x bounds and the upper field, falling at the original 68 logical pixels/second. The seeded drop tests averaged 1.00, 1.45, 2.02, 2.66 and 2.95 pickups in sectors 1/6/16/26/40 using dispersed seed samples.
 
-A boss occupies the rear-center at logical (180,38), behind the ordinary back row. Its original six-wing spacecraft is about 1.5× ordinary width, with increasingly detailed plating/engines and a compact health bar. Bosses are integrated targets: **all ordinary enemies and the boss must be destroyed** to finish that sector.
+## Continuous, always-enabled audio
 
-| Sector | HP | Base points |
-| --- | --- | --- |
-| 5 | 4 | 500 |
-| 10 | 6 | 750 |
-| 15 | 8 | 1,000 |
-| 20 | 10 | 1,250 |
-| 25 | 12 | 1,500 |
-| 30 | 15 | 2,000 |
+There is **no Sound On/Off button or preference**. Playback unlocks on the player's first pointer/key interaction as required by browsers. If Web Audio is unavailable, the game remains functional. Existing combat effects, boss effects, ascending victory/final-victory and descending defeat fanfares remain, with additional entrance/laser/mine cues.
 
-The boss initially moves with the formation and fires a modest independent stream. It occasionally flashes a **1.05s violet warning**, locks a target, breaks into a sweeping upper-field arc and returns continuously to its rear-center position. Successive bosses attack/fire slightly more often and add lateral motion; bosses 20+ fire two spaced projectiles during the major attack. They do not continuously home or dive directly through the player's zone. Ordinary enemies keep attacking while the boss exists. Boss hits produce a heavier impact; destruction adds a 44-particle burst and a special two-layer electronic explosion.
+The old rhythmic throb is replaced by a soft **196Hz sine carrier** and one sine LFO. A 50-cent base detune plus ±50-cent modulation glides smoothly from the root to **one semitone above**, never switches between notes. The LFO rate rises linearly from **0.7 cycles/second** at sector 1 to **2.5** at 40, with smooth rate automation. The same LFO supplies a gentle gain breath. The background is quieter than important effects.
 
-## Audio
+Only one carrier/LFO graph exists during active gameplay; no interval or note-retrigger timer is used. Pause, hidden pages, announcements and fanfares stop/disconnect the background. Pause/page exit stop all effects and future notes too. Resume recreates one clean background graph. Combat and fanfare voices plus background oscillators share the **12-oscillator cap**; finished/cancelled nodes are disconnected. Sound timing and rendering consume no gameplay RNG and never drive simulation time.
 
-`audio.js` uses only original Web Audio oscillators/envelopes, with no assets or simulation RNG. Existing Sound On/Off preference persists. User gestures unlock playback; missing devices, rejected playback and blocked storage stay silent without interrupting gameplay.
+## Modules and verification
 
-Combat cues distinguish crisp player laser pulses, enemy projectiles, nonlethal impacts, short explosions, rising dive swoops, player damage, protective shield effects, heavy boss impacts and larger boss explosions. Repetition limits, priority selection (at most two routine cue categories per step), a 0.12 master gain and a **12-voice cap** bound overlap and CPU cost. Finished/cancelled nodes are disconnected.
+- `engine.js`: fixed 120Hz simulation, campaign/sector flow, scoring, collisions, freezes and enemy hazards.
+- `weapons.js`: one-slot inventory, unlock/drop eligibility, projectile/beam/mine emissions and bounded area damage.
+- `attacks.js`: existing deterministic dive paths plus boss definitions/entrances/phases and mine deployments.
+- `appearance.js`: pure weapon colors/flashes and boss damage styling.
+- `game.js`: portrait Canvas/input/session/announcement presentation and audio dispatch.
+- `audio.js`: independent Web Audio modulation, effects, priority and cleanup.
 
-A quiet low synthesized throb runs only during active gameplay, starting at **75 BPM** and increasing linearly to **145 BPM** at sector 30. A 25ms audio scheduler looks 120ms ahead using `AudioContext.currentTime`; it does not drive engine time or randomness. It skips missed beats rather than bursting after a throttled tab.
-
-Sector victory plays an original ascending ~1.5-second fanfare; final victory expands to ~1.8 seconds. Defeat uses a descending ~1.2-second phrase. They cancel routine voices and take priority over rhythm/effects, reject overlapping/repeated fanfares, and preserve a final boss explosion when destruction and victory coincide. Sector completion stops the rhythm while allowing its fanfare to finish. Starting another sector cancels any remaining notes and starts a clean rhythm. Pause, mute, blur, hidden pages and page exit stop all voices and the scheduler; Resume restarts cleanly from the audio clock.
-
-## Modules and determinism
-
-- `engine.js`: fixed 120Hz gameplay, collisions, scoring, pickups, enemy events and campaign state.
-- `attacks.js`: original kamikaze, column and boss paths/definitions, driven only by simulation time and seeded selections.
-- `appearance.js`: pure weapon color/flash feedback; never changes gameplay.
-- `game.js`: portrait Canvas presentation, input ownership, menu/session lifecycle and audio dispatch.
-- `audio.js`: Web Audio timing/voices, independent of the deterministic engine.
-
-The seeded LCG and identical input steps reproduce gameplay. Rendering and sound consume no random numbers and cannot change encounter timing. Transient shots, bullets, pickups, particles and audio voices are bounded.
-
-## Verification
-
-Run from repository root:
+From repository root:
 
 ```sh
 node --check space-shooter/engine.js
+node --check space-shooter/weapons.js
 node --check space-shooter/attacks.js
 node --check space-shooter/appearance.js
 node --check space-shooter/game.js
 node --check space-shooter/audio.js
 node space-shooter/test-engine.cjs
 node space-shooter/test-v03.cjs
+node space-shooter/test-v04.cjs
 node space-shooter/test-controls.cjs
 node space-shooter/test-audio.cjs
 python space-shooter/test-browser.py
 python tests/check_site.py
 ```
 
-Browser tests reuse the repository's Python Playwright/Chromium setup (`CHROMIUM_PATH` can override `/usr/bin/chromium`), routing a reserved `.test` origin to local files without an HTTP server or external requests.
+The retained engine suite covers all forty real clears, accuracy/delayed/shared-action scoring, normal/rapid cadence, movement/jitter, armor behavior, shields/grace and bounded simulations. The retained v0.3 suite covers first-20 fixtures and classic/looping/coordinated/kamikaze/column path regressions. The v0.4 suite adds first-30 fixtures, jump/campaign unlocks, delayed eight-boss spawning/HP/behavior, freeze/RNG/input/announcement ordering, full weapon replacement matrix, laser/mine damage/caps/duration, drop reachability/frequency/caps, enemy mines, damage feedback/final phases, and deterministic later combat runs.
 
-- **Existing engine suite, expanded to 30:** all sector clears, base/accuracy/bonus scoring including delayed and spread projectiles, movement/jitter/cadence, original enemy weights/loops/groups, pickups/stacking/independent expiry, shield/grace/defeat and bounded two-minute runs in every sector.
-- **v0.3 engine/appearance suite:** exact first-20 configuration fixture, gentle later parameters, bosses only on fifth sectors, rear positioning/HP/value/destruction/accuracy/completion and attack return; kamikaze warning/locked targeting/acceleration/dodge/hit/frequency; 3/4/5-member columns, safe staging/shared trajectories/spacing/depleted-row fallback/return; weapon colors/blending/expiration flashing; one-step audio event contracts; repeated deterministic combat simulations with bounded projectiles.
-- **Controller:** actual engine cue dispatch, completion vs paused audio lifecycle, pointer ownership/cancellation, blur/visibility/rotation, explicit resume, retries and 30-sector progression/selection.
-- **Audio:** gesture/preference/unsupported-device fallback, tempo endpoints and steady scheduling, one timer, all combat sounds, overlap cap, ascending/descending/final fanfares, suppression/deduplication, rhythm priority, pause/mute/cleanup and scheduled-note cancellation.
-- **Real Chromium:** four portrait viewport sizes (320×568 through 430×932), CDP two-finger move/fire/cancel, keyboard, 30-sector HUD/progression, boss and new attack-warning rendering, Canvas pixel checks for powered/flashing/restored ship colors, actual final-boss/victory audio events, sound timer/voice lifecycle, rotation, pickup HUD, best score and navigation/assets at both `/` and **`/small-apps/`**. Screenshots go to `/tmp/galactix-v03-*.png`.
-- **Existing gallery suite:** responsive layouts, assets/navigation, calculator arithmetic/keyboard regressions and original blob hashes, plus the no-JavaScript gallery. Other apps' source is unchanged.
+Controller tests cover forty sequential transitions, visible selectors, jump unlocks, pointer/keyboard cancellation, announcement pause/resume and fresh firing. Audio tests inspect the actual oscillator/gain graph, pitch/depth/rate automation, lifecycle/no duplicates, retained/new cues, voice caps and ordered fanfares. Real Chromium uses the repository's existing Python Playwright setup (`CHROMIUM_PATH` can override `/usr/bin/chromium`) and locally routed `.test` files, with no server or external requests. It verifies four portrait viewports, actual CDP two-finger input, Space behavior through rewards, jump unlocks, boss entry/announcement/final flows, weapon Canvas colors, all attack warnings without dashed calls, mine rendering, continuous audio lifecycle, best scores and assets/navigation at **`/` and `/small-apps/`**. Screenshots go to `/tmp/galactix-v04-*.png`.
 
-These suites passed during implementation; Chromium required execution outside the restricted socket sandbox. Inspected small-phone menus, populated sector 30 with its boss/health bar, pickups and powered-ship screenshots. **Not physically tested:** Safari/iOS and Chrome/Android touch feel, browser chrome/safe areas, native orientation lock support, audible mix/rhythm/fanfares on phone speakers or headphones, long-session mobile CPU/battery use, and background/lock-screen audio policy. Emulated browser and synthesized-clock tests do not establish those device behaviors.
+The unchanged gallery regression suite verifies responsive layouts/assets/launch navigation, calculator arithmetic/keyboard behavior and original blob hashes, plus the JavaScript-disabled gallery. These suites passed during implementation; Chromium required execution outside the restricted socket sandbox.
 
-Tractor-beam capture/rescue and bonus challenge stages remain deferred. This feature is delivered on a dedicated branch/PR; it is not merged or deployed by this assignment.
+**Remaining physical-device checks:** Safari/iOS and Chrome/Android two-thumb feel, browser chrome/safe areas, native portrait locking, speaker/headphone audibility and fatigue of the continuous tone, audio focus/silent-mode/lock-screen policies, sustained mobile CPU/battery usage, and longer human balance runs across the late bosses. Emulation and synthesized audio-graph tests cannot establish those device behaviors.
+
+Tractor-beam capture/rescue and bonus challenge stages remain deferred. Delivery is a dedicated branch and PR against `main`; no merge or production deployment is performed by this assignment.

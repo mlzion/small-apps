@@ -1,14 +1,15 @@
-/* Original v0.3 attack paths. Simulation time/RNG only; no rendering or audio clocks. */
+/* Original Galactix attack paths. Simulation time/RNG only; no rendering or audio clocks. */
 (function(root) {
   'use strict';
   const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
   const ease=t=>{t=clamp(t,0,1);return t*t*(3-2*t);};
-  const BOSSES=Object.freeze({5:[4,500],10:[6,750],15:[8,1000],20:[10,1250],25:[12,1500],30:[15,2000]});
+  const BOSSES=Object.freeze({5:[6,750],10:[10,1200],15:[14,1800],20:[18,2500],25:[22,3300],30:[26,4200],35:[30,5200],40:[35,6500]});
   function makeBoss(level) {
     const stats=BOSSES[level]; if(!stats)return null;
     return {id:100,type:4,boss:true,rank:level/5,hp:stats[0],maxHp:stats[0],points:stats[1],
-      homeX:180,homeY:38,x:180,y:-60,mode:'entry',age:0,delay:0};
+      homeX:180,homeY:38,x:180,y:-80,mode:'boss-entry',pattern:'boss-entry',phase:1,age:0,delay:0,hitFlash:0};
   }
+  const homeX=(w,e)=>e.homeX+Math.sin(w.time*(e.boss?1.35+e.rank*.07:1.1))*w.config.sway;
   const busy=w=>w.enemies.some(e=>e.mode==='telegraph'||e.mode==='dive');
   function beginReturn(e) {e.mode='return';e.age=0;e.returnX=clamp(e.x,-25,385);e.y=-30;}
   function returnToFormation(w,e) {
@@ -44,23 +45,33 @@
     return true;
   }
   function startBoss(w,e) {
-    e.mode='telegraph';e.pattern='boss';e.age=0;
-    e.group={id:++w.attackId,kind:'boss',launchAt:w.time+1.05,target:null};
+    e.mode='telegraph';e.pattern='boss';e.age=0;e.attackPhase=e.phase||1;e.majorFired=false;e.variant=w.attackStats.boss%2;
+    e.group={id:++w.attackId,kind:'boss',launchAt:w.time+1.05-e.rank*.02,target:null};
     w.lastAttack=e.group;w.attackStats.boss++;
-    w.bossDiveClock=12-e.rank*.5;
+    w.bossDiveClock=Math.max(5.4,9.6-e.rank*.42-(e.attackPhase-1)*.5);
   }
   function bossFire(w,e,major=false) {
     // Ordinary enemies retain their own stream. All sources share a hard live cap.
-    const count=e.rank>=4&&major?2:1;
+    const count=!major?1:e.rank===8&&e.attackPhase===1?2:e.rank>=7?3:e.rank>=3?2:1;
     if(w.bullets.length+count>14)return;
     const target=e.group?.target;
     const center=major&&target?Math.atan2(target.x-e.x,Math.max(80,target.y-e.y)):0;
     for(let i=0;i<count;i++){
-      const angle=center+(count===2?(i?1:-1)*.16:0),speed=w.config.bulletSpeed*.86;
+      const angle=center+(i-(count-1)/2)*.3,speed=w.config.bulletSpeed*.86;
       w.bullets.push({x:e.x,y:e.y+15,previousX:e.x,previousY:e.y+15,
         vx:Math.sin(angle)*speed,vy:Math.cos(angle)*speed,sourceType:4});
     }
     w.cues.push('enemyFire');
+  }
+  function deployMines(w,e){
+    const count=e.rank>=6?2:1;
+    for(let i=0;i<count&&w.enemyMines.length<2;i++){
+      const lanes=[72,288].filter(lane=>!w.enemyMines.some(m=>m.lane===lane));
+      if(!lanes.length)break;
+      const lane=lanes[Math.floor(w.random()*lanes.length)];
+      w.enemyMines.push({x:e.x,startX:e.x,lane,y:e.y+18,age:0,speed:40+e.rank*1.5,radius:50,warning:false,fuse:1});
+      w.cues.push('enemyMineDeploy');
+    }
   }
   function filePoint(g,u){
     const targetU=(g.target.y-g.origin.y)/(520-g.origin.y);
@@ -72,6 +83,11 @@
   function update(w,e,dt) {
     if(!e.pattern)return false;
     e.age+=dt;
+    if(e.mode==='boss-entry'){
+      const t=ease(e.age/2.2);e.x=180+(homeX(w,e)-180)*t;e.y=-80+(e.homeY+80)*t;
+      if(e.age>=2.2-1e-9){e.mode='formation';e.pattern=null;w.bossStatus='active';}
+      return true;
+    }
     const g=e.group;
     if(e.mode==='return'){returnToFormation(w,e);return true;}
     if(e.mode==='telegraph'){
@@ -108,17 +124,17 @@
         if(u>=1)beginReturn(e);
       }
     }else if(e.pattern==='boss'){
-      const duration=4.8-e.rank*.16,u=clamp(e.age/duration,0,1),arc=Math.sin(Math.PI*u)**2;
-      const hx=e.homeX+Math.sin(w.time*1.1)*w.config.sway;
+      const duration=2.65-e.rank*.075-(e.attackPhase-1)*.12,u=clamp(e.age/duration,0,1),arc=Math.sin(Math.PI*u)**2;
+      const hx=homeX(w,e);
       const hy=e.homeY+Math.sin(w.time*1.6+e.id*.4)*4;
       e.x=e.startX+(hx-e.startX)*ease(u)+(clamp(g.target.x,80,280)-e.startX)*arc;
-      e.x+=Math.sin(u*Math.PI*(e.rank>=4?4:2))*arc*(10+e.rank*2);
-      e.y=e.startY+(hy-e.startY)*ease(u)+(190+e.rank*3-e.homeY)*arc;
+      e.x+=Math.sin(u*Math.PI*(e.rank>=7?8:e.rank>=5?6:e.rank>=3?4:2))*arc*(12+e.rank*2.5+(e.attackPhase-1)*4)+(e.rank===2?(e.variant?1:-1)*16*arc:0);
+      e.y=e.startY+(hy-e.startY)*ease(u)+(190+e.rank-e.homeY)*arc;
       if(u>=.42&&!e.majorFired){e.majorFired=true;bossFire(w,e,true);}
       if(u>=1){e.mode='formation';e.pattern=null;e.group=null;e.majorFired=false;}
     }
     return true;
   }
-  const api={BOSSES,makeBoss,busy,scheduleSpecial,startBoss,bossFire,filePoint,update};
+  const api={BOSSES,makeBoss,homeX,busy,scheduleSpecial,startBoss,bossFire,deployMines,filePoint,update};
   if(typeof module!=='undefined')module.exports=api;else root.GalactixAttacks=api;
 })(typeof globalThis!=='undefined'?globalThis:this);
