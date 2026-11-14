@@ -26,8 +26,16 @@ with sync_playwright() as p:
  ctx=browser.new_context(viewport={'width':1280,'height':1000},accept_downloads=True);setup(ctx);page=ctx.new_page()
  page.goto('http://app-lab.test/small-apps/');page.get_by_role('link',name='Launch PicturePaint').click()
  expect(page.locator('#library-dialog')).to_be_visible();assert 'picturepaint/drawings/hibiscus.png' not in requests
- page.locator('.drawing-card').click();expect(page.locator('#dimensions')).to_have_text('2048 × 2048',timeout=30000)
- expect(page.locator('#save')).to_be_enabled();page.locator('#upload-file').set_input_files({'name':'shapes.png','mimeType':'image/png','buffer':fixture})
+ page.locator('.drawing-card').click();expect(page.locator('#dimensions')).to_have_text('1280 × 1280',timeout=30000)
+ expect(page.locator('#save')).to_be_enabled()
+ # Real supplied JPEG-derived artwork: separated petals and a leaf fill cleanly.
+ def hibiscus_pixel(x,y):return page.evaluate("([x,y])=>Array.from(document.querySelector('#surface').getContext('2d').getImageData(x,y,1,1).data)",[x,y])
+ for x,y in [(500,300),(1000,600),(600,1000),(150,1000)]:
+  pos=page.evaluate("([x,y])=>{const b=document.querySelector('#stage').getBoundingClientRect(),m=new DOMMatrix(getComputedStyle(document.querySelector('#surface')).transform);return {x:b.left+m.e+x*m.a,y:b.top+m.f+y*m.d}}",[x,y])
+  page.mouse.click(pos['x'],pos['y']);assert all(abs(a-b)<=5 for a,b in zip(hibiscus_pixel(x,y)[:3],[232,116,97])),(x,y,hibiscus_pixel(x,y))
+  assert min(hibiscus_pixel(5,5)[:3])>240
+  page.locator('#undo').click();assert min(hibiscus_pixel(x,y)[:3])>240
+ page.locator('#upload-file').set_input_files({'name':'shapes.png','mimeType':'image/png','buffer':fixture})
  expect(page.locator('#dimensions')).to_have_text('400 × 240');expect(page.locator('#save')).to_be_enabled()
  def point(x,y):
   # DOMMatrix is the actual CSS transform; this tests image coordinates through the UI.
