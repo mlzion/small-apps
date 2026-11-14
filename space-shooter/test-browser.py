@@ -40,6 +40,12 @@ with sync_playwright() as p:
         engine=value;const create=value.create;
         engine.create=(...args)=>(window.__world=create(...args));
       }});
+      let audioModule;
+      Object.defineProperty(window,'GalactixAudio',{get(){return audioModule},set(value){
+        audioModule=value;const create=value.create;
+        value.create=(...args)=>{const audio=create(...args);window.__audio=audio;window.__audioEvents=[];
+          const play=audio.play;audio.play=cues=>{window.__audioEvents.push(...cues);play(cues);};return audio;};
+      }});
       try{if(!localStorage.getItem('galactix.best.v01'))localStorage.setItem('galactix.best.v01','1234');}catch{}
     }""")
     page = context.new_page()
@@ -48,9 +54,9 @@ with sync_playwright() as p:
         page.evaluate("localStorage.setItem('galactix.best.v01','1234')")
         page.get_by_role('link', name='Launch Galactix').click()
         expect(page).to_have_url(ORIGIN + prefix + 'space-shooter/')
-        expect(page.locator('#level-select option')).to_have_count(20)
+        expect(page.locator('#level-select option')).to_have_count(30)
         expect(page.locator('#best')).to_have_text('BEST 01234')
-        expect(page.locator('#level')).to_have_text('01 / 20')
+        expect(page.locator('#level')).to_have_text('01 / 30')
         for width, height in ((320, 568), (375, 812), (390, 844), (430, 932)):
             page.set_viewport_size({'width': width, 'height': height})
             assert page.evaluate('document.documentElement.scrollWidth<=innerWidth && document.documentElement.scrollHeight<=innerHeight')
@@ -58,7 +64,7 @@ with sync_playwright() as p:
             assert field['height'] > 200 and field['y'] + field['height'] <= pad['y']
             assert pad['y'] == fire['y'] and fire['y'] + fire['height'] <= height
             assert page.locator('#action').evaluate('el=>el.getBoundingClientRect().top>=document.querySelector("#field").getBoundingClientRect().top')
-            page.screenshot(path=f'/tmp/galactix-v02-menu-{width}.png')
+            page.screenshot(path=f'/tmp/galactix-v03-menu-{width}.png')
         page.set_viewport_size({'width': 390, 'height': 844})
         page.locator('#action').click()
         expect(page.locator('#menu')).to_be_hidden()
@@ -90,8 +96,10 @@ with sync_playwright() as p:
         # Sound is an optional user gesture, and does not change the engine clock.
         page.locator('#sound').click()
         expect(page.locator('#sound')).to_have_attribute('aria-pressed', 'true')
+        page.wait_for_function('__audio.diagnostics.timer')
         page.keyboard.press('p'); expect(page.locator('#menu-title')).to_have_text('Flight paused')
         page.evaluate('__world.effects.rapid=6;__world.effects.spread=8')
+        assert page.evaluate('__audio.diagnostics.voices===0 && !__audio.diagnostics.timer')
         time = page.evaluate('__world.time')
         page.wait_for_timeout(150)
         assert page.evaluate('__world.time') == time and page.evaluate('__world.effects.rapid') == 6
@@ -106,17 +114,17 @@ with sync_playwright() as p:
         expect(page.locator('#menu-title')).to_have_text('Flight paused')
         page.locator('#action').click()
         expect(page.locator('#weapons')).to_contain_text('RAPID')
-        for level in range(1, 21):
+        for level in range(1, 31):
             assert page.evaluate('__world.level') == level
             page.evaluate('__world.state="cleared";__world.score=100')
-            expect(page.locator('#action')).to_have_text('Fly again →' if level == 20 else 'Next sector →')
+            expect(page.locator('#action')).to_have_text('Fly again →' if level == 30 else 'Next sector →')
             page.locator('#action').click()
         assert page.evaluate('__world.level') == 1
         page.evaluate('__world.state="lost"')
         expect(page.locator('#action')).to_have_text('Retry sector →')
-        page.locator('#level-select').select_option('20')
+        page.locator('#level-select').select_option('30')
         page.locator('#action').click()
-        expect(page.locator('#level')).to_have_text('20 / 20')
+        expect(page.locator('#level')).to_have_text('30 / 30')
         page.evaluate("""{
           __world.invulnerable=100;
           for(let i=0;i<432;i++)Galactix.step(__world,1/120);
@@ -124,21 +132,61 @@ with sync_playwright() as p:
           __world.pickups=[{kind:'shield',x:100,y:220,age:0},{kind:'rapid',x:180,y:220,age:0},{kind:'spread',x:260,y:220,age:0}];
         }""")
         page.wait_for_timeout(100)
-        page.screenshot(path='/tmp/galactix-v02-pickups.png')
+        page.screenshot(path='/tmp/galactix-v03-pickups.png')
         page.evaluate('__world.pickups.forEach(p=>{p.x=__world.player.x;p.y=__world.player.y})')
         page.wait_for_timeout(40)
         assert page.evaluate('__world.shield && __world.effects.rapid>7 && __world.effects.spread>9')
         expect(page.locator('#weapons')).to_contain_text('SPREAD')
+        assert page.evaluate('__world.enemies.filter(e=>e.boss).length===1 && __world.enemies.find(e=>e.boss).maxHp===15')
+        assert page.evaluate('__audio.diagnostics.bpm===145 && __audio.diagnostics.voices<=12')
+        page.evaluate('__world.bullets=[];__world.shotClock=__world.bossShotClock=__world.bossDiveClock=1e9;__world.invulnerable=0')
+        for rapid, spread in ((8, 0), (0, 10), (8, 10), (1.8, 8), (8, 1.8), (0, 0)):
+            page.evaluate('([r,s])=>{__world.effects.rapid=r;__world.effects.spread=s}', [rapid, spread])
+            page.wait_for_timeout(40)
+            assert page.evaluate('''() => {
+              const c=document.querySelector('canvas'),r=c.getBoundingClientRect(),scale=Math.min(r.width/360,r.height/480);
+              const x=(r.width-360*scale)/2+(__world.player.x+6)*scale;
+              const y=(r.height-480*scale)/2+(__world.player.y+5)*scale;
+              const pixel=c.getContext('2d').getImageData(Math.round(x*c.width/r.width),Math.round(y*c.height/r.height),1,1).data;
+              const color=GalactixAppearance.weaponStyle(__world.effects,__world.time).hull;
+              return [1,3,5].every((j,i)=>Math.abs(pixel[i]-parseInt(color.slice(j,j+2),16))<10);
+            }'''), 'canvas hull color must follow active and flashing weapon effects'
+        page.evaluate('__world.effects.rapid=8;__world.effects.spread=10;__world.bullets=[{x:__world.player.x+22,y:__world.player.y-30,speed:30}]')
+        page.wait_for_timeout(40)
+        page.screenshot(path='/tmp/galactix-v03-powered.png')
         page.evaluate('__world.effects.rapid=.02;__world.effects.spread=.02')
         expect(page.locator('#weapons')).to_have_text('')
         page.wait_for_timeout(100)
-        page.reload(); expect(page.locator('#best')).to_have_text('BEST 02000')
+        # Exercise each new warning path in the real renderer, not just the headless engine.
+        for pattern in ('file', 'kamikaze', 'boss'):
+            page.evaluate('''kind => {
+              __world.invulnerable=100;__world.bullets=[];
+              __world.enemies.forEach(e=>{e.mode='formation';e.pattern=null;e.group=null;e.majorFired=false;});
+              __world.config={...__world.config,fileChance:kind==='file'?1:0,kamikazeChance:kind==='kamikaze'?1:0};
+              __world.shotClock=__world.bossShotClock=1e9;
+              __world.diveClock=kind==='boss'?1e9:0;__world.bossDiveClock=kind==='boss'?0:1e9;
+            }''', pattern)
+            page.wait_for_function('kind=>__world.enemies.some(e=>e.pattern===kind && e.mode==="telegraph")', arg=pattern)
+            page.screenshot(path=f'/tmp/galactix-v03-{pattern}-warning.png')
+            assert page.evaluate('kind=>__world.enemies.filter(e=>e.pattern===kind).length', pattern) >= (3 if pattern == 'file' else 1)
+            page.evaluate('''() => {for(let i=0;i<240;i++)Galactix.step(__world,1/120);}''')
+            page.wait_for_timeout(30)
+            assert page.evaluate('kind=>__world.enemies.some(e=>e.pattern===kind && e.mode==="dive")', pattern)
+        page.evaluate('''() => {
+          const b=__world.enemies.find(e=>e.boss);b.hp=1;b.mode='formation';b.pattern=null;
+          b.x=b.homeX+Math.sin(__world.time*1.1)*__world.config.sway;b.y=b.homeY+Math.sin(__world.time*1.6+b.id*.4)*4;
+          __world.enemies=[b];__world.shots=[{x:b.x,y:b.y+1,vx:0,vy:-440,action:{id:999,attempt:1,multiplier:1}}];
+        }''')
+        expect(page.locator('#menu-title')).to_have_text('Welcome home.')
+        assert page.evaluate('__audioEvents.includes("bossDestroy") && __audioEvents.includes("finalVictory")')
+        assert page.evaluate('__audio.diagnostics.fanfare==="finalVictory" && !__audio.diagnostics.timer && __audio.diagnostics.voices<=12')
+        page.reload(); expect(page.locator('#best')).to_have_text('BEST 03000')
         expect(page.locator('#sound')).to_have_attribute('aria-pressed', 'true')
         page.locator('header a').click(); expect(page).to_have_url(ORIGIN + prefix)
         page.goto(ORIGIN + prefix + 'space-shooter/')
         page.locator('#sound').click()  # Reset the saved preference for the next path.
         cdp.detach()
-        print('PASS: viewport layout, real two-finger/keyboard input, cancel, sound preference, pause, portrait, 20-sector UI, pickup HUD, best score and links at', prefix)
+        print('PASS: viewport layout, real two-finger/keyboard input, cancel, sound preference, pause, portrait, 30-sector UI, pickup HUD, best score and links at', prefix)
     assert not missing, missing
     assert not errors, errors
     context.close(); browser.close()
