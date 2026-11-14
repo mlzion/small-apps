@@ -4,7 +4,7 @@ const E = require('./engine.js'), DT = 1 / 120;
 const tick = (w, n, input = {}) => { for (let i = 0; i < n; i++) E.step(w, DT, input); };
 const near = (a, b, tolerance = 1e-8) => assert.ok(Math.abs(a - b) < tolerance, `${a} != ${b}`);
 function controlled(level = 1, seed = 17) {
-  const w = E.create(level, seed); w.diveClock = w.shotClock = 1e9;
+  const w = E.create(level, seed); w.diveClock = w.shotClock = w.bossDiveClock = w.bossShotClock = 1e9;
   w.enemies.forEach(e => { e.mode = 'formation'; e.x = e.homeX; e.y = e.homeY; });
   return w;
 }
@@ -17,18 +17,18 @@ function killAll(w, onKill = () => {}) {
     onKill(w);
   }
 }
-assert.equal(E.LEVELS.length, 20);
-for (let i = 0; i < 20; i++) {
+assert.equal(E.LEVELS.length, 30);
+for (let i = 0; i < 30; i++) {
   const w = E.create(i + 1, 42), c = w.config;
-  assert.equal(w.enemies.length, c.rows * c.columns);
+  assert.equal(w.enemies.length, c.rows * c.columns + (w.level % 5 === 0 ? 1 : 0));
   assert.equal(w.enemies.filter(e => e.type === 2).length, c.armored);
   assert.equal(w.enemies.filter(e => e.type === 3).length, c.loopers);
-  assert.ok(w.enemies.every(e => e.hp === E.TYPES[e.type].hp));
+  assert.ok(w.enemies.every(e => e.hp === (e.maxHp ?? E.TYPES[e.type].hp)));
   if (i) {
     const p = E.LEVELS[i - 1];
     assert.ok(c.rows * c.columns >= p.rows * p.columns && c.armored >= p.armored && c.loopers >= p.loopers);
     assert.ok(c.diveInterval < p.diveInterval && c.shotInterval < p.shotInterval && c.bulletSpeed > p.bulletSpeed && c.diveSpeed > p.diveSpeed);
-    assert.ok(c.playerCooldown < p.playerCooldown);
+    assert.ok(c.playerCooldown <= p.playerCooldown);
   }
   if (i < 10) {
     near(c.diveSpeed, 83 + i * 10); near(c.shotInterval, 2.8 - i * .17);
@@ -37,16 +37,16 @@ for (let i = 0; i < 20; i++) {
     const p = E.LEVELS[i - 1];
     assert.ok(c.diveSpeed / p.diveSpeed < 1.03 && p.shotInterval / c.shotInterval < 1.04, 'no sector-11+ parameter spike');
   }
-  w.diveClock = w.shotClock = 1e9;
+  w.diveClock = w.shotClock = w.bossDiveClock = w.bossShotClock = 1e9;
   tick(w, 444); assert.ok(w.enemies.every(e => e.mode === 'formation'));
-  const base = w.enemies.reduce((n, e) => n + E.TYPES[e.type].points, 0);
+  const base = w.enemies.reduce((n, e) => n + (e.points ?? E.TYPES[e.type].points), 0);
   killAll(w);
   assert.equal(w.state, 'cleared'); assert.equal(w.kills, w.total);
   assert.equal(w.killScore, base); assert.equal(w.clearBonus, 750); assert.equal(w.score, base + 750);
   assert.equal(w.bullets.length, 0); const time = w.time; tick(w, 120); assert.equal(w.time, time);
   assert.equal(E.create(i + 1).attempts, 0);
 }
-console.log('PASS: 20 increasing sectors, early curve retained, all formations clear, base values and separate bonuses');
+console.log('PASS: 30 increasing sectors, early curve retained, all formations clear, base values and separate bonuses');
 
 let w = controlled();
 E.move(w, -100, 900); tick(w, 240); near(w.player.x, 18); near(w.player.y, 455);
@@ -174,7 +174,7 @@ bulletHit(); assert.equal(w.lives, 2); bulletHit(); assert.equal(w.lives, 2);
 w.shield = true; w.invulnerable = 0; bulletHit(); assert.equal(w.lives, 2); assert.equal(w.shield, false);
 w.invulnerable = 0; w.lives = 1; bulletHit(); assert.equal(w.state, 'lost'); assert.equal(w.lives, 0);
 console.log('PASS: bounded seeded drops, pickup collection/refresh/miss/expiry, stacked weapons, shield protection/grace and defeat');
-for (let level = 1; level <= 20; level++) {
+for (let level = 1; level <= 30; level++) {
   w = E.create(level, level * 27);
   for (let i = 0; i < 120 * 120 && w.state === 'playing'; i++) {
     w.invulnerable = 1; E.step(w, DT, {fire: true, dx: Math.sin(i / 180)});
@@ -183,4 +183,4 @@ for (let level = 1; level <= 20; level++) {
     w.events.length = 0;
   }
 }
-console.log('PASS: two-minute simulations in all 20 sectors keep transient entities bounded');
+console.log('PASS: two-minute simulations in all 30 sectors keep transient entities bounded');

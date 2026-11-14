@@ -1,29 +1,34 @@
 /* Galactix: deterministic simulation, logical coordinates, no DOM or wall clock. */
 (function (root) {
   'use strict';
+  const A = typeof module !== 'undefined' ? require('./attacks.js') : root.GalactixAttacks;
   const W = 360, H = 480;
   const clamp = (x, a, b) => Math.max(a, Math.min(b, x));
   const ease = t => { t = clamp(t, 0, 1); return t * t * (3 - 2 * t); };
   const TYPES = Object.freeze({
     1: Object.freeze({hp: 1, points: 100, speed: 1, fireWeight: 1, diveWeight: 1}),
     2: Object.freeze({hp: 2, points: 200, speed: 1.1, fireWeight: 1.5, diveWeight: 1.35}),
-    3: Object.freeze({hp: 2, points: 300, speed: 1.04, fireWeight: 1.3, diveWeight: 1.8})
+    3: Object.freeze({hp: 2, points: 300, speed: 1.04, fireWeight: 1.3, diveWeight: 1.8}),
+    4: Object.freeze({hp: 4, points: 500, speed: 1, fireWeight: 1, diveWeight: 0})
   });
   const DURATIONS = Object.freeze({rapid: 8, spread: 10});
-  const LEVELS = Object.freeze(Array.from({length: 20}, (_, i) => {
-    const early = Math.min(i, 9), late = Math.max(0, i - 9);
+  const LEVELS = Object.freeze(Array.from({length: 30}, (_, i) => {
+    const early = Math.min(i, 9), late = Math.min(10, Math.max(0, i - 9)), extra = Math.max(0, i - 19);
     return Object.freeze({
       number: i + 1, columns: 4 + Math.floor(early / 3), rows: 2 + Math.floor(early / 4),
-      sway: 12 + early * 1.5 + late * .5,
-      diveInterval: 4.6 - early * .27 - late * .052,
-      diveSpeed: 83 + early * 10 + late * 3.2,
-      shotInterval: 2.8 - early * .17 - late * .032,
-      bulletSpeed: 100 + early * 9 + late * 3.4,
+      sway: 12 + early * 1.5 + late * .5 + extra * .2,
+      diveInterval: 4.6 - early * .27 - late * .052 - extra * .018,
+      diveSpeed: 83 + early * 10 + late * 3.2 + extra * 1.4,
+      shotInterval: 2.8 - early * .17 - late * .032 - extra * .008,
+      bulletSpeed: 100 + early * 9 + late * 3.4 + extra * 1.5,
       armored: i < 3 ? 0 : Math.min(2 + i - 3, 8) + Math.floor(late / 5),
       loopers: late ? Math.min(2 + Math.floor((late - 1) / 2), 6) : 0,
       loops: i >= 12, groupSize: i >= 18 ? 3 : i >= 14 ? 2 : 1,
       // Sector 20 fires 18% more often than sector 1, without a breakpoint at 11.
-      playerCooldown: .285 / (1 + .18 * i / 19)
+      playerCooldown: .285 / (1 + .18 * Math.min(i, 19) / 19),
+      kamikazeChance: extra ? .18 + (extra - 1) * .022 : 0,
+      fileChance: i >= 23 ? .18 + (i - 23) * .02 : 0,
+      fileCount: i >= 29 ? 5 : i >= 26 ? 4 : 3
     });
   }));
   function create(level = 1, seed = 17) {
@@ -36,6 +41,8 @@
       invulnerable: 1.5, fireCooldown: 0, attempts: 0, actionId: 0,
       effects: {rapid: 0, spread: 0},
       shotClock: config.shotInterval + 1.7, diveClock: config.diveInterval + 1.7,
+      bossShotClock: 5.2 - config.number / 5 * .15, bossDiveClock: 10 - config.number / 5 * .4,
+      attackStats: {classic: 0, kamikaze: 0, file: 0, boss: 0}, lastAttack: null,
       attackId: 0, enemies: [], bullets: [], shots: [], particles: [], pickups: [],
       kills: 0, random, events: [], cues: [], lastAward: null
     };
@@ -43,20 +50,23 @@
       const id = row * config.columns + col;
       const type = id < config.loopers ? 3 : id < config.loopers + config.armored ? 2 : 1;
       const x = 46 + col * (268 / (config.columns - 1));
-      world.enemies.push({id, type, hp: TYPES[type].hp, homeX: x, homeY: 58 + row * 40,
+      world.enemies.push({id, type, hp: TYPES[type].hp, homeX: x, homeY: 58 + row * 40 + (A.BOSSES[config.number] ? 20 : 0),
         x, y: -50 - row * 40, mode: 'entry', age: 0, delay: id * .07});
     }
+    const boss = A.makeBoss(config.number);
+    if (boss) world.enemies.unshift(boss);
     world.total = world.enemies.length;
     return world;
   }
   function move(w, x, y, source = 'direct') {
     w.target.x = clamp(x, 18, W - 18); w.target.y = clamp(y, H * .52, H - 25); w.control = source;
   }
-  function burst(w, x, y, color) {
-    for (let i = 0; i < 10; i++) {
+  function burst(w, x, y, color, count = 10) {
+    for (let i = 0; i < count; i++) {
       const a = w.random() * Math.PI * 2, s = 25 + w.random() * 85;
       w.particles.push({x, y, vx: Math.cos(a) * s, vy: Math.sin(a) * s, life: .45 + w.random() * .2, color});
     }
+    w.particles = w.particles.slice(-240);
   }
   function damage(w) {
     if (w.invulnerable > 0 || w.state !== 'playing') return;
@@ -67,7 +77,7 @@
     }
     w.lives--; burst(w, w.player.x, w.player.y, '#9eb6dc'); w.cues.push('damage');
     w.events.push(w.lives ? 'Hull hit · ' + w.lives + ' remaining' : 'Ship lost');
-    if (!w.lives) w.state = 'lost';
+    if (!w.lives) { w.state = 'lost'; w.cues.push('defeat'); }
   }
   // Closest point on a swept segment also handles the spread's horizontal motion.
   function collisionTime(s, obj, radius) {
@@ -84,6 +94,8 @@
     const active = w.enemies.filter(e => ['telegraph', 'dive'].includes(e.mode)).length;
     // Later attacks have one visible group at a time; the lower lanes stay readable.
     if (late ? active > 0 : active >= 2) return;
+    if (A.scheduleSpecial(w, ready)) return;
+    w.attackStats.classic++;
     const count = late ? Math.min(w.config.groupSize, ready.length) : 1;
     const chosen = [], candidates = ready.slice();
     for (let i = 0; i < count; i++) {
@@ -103,6 +115,10 @@
     w.diveClock = w.config.diveInterval;
   }
   function updateEnemy(w, e, dt) {
+    if (A.update(w, e, dt)) {
+      if (Math.hypot(e.x - w.player.x, e.y - w.player.y) < (e.boss ? 32 : 23)) damage(w);
+      return;
+    }
     const c = w.config, hx = e.homeX + Math.sin(w.time * 1.1) * c.sway;
     e.age += dt;
     if (e.mode === 'entry') {
@@ -112,7 +128,7 @@
     } else if (e.mode === 'formation' || e.mode === 'telegraph') {
       e.x = hx; e.y = e.homeY + Math.sin(w.time * 1.6 + e.id * .4) * 4;
       if (e.mode === 'telegraph' && e.age >= .75) {
-        e.mode = 'dive'; e.age = 0; e.startX = e.x; e.startY = e.y; e.diveX = e.x;
+        e.mode = 'dive'; w.cues.push('dive'); e.age = 0; e.startX = e.x; e.startY = e.y; e.diveX = e.x;
       }
     } else if (e.mode === 'dive') {
       if (e.curved) {
@@ -156,17 +172,18 @@
   }
   function drop(w, kind, e) { w.pickups.push({kind, x: e.x, y: e.y, age: 0}); w.events.push(kind === 'shield' ? 'Shield pickup incoming' : 'Weapon pickup incoming'); }
   function destroy(w, e, action) {
-    const points = Math.round(TYPES[e.type].points * action.multiplier);
+    const points = Math.round((e.points ?? TYPES[e.type].points) * action.multiplier);
     w.score += points; w.killScore += points;
     w.lastAward = {type: e.type, points, actionId: action.id, attempt: action.attempt, multiplier: action.multiplier};
-    w.kills++; w.enemies.splice(w.enemies.indexOf(e), 1); w.cues.push('destroy');
+    w.kills++; w.enemies.splice(w.enemies.indexOf(e), 1); w.cues.push(e.boss ? 'bossDestroy' : 'destroy');
+    if (e.boss) burst(w, e.x, e.y, '#ffc994', 44);
     // Bounded drops: one shield plus at most one of each weapon in a sector.
     if (w.kills === Math.ceil(w.total / 2)) drop(w, 'shield', e);
     if (w.kills === Math.ceil(w.total * .25) && w.random() < .65) drop(w, 'rapid', e);
     if (w.kills === Math.ceil(w.total * .75) && w.random() < .55) drop(w, 'spread', e);
   }
   function step(w, dt, input = {}) {
-    if (w.state !== 'playing') return;
+    if (w.state !== 'playing') { w.cues = []; return; }
     dt = clamp(dt, 0, 1 / 60); w.time += dt; w.cues = [];
     w.invulnerable = Math.max(0, w.invulnerable - dt);
     for (const kind of Object.keys(DURATIONS)) {
@@ -187,31 +204,35 @@
       fireAction(w); w.fireCooldown += c.playerCooldown * (w.effects.rapid > 0 ? .5 : 1);
     }
     w.diveClock -= dt; w.shotClock -= dt;
-    const ready = w.enemies.filter(e => e.mode === 'formation');
+    const boss = w.enemies.find(e => e.boss);
+    w.bossShotClock -= dt; w.bossDiveClock -= dt;
+    if (boss?.mode === 'formation' && w.bossDiveClock <= 0 && !A.busy(w)) A.startBoss(w, boss);
+    if (boss?.mode === 'formation' && w.bossShotClock <= 0) { A.bossFire(w, boss); w.bossShotClock = 5.2 - boss.rank * .15; }
+    const ready = w.enemies.filter(e => e.mode === 'formation' && !e.boss);
     if (w.diveClock <= 0 && ready.length) scheduleDive(w, ready);
-    if (w.shotClock <= 0 && ready.length) {
+    if (w.shotClock <= 0 && ready.length && w.bullets.length < 14) {
       const e = weighted(w, ready, 'fireWeight');
       w.bullets.push({x: e.x, y: e.y + 12, previousX: e.x, previousY: e.y + 12,
         speed: c.bulletSpeed * (e.type === 2 ? 1.08 : 1), sourceType: e.type});
-      w.shotClock = c.shotInterval;
+      w.cues.push('enemyFire'); w.shotClock = c.shotInterval;
     }
     for (const e of w.enemies) updateEnemy(w, e, dt);
     for (const s of w.shots) {
       s.previousX = s.x; s.previousY = s.y; s.x += s.vx * dt; s.y += s.vy * dt;
       let victim = null, first = Infinity;
-      for (const e of w.enemies) { const t = collisionTime(s, e, e.type === 1 ? 14 : 16); if (t < first) { first = t; victim = e; } }
+      for (const e of w.enemies) { const t = collisionTime(s, e, e.boss ? 24 : e.type === 1 ? 14 : 16); if (t < first) { first = t; victim = e; } }
       if (victim) {
-        s.y = -100; victim.hp--; w.attempts = 0; w.cues.push('hit');
+        s.y = -100; victim.hp--; w.attempts = 0; w.cues.push(victim.boss ? 'bossHit' : 'hit');
         burst(w, victim.x, victim.y, victim.type === 3 ? '#81e0d4' : victim.type === 2 ? '#b4a4d9' : '#789df4');
         if (victim.hp <= 0) destroy(w, victim, s.action);
       }
     }
     for (const b of w.bullets) {
-      b.previousX = b.x; b.previousY = b.y; b.y += b.speed * dt;
+      b.previousX = b.x; b.previousY = b.y; b.x += (b.vx || 0) * dt; b.y += (b.vy ?? b.speed) * dt;
       if (collisionTime(b, p, 12) !== Infinity) { damage(w); b.y = H + 100; }
     }
     w.shots = w.shots.filter(s => s.y > -20 && s.x > -20 && s.x < W + 20);
-    w.bullets = w.bullets.filter(b => b.y < H + 20);
+    w.bullets = w.bullets.filter(b => b.y < H + 20 && b.x > -30 && b.x < W + 30);
     w.pickups = w.pickups.filter(pickup => {
       pickup.y += 68 * dt; pickup.age += dt;
       if (Math.hypot(pickup.x - p.x, pickup.y - p.y) < 27) {
@@ -224,7 +245,7 @@
     for (const q of w.particles) { q.x += q.vx * dt; q.y += q.vy * dt; q.life -= dt; }
     w.particles = w.particles.filter(q => q.life > 0);
     if (!w.enemies.length && w.state === 'playing') {
-      w.clearBonus = w.lives * 250; w.score += w.clearBonus; w.state = 'cleared'; w.bullets = []; w.events.push('Sector cleared');
+      w.clearBonus = w.lives * 250; w.score += w.clearBonus; w.state = 'cleared'; w.bullets = []; w.events.push('Sector cleared'); w.cues.push(w.level === LEVELS.length ? 'finalVictory' : 'victory');
     }
   }
   const api = {W, H, LEVELS, TYPES, DURATIONS, create, move, step, accuracy};
