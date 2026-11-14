@@ -32,7 +32,7 @@ with sync_playwright() as p:
  def hibiscus_pixel(x,y):return page.evaluate("([x,y])=>Array.from(document.querySelector('#surface').getContext('2d').getImageData(x,y,1,1).data)",[x,y])
  for x,y in [(500,300),(1000,600),(600,1000),(150,1000)]:
   pos=page.evaluate("([x,y])=>{const b=document.querySelector('#stage').getBoundingClientRect(),m=new DOMMatrix(getComputedStyle(document.querySelector('#surface')).transform);return {x:b.left+m.e+x*m.a,y:b.top+m.f+y*m.d}}",[x,y])
-  page.mouse.click(pos['x'],pos['y']);assert all(abs(a-b)<=5 for a,b in zip(hibiscus_pixel(x,y)[:3],[232,116,97])),(x,y,hibiscus_pixel(x,y))
+  page.mouse.click(pos['x'],pos['y']);assert all(abs(a-b)<=5 for a,b in zip(hibiscus_pixel(x,y)[:3],[255,0,0])),(x,y,hibiscus_pixel(x,y))
   assert min(hibiscus_pixel(5,5)[:3])>240
   page.locator('#undo').click();assert min(hibiscus_pixel(x,y)[:3])>240
  page.locator('#upload-file').set_input_files({'name':'shapes.png','mimeType':'image/png','buffer':fixture})
@@ -43,7 +43,7 @@ with sync_playwright() as p:
  def tap(x,y):
   pos=point(x,y);page.mouse.click(pos['x'],pos['y'])
  def pixel(x,y):return page.evaluate('''([x,y])=>Array.from(document.querySelector('#surface').getContext('2d').getImageData(x,y,1,1).data)''',[x,y])
- tap(100,120);assert pixel(100,120)[:3]==[232,116,97];assert pixel(290,120)[:3]==[255]*3
+ tap(100,120);assert pixel(100,120)[:3]==[255,0,0];assert pixel(290,120)[:3]==[255]*3
  page.locator('#gradient').click();page.locator('#color1').fill('#ff0000');page.locator('#color2').fill('#0000ff')
  for angle in [0,45,90,180,270,360]:
   page.locator('#angle').fill(str(angle));tap(290,120)
@@ -61,9 +61,9 @@ with sync_playwright() as p:
  expect(page.locator('#zoom')).not_to_have_text(old_zoom)
  page.locator('#hand').click();box=page.locator('#stage').bounding_box();x,y=box['x']+100,box['y']+100
  page.mouse.move(x,y);page.mouse.down();page.mouse.move(x+30,y+20);page.mouse.up();page.locator('#hand').click()
- assert pixel(100,120)[:3]==[232,116,97]
+ assert pixel(100,120)[:3]==[255,0,0]
  page.locator('#fit').click();page.locator('#zoom-in').click();tap(100,120);assert pixel(100,120)[2]>0
- page.locator('#undo').click();assert pixel(100,120)[:3]==[232,116,97]
+ page.locator('#undo').click();assert pixel(100,120)[:3]==[255,0,0]
  with page.expect_download() as event:page.locator('#save').click()
  project=Path(event.value.path()).read_text();obj=json.loads(project);assert obj['width']==400 and len(obj['fills'])==2
  assert sorted(f['style']['mode'] for f in obj['fills'])==['gradient','solid']
@@ -78,7 +78,7 @@ with sync_playwright() as p:
  page.locator('#open-file').set_input_files({'name':'hidden.picturepaint','mimeType':'application/json','buffer':hidden_project.encode()})
  expect(page.locator('#drawing-title')).to_have_text('hidden');expect(page.locator('#outlines')).to_have_text('Show outlines')
  page.locator('#open-file').set_input_files({'name':'restored.picturepaint','mimeType':'application/json','buffer':project.encode()})
- expect(page.locator('#drawing-title')).to_have_text('restored');expect(page.locator('#save')).to_be_enabled();assert pixel(100,120)[:3]==[232,116,97];assert pixel(290,120)[2]>10;tap(100,120);page.locator('#undo').click();assert pixel(100,120)[:3]==[232,116,97]
+ expect(page.locator('#drawing-title')).to_have_text('restored');expect(page.locator('#save')).to_be_enabled();assert pixel(100,120)[:3]==[255,0,0];assert pixel(290,120)[2]>10;tap(100,120);page.locator('#undo').click();assert pixel(100,120)[:3]==[255,0,0]
  # Edge-connected regions can be painted; malformed projects preserve the active painting.
  tap(395,235);assert pixel(395,235)[:3] != [255]*3
  page.locator('#undo').click();assert pixel(395,235)[:3] == [255]*3

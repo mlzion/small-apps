@@ -1,18 +1,30 @@
 // Stable IDs keep saved shades independent of swatch order and endpoint colors.
 export const BASE_COLORS = [
-  {id: 'coral', name: 'Coral', color: '#e87461'},
-  {id: 'red', name: 'Red', color: '#e53935'},
-  {id: 'orange', name: 'Orange', color: '#ed8b32'},
-  {id: 'yellow', name: 'Yellow', color: '#efc96a'},
-  {id: 'green', name: 'Green', color: '#8aa978'},
-  {id: 'teal', name: 'Teal', color: '#4c8d82'},
-  {id: 'blue', name: 'Blue', color: '#4276cc'},
-  {id: 'violet', name: 'Violet', color: '#9766bc'},
-  {id: 'pink', name: 'Pink', color: '#dd9eb8'},
-  {id: 'brown', name: 'Brown', color: '#825c49'},
+  {id: 'red', name: 'Red', color: '#ff0000'},
+  {id: 'orange', name: 'Orange', color: '#ff8000'},
+  {id: 'yellow', name: 'Yellow', color: '#ffff00'},
+  {id: 'green', name: 'Green', color: '#00ff00'},
+  {id: 'cyan', name: 'Cyan', color: '#00ffff'},
+  {id: 'blue', name: 'Blue', color: '#0000ff'},
+  {id: 'violet', name: 'Violet', color: '#8000ff'},
+  {id: 'magenta', name: 'Magenta', color: '#ff00ff'},
+  {id: 'rose', name: 'Rose', color: '#ff0080'},
+  {id: 'brown', name: 'Brown', color: '#804000'},
   {id: 'gray', name: 'Gray', color: '#808080'},
-  {id: 'charcoal', name: 'Charcoal', color: '#293c39'},
+  {id: 'white', name: 'White', color: '#ffffff'},
 ];
+const LEGACY_IDS = ['coral', 'red', 'orange', 'yellow', 'green', 'teal',
+  'blue', 'violet', 'pink', 'brown', 'gray', 'charcoal'];
+
+// Derived only from current assignments: not a history, pixel scan or saved cache.
+export function collectUsedColors(styles) {
+  const colors = new Set();
+  for (const style of styles.values()) {
+    colors.add(style.color1.toLowerCase());
+    if (style.mode === 'gradient') colors.add(style.color2.toLowerCase());
+  }
+  return [...colors].sort();
+}
 
 // -100 = black, 0 = original, +100 = white. RGB interpolation, no HSL conversion.
 export function shadeColor(hex, shade) {
@@ -27,30 +39,37 @@ export function shadeColor(hex, shade) {
 
 export function defaultPalette() {
   return {
+    baseVersion: 2,
     shades: Object.fromEntries(BASE_COLORS.map(base => [base.id, 0])),
-    selected: 'coral',
+    selected: 'red',
     activeEndpoint: 'color1',
-    colors: {color1: '#e87461', color2: '#efc96a'},
+    colors: {color1: '#ff0000', color2: '#ffff00'},
   };
 }
 
 export function validatePalette(value) {
   const isColor = color => typeof color === 'string' && /^#[0-9a-f]{6}$/i.test(color);
+  const legacy = value?.baseVersion === undefined;
+  const ids = legacy ? LEGACY_IDS : BASE_COLORS.map(base => base.id);
   if (!value || typeof value !== 'object' || !value.shades ||
+      (!legacy && value.baseVersion !== 2) ||
       !['color1', 'color2'].includes(value.activeEndpoint) ||
-      !(value.selected === null || BASE_COLORS.some(base => base.id === value.selected)) ||
+      !(value.selected === null || ids.includes(value.selected)) ||
       !value.colors || !isColor(value.colors.color1) || !isColor(value.colors.color2) ||
-      BASE_COLORS.some(base => !Number.isFinite(value.shades[base.id]) ||
-        value.shades[base.id] < -100 || value.shades[base.id] > 100)) {
+      ids.some(id => !Number.isFinite(value.shades[id]) ||
+        value.shades[id] < -100 || value.shades[id] > 100)) {
     throw Error('Invalid palette settings.');
   }
-  // Return a fresh known shape; never trust extra project keys as application state.
-  return {
-    selected: value.selected,
-    activeEndpoint: value.activeEndpoint,
-    shades: Object.fromEntries(BASE_COLORS.map(base => [base.id, value.shades[base.id]])),
-    colors: {color1: value.colors.color1.toLowerCase(), color2: value.colors.color2.toLowerCase()},
-  };
+  // Shared IDs retain shade percentages. New swatches start at center. Endpoint
+  // RGB values never change during migration, even when their old base is gone.
+  const shades = Object.fromEntries(BASE_COLORS.map(base => [base.id,
+    ids.includes(base.id) ? value.shades[base.id] : 0]));
+  const colors = {color1: value.colors.color1.toLowerCase(), color2: value.colors.color2.toLowerCase()};
+  const selectedBase = BASE_COLORS.find(base => base.id === value.selected);
+  const selected = selectedBase && (!legacy ||
+    shadeColor(selectedBase.color, shades[selectedBase.id]) === colors[value.activeEndpoint])
+    ? selectedBase.id : null;
+  return {baseVersion: 2, selected, activeEndpoint: value.activeEndpoint, shades, colors};
 }
 
 export class SmartPalette {
@@ -60,6 +79,7 @@ export class SmartPalette {
     this.state = defaultPalette();
     this.buttons = new Map();
     this.lastTap = null;
+    this.usedButtons = new Map();
     this.slider = document.getElementById('shade');
     for (const base of BASE_COLORS) {
       const button = document.createElement('button');
@@ -101,7 +121,53 @@ export class SmartPalette {
         this.onChange();
       });
     }
+    this.setUsedColors(new Map());
     this.update();
+  }
+
+  setUsedColors(styles) {
+    const colors = collectUsedColors(styles);
+    const container = document.getElementById('used-colors');
+    const next = new Set(colors);
+    for (const [color, button] of this.usedButtons) {
+      if (!next.has(color)) {
+        button.remove();
+        this.usedButtons.delete(color);
+      }
+    }
+    for (const color of colors) {
+      if (this.usedButtons.has(color)) continue;
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.dataset.usedColor = color;
+      button.style.background = color;
+      button.setAttribute('aria-label', `Use ${color.toUpperCase()}`);
+      button.title = color.toUpperCase();
+      button.addEventListener('click', () => {
+        this.lastTap = null;
+        this.state.colors[this.state.activeEndpoint] = color;
+        this.matchSelection();
+        this.update();
+        this.onChange();
+      });
+      // Sorted insertion keeps existing buttons, keyboard focus and scroll position.
+      const after = [...container.children].find(child => child.dataset.usedColor > color);
+      container.insertBefore(button, after || null);
+      this.usedButtons.set(color, button);
+    }
+    container.hidden = !colors.length;
+    document.getElementById('used-colors-empty').hidden = !!colors.length;
+    document.getElementById('used-colors-count').textContent = colors.length || '';
+    this.updateUsedSelection();
+  }
+
+  updateUsedSelection() {
+    const color = this.state.colors[this.state.activeEndpoint];
+    for (const [hex, button] of this.usedButtons) {
+      button.setAttribute('aria-pressed', hex === color);
+    }
+    document.getElementById('used-colors-target').textContent =
+      `Color ${this.state.activeEndpoint === 'color1' ? '1' : '2'}`;
   }
 
   matchSelection() {
@@ -151,6 +217,7 @@ export class SmartPalette {
     $('selected-color').style.background = color;
     $('selected-color-hex').textContent = color.toUpperCase();
     $('selected-color-name').textContent = `${base?.name || 'Custom'} · Color ${this.state.activeEndpoint === 'color1' ? '1' : '2'}`;
+    this.updateUsedSelection();
     this.onPreview();
   }
 

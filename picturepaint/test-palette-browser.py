@@ -91,7 +91,7 @@ with sync_playwright() as p:
     swatch('red').click()
     assert color() == red
     expect(page.locator('#shade')).to_have_value('40.5')
-    assert swatch('red').evaluate('el=>getComputedStyle(el).backgroundColor') != 'rgb(229, 57, 53)'
+    assert swatch('red').evaluate('el=>getComputedStyle(el).backgroundColor') != 'rgb(255, 0, 0)'
     expect(swatch('red')).to_have_attribute('aria-pressed', 'true')
     assert page.locator('#palette [aria-pressed=true]').count() == 1
     paint(50, 100)
@@ -127,7 +127,7 @@ with sync_playwright() as p:
     expect(page.locator('#shade')).to_have_value('-40.5')
     assert color() == blue
     swatch('red').dblclick()
-    assert color() == '#e53935'
+    assert color() == '#ff0000'
     expect(page.locator('#shade')).to_have_value('0')
     swatch('blue').click()
     expect(page.locator('#shade')).to_have_value('-40.5')
@@ -170,7 +170,7 @@ with sync_playwright() as p:
     reopen(legacy, 'legacy-1.0')
     restored = project()
     assert all(value == 0 for value in restored['palette']['shades'].values())
-    assert restored['palette']['selected'] == 'coral'
+    assert restored['palette']['selected'] == 'red'
     assert restored['fills'] == original_fills
     assert restored['width'] == saved['width'] and restored['original'] == saved['original']
     invalid = json.loads(json.dumps(saved))
