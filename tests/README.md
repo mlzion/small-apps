@@ -21,3 +21,5 @@ ChordMidi brings the gallery to twelve cards and nine launch links. See [chordmi
 PicturePaint makes ten gallery launch links. See [picturepaint/README.md](../picturepaint/README.md) for region detection, gradient/export/project round trips, mobile gesture automation, existing-app smoke checks, and outstanding physical-device checks.
 
 Galactix makes eleven gallery launch links, with MIDI Lab the only planned card. See [space-shooter/README.md](../space-shooter/README.md) for simulation and input lifecycle checks plus the outstanding portrait-phone checks.
+
+Brittz Puzzle Palace adds a thirteenth card and twelfth launch link. See [its README](../brittz-puzzle-palace/README.md) for geometry and engine validation, browser acceptance checks, and outstanding physical Android checks.

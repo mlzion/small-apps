@@ -1,0 +1,15 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="#101d27"><title>Brittz Puzzle Palace · Sea Turtle</title><link rel="icon" href="../assets/favicon.svg"><link rel="stylesheet" href="style.css"><script type="module" src="game.js"></script></head>
+<body><main>
+<header><a class="back" href="../">← App Lab</a><span class="edition">GLASS COLLECTION / 001</span><h1>Brittz <span>Puzzle Palace</span></h1><p>A little patience. A sea of color.</p></header>
+<section class="game" aria-label="Sea Turtle puzzle">
+<div class="topbar"><div><span class="eyebrow">TROPICAL WATERS</span><h2>Sea Turtle <span>23 pieces</span></h2></div><div class="toggle" aria-label="Viewing mode"><button id="puzzle-view" aria-pressed="true">Puzzle</button><button id="reference-view" aria-pressed="false">Reference</button></div></div>
+<div class="viewport"><svg id="board" viewBox="0 0 720 480" role="application" aria-label="Puzzle board. Select a piece, drag its circle to move, or its line to rotate." tabindex="0"><defs><clipPath id="board-clip"><rect width="720" height="480"/></clipPath></defs><g clip-path="url(#board-clip)"><g id="camera"><rect class="paper" width="720" height="480"/><g id="art"></g></g></g><g id="controls"></g></svg><div id="empty-note">Your ocean starts here<span>Choose a piece below</span></div><div class="zoom"><button id="zoom-out" aria-label="Zoom out">−</button><button id="fit">Fit</button><button id="zoom-in" aria-label="Zoom in">+</button></div></div>
+<div class="statusbar"><p id="counter" role="status" aria-live="polite">0 / 23 pieces placed</p><button id="return" disabled>↩ Return piece</button></div>
+<div class="tray-heading"><span>YOUR GLASS PIECES</span><span>Swipe to explore →</span></div><div id="tray" aria-label="Puzzle piece tray"></div>
+<p class="instructions">Tap a piece · Drag the <strong>circle to move</strong> · Drag the <strong>line to rotate</strong><br>Drag empty space to pan · Pinch or use + / − to zoom</p>
+<div id="complete" hidden role="status"><h2>A beautiful ocean, piece by piece.</h2><p>You brought the sea turtle home!</p><button id="replay">Play again</button></div>
+<footer><button id="restart">Restart puzzle</button><button id="sound" aria-pressed="true">Sound on</button></footer>
+</section><p class="footnote">ORIGINAL STAINED GLASS · BRITTZ PUZZLE PALACE · v0.1</p>
+<dialog id="restart-dialog"><h2>Start a fresh ocean?</h2><p>Your current puzzle progress will be cleared.</p><form method="dialog"><button value="cancel">Keep playing</button><button value="restart">Restart puzzle</button></form></dialog>
+<noscript>This puzzle needs JavaScript enabled.</noscript></main></body></html>

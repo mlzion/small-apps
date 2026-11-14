@@ -2,7 +2,7 @@
 
 Small ideas. Working experiments.
 
-A static gallery for browser games, audio tools, MIDI applications, and creative projects. Calculator, Breakout, Space Shooter (Galactix), Falling Blocks, D::FUZE, Celphonica, Synth Lab, LaserBreak, DruMidi, ChordMidi, and PicturePaint are available; MIDI Lab is planned.
+A static gallery for browser games, audio tools, MIDI applications, and creative projects. Calculator, Breakout, Space Shooter (Galactix), Falling Blocks, D::FUZE, Celphonica, Synth Lab, LaserBreak, DruMidi, ChordMidi, PicturePaint, and Brittz Puzzle Palace are available; MIDI Lab is planned.
 
 ## Running locally
 
@@ -57,3 +57,7 @@ See [picturepaint/README.md](picturepaint/README.md) for the local painting engi
 ## Space Shooter · Galactix
 
 See [space-shooter/README.md](space-shooter/README.md) for the portrait arcade game, ten test sectors, controls, and verification.
+
+## Brittz Puzzle Palace
+
+See [brittz-puzzle-palace/README.md](brittz-puzzle-palace/README.md) for the stained-glass turtle puzzle, controls, geometry validation, and verification.
