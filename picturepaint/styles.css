@@ -4,6 +4,15 @@
 .color-row[hidden]{display:none}
 .color-row button{flex:1;text-align:left;padding:8px 10px}
 input[type=color]{width:52px;height:44px;border:1px solid #d6dcd5;border-radius:8px;background:white;padding:4px;cursor:pointer;flex-shrink:0}
+.used-colors-panel{grid-column:1/-1;min-width:0}
+.used-colors-heading{display:flex;justify-content:space-between;gap:8px;font-size:11px;color:#52685b;margin:4px 0 8px}
+#used-colors-count{font-variant-numeric:tabular-nums}
+#used-colors{display:grid;grid-template-columns:repeat(auto-fill,minmax(44px,1fr));gap:4px;max-height:154px;overflow-y:auto;overscroll-behavior:contain;padding:6px;scrollbar-width:thin;border:1px solid #d6dcd5;border-radius:10px}
+#used-colors[hidden],#used-colors-empty[hidden]{display:none}
+#used-colors button{position:relative;min-width:44px;min-height:44px;height:44px;padding:0;border:3px solid #fffefa;border-radius:8px;box-shadow:0 0 0 1px #d6dcd5;touch-action:manipulation}
+#used-colors button[aria-pressed=true]{box-shadow:0 0 0 2px #315c50;z-index:1}
+#used-colors button[aria-pressed=true]::after{content:'✓';position:absolute;right:0;bottom:0;width:17px;height:17px;font-size:12px;line-height:17px;border-radius:50%;background:#315c50;color:white}
+#used-colors-empty{font-size:11px;line-height:1.5;color:#718078;margin:0}
 .smart-colors{display:grid;grid-template-columns:minmax(0,1fr) 44px;gap:8px;align-items:center}
 #palette{display:grid;grid-template-columns:repeat(3,minmax(44px,1fr));gap:4px}
 #palette button{position:relative;padding:0;min-height:44px;height:44px;border-radius:12px;border:4px solid #fffefa;box-shadow:0 0 0 1px #d6dcd5;touch-action:manipulation;user-select:none}
