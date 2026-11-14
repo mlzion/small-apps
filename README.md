@@ -2,7 +2,7 @@
 
 Small ideas. Working experiments.
 
-A static gallery for browser games, audio tools, MIDI applications, and creative projects. Calculator, Breakout, Falling Blocks, D::FUZE, Celphonica, Synth Lab, LaserBreak, DruMidi, ChordMidi, and PicturePaint are available; Space Shooter and MIDI Lab are planned.
+A static gallery for browser games, audio tools, MIDI applications, and creative projects. Calculator, Breakout, Space Shooter (Galactix), Falling Blocks, D::FUZE, Celphonica, Synth Lab, LaserBreak, DruMidi, ChordMidi, and PicturePaint are available; MIDI Lab is planned.
 
 ## Running locally
 
@@ -53,3 +53,7 @@ See [chordmidi/README.md](chordmidi/README.md) for the chord builder, three-lane
 ## PicturePaint
 
 See [picturepaint/README.md](picturepaint/README.md) for the local painting engine, library, projects, and verification.
+
+## Space Shooter · Galactix
+
+See [space-shooter/README.md](space-shooter/README.md) for the portrait arcade game, ten test sectors, controls, and verification.
