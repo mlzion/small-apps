@@ -6,7 +6,7 @@ function fittedText(ctx,text,x,y,width,size,family='Georgia, serif'){
 export async function certificateJPG(puzzle,name){
  name=cleanName(name);if(!name)throw new Error('Enter your name for the certificate.');
  const canvas=document.createElement('canvas');canvas.width=1600;
- const imageWidth=Math.min(1400,960*puzzle.width/puzzle.height),imageHeight=imageWidth*puzzle.height/puzzle.width;
+ const imageWidth=puzzle.kind==='image'?1400:Math.min(1400,960*puzzle.width/puzzle.height),imageHeight=imageWidth*puzzle.height/puzzle.width;
  canvas.height=Math.ceil(imageHeight+490);
  const ctx=canvas.getContext('2d');if(!ctx)throw new Error('Your browser could not create the certificate.');
  ctx.fillStyle='#f8f5ed';ctx.fillRect(0,0,canvas.width,canvas.height);
@@ -14,11 +14,14 @@ export async function certificateJPG(puzzle,name){
  ctx.textAlign='center';ctx.fillStyle='#183e49';
  fittedText(ctx,'Brittz Puzzle Palace',800,125,1400,66);
  ctx.font='22px sans-serif';ctx.fillStyle='#4b776e';ctx.fillText('CERTIFICATE OF COMPLETION',800,178);
- const url=URL.createObjectURL(new Blob([artworkSVG(puzzle)],{type:'image/svg+xml'}));
+ const ownsURL=puzzle.kind!=='image';
+ const url=ownsURL?URL.createObjectURL(new Blob([artworkSVG(puzzle)],{type:'image/svg+xml'})):puzzle.imageURL;
  try{
  const image=new Image();await new Promise((resolve,reject)=>{image.onload=resolve;image.onerror=()=>reject(new Error('The puzzle artwork could not be rendered. Try exporting again.'));image.src=url;});
+ // JPG has no alpha; match the puzzle's white board for transparent PNGs.
+ if(puzzle.kind==='image'){ctx.fillStyle='#fff';ctx.fillRect((1600-imageWidth)/2,220,imageWidth,imageHeight);}
  ctx.drawImage(image,(1600-imageWidth)/2,220,imageWidth,imageHeight);
- }finally{URL.revokeObjectURL(url);}
+ }finally{if(ownsURL)URL.revokeObjectURL(url);}
  const y=220+imageHeight;ctx.fillStyle='#183e49';fittedText(ctx,puzzle.title,800,y+70,1380,48);
  ctx.font='27px sans-serif';ctx.fillStyle='#4b776e';ctx.fillText(`${puzzle.pieceCount} pieces · Every piece in its place`,800,y+118);
  ctx.fillStyle='#183e49';fittedText(ctx,`Completed by ${name}`,800,y+195,1380,42);

@@ -2,7 +2,7 @@ import {attachPrecisionControls,moveRelative,visibleCenter,panCamera,zoomWorkspa
 import {imagePiece,completedImage,sourceImage} from './cutting/render.js';
 import {preparePuzzle,validateCatalog,matchEntry,detailMarkup} from './content.js';
 import {loadProgress,saveProgress,validGame,progressSummary,isComplete,playerName,rememberName} from './progress.js';
-import {certificateJPG,cleanName} from './certificate.js';
+import {certificateJPG,cleanName} from './certificate.js?v=main-1';
 import {canSnap,shuffledState,clampPiece,rotatedBounds,config} from './engine.js';
 const $=id=>document.getElementById(id), ns='http://www.w3.org/2000/svg';
 const board=$('board'),art=$('art'),controls=$('controls'),tray=$('tray');
@@ -10,6 +10,7 @@ let puzzle=null,pieces=[],lookup=new Map(),W=720,H=480;
 let game=null,selected=null,reference=false,sound=true,audio;
 let catalog=[],requestSerial=0,exportSerial=0,exporting=false,certificateURL=null;
 const cache=new Map();
+// Compatibility marker shared by the promoted mosaic app and development lab.
 const isLab=document.documentElement.dataset.cuttingLab==='true';
 let precision=null,precisionActive=false,workspaceMode='select',trayScroll=0;
 const views={puzzle:{zoom:1,x:0,y:0},reference:{zoom:1,x:0,y:0}};
@@ -67,7 +68,7 @@ function renderBoard(){
  const count=pieces.filter(p=>game.states[p.id].location==='locked').length;
  $('counter').textContent=`${count} / ${pieces.length} pieces placed`;
  $('complete').hidden=count!==pieces.length||reference;
- $('export-certificate').disabled=puzzle.kind==='image'||count!==pieces.length||reference||exporting;
+ $('export-certificate').disabled=count!==pieces.length||reference||exporting;
  $('certificate-download').hidden=reference||count!==pieces.length||!certificateURL;
  camera();
 }
@@ -198,7 +199,7 @@ export function mountPuzzle(next,replay=false){
  }
 $('player-name').addEventListener('input',()=>rememberName($('player-name').value));
 $('certificate-form').addEventListener('submit',async e=>{
- e.preventDefault();if(!puzzle||puzzle.kind==='image'||reference||!isComplete(puzzle,game)||exporting)return;
+ e.preventDefault();if(!puzzle||reference||!isComplete(puzzle,game)||exporting)return;
  const name=cleanName($('player-name').value);if(!name){$('certificate-status').textContent='Enter your name for the certificate.';$('player-name').focus();return;}
  clearCertificate();const request=exportSerial,active=puzzle;exporting=true;$('export-certificate').disabled=true;$('certificate-status').textContent='Creating your certificate…';rememberName(name);
  try{

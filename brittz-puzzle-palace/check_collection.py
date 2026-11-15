@@ -72,7 +72,7 @@ with sync_playwright() as p:
         errors = []
         page.on('pageerror', lambda error: errors.append(str(error)))
         for prefix in ('/', '/small-apps/'):
-            url = ORIGIN+prefix+'brittz-puzzle-palace/'
+            url = ORIGIN+prefix+'brittz-puzzle-palace/legacy.html'
             page.goto(url)
             expect(page.locator('.puzzle-card')).to_have_count(len(CATALOG['puzzles']))
             expect(page.locator('#game-screen')).to_be_hidden()
@@ -203,7 +203,7 @@ with sync_playwright() as p:
     context.route('**/catalog.json', lambda route:route.fulfill(json=catalog))
     context.route('**/puzzles/new/puzzle.json',lambda route:route.fulfill(json=demo))
     page = context.new_page()
-    page.goto(ORIGIN+'/small-apps/brittz-puzzle-palace/')
+    page.goto(ORIGIN+'/small-apps/brittz-puzzle-palace/legacy.html')
     expect(page.locator('.puzzle-card')).to_have_count(len(catalog['puzzles']))
     choose(page,'my-puzzle')
     expect(page.locator('.piece-slot')).to_have_count(4)
@@ -215,7 +215,7 @@ with sync_playwright() as p:
     context.route(ORIGIN+'/**',serve)
     bad=json.loads(json.dumps(GEM));bad['pieces'][0]['points'][0]=[-1,0]
     context.route('**/puzzles/tropical-gem/puzzle.json',lambda route:route.fulfill(json=bad))
-    page=context.new_page();page.goto(ORIGIN+'/small-apps/brittz-puzzle-palace/')
+    page=context.new_page();page.goto(ORIGIN+'/small-apps/brittz-puzzle-palace/legacy.html')
     page.locator('[data-puzzle=tropical-gem]').click()
     expect(page.locator('#gallery-message')).to_contain_text('coordinates')
     expect(page.locator('#game-screen')).to_be_hidden()

@@ -23,15 +23,15 @@ with sync_playwright() as p:
     for width in (320,360,390):
         context=browser.new_context(viewport={'width':width,'height':800},has_touch=True,is_mobile=True)
         context.route(ORIGIN+'/**',serve);page=context.new_page();errors=[];requests=[];page.on('request',lambda request:requests.append(request.url));page.on('pageerror',lambda error:errors.append(str(error)))
-        page.goto(ORIGIN+'/small-apps/brittz-puzzle-palace/cutting/')
+        page.goto(ORIGIN+os.environ.get('MOSAIC_ENTRY','/small-apps/brittz-puzzle-palace/cutting/'))
         page.locator('#source-file').set_input_files({'name':'Saved.png','mimeType':'image/png','buffer':blob})
         expect(page.locator('#gallery-message')).to_contain_text('Ready to shuffle')
         page.locator('#image-outlines').uncheck();page.locator('#start-lab').click();expect(page.locator('.piece-slot')).to_have_count(50)
         def saved():
-            return page.evaluate("async()=>{const {readSession}=await import('./session.js');const s=await readSession();return {record:{...s.record,blob:Array.from(new Uint8Array(await s.record.blob.arrayBuffer()))},progress:s.progress};}")
+            return page.evaluate("async()=>{const {readSession}=await import(new URL('session.js',new URL(document.querySelector('script[type=module]').src,location.href)));const s=await readSession();return {record:{...s.record,blob:Array.from(new Uint8Array(await s.record.blob.arrayBuffer()))},progress:s.progress};}")
         initial=saved();angles=[s['angle'] for s in initial['progress']['game']['states'].values()]
         assert all(0<=a<360 for a in angles) and sum(abs(a/30-round(a/30))>.0001 for a in angles)>45
-        targets=page.evaluate("async()=>{const {readSession}=await import('./session.js');const {mosaicPuzzle}=await import('./image-puzzle.js');return mosaicPuzzle((await readSession()).record.pattern,{url:'unused',name:'Saved'}).pieces.map(p=>({id:p.id,x:p.cx,y:p.cy}));}")
+        targets=page.evaluate("async()=>{const {readSession}=await import(new URL('session.js',new URL(document.querySelector('script[type=module]').src,location.href)));const {mosaicPuzzle}=await import(new URL('image-puzzle.js',new URL(document.querySelector('script[type=module]').src,location.href)));return mosaicPuzzle((await readSession()).record.pattern,{url:'unused',name:'Saved'}).pieces.map(p=>({id:p.id,x:p.cx,y:p.cy}));}")
         session=context.new_cdp_session(page)
         def drag(points):
             session.send('Input.dispatchTouchEvent',{'type':'touchStart','touchPoints':[{'x':points[0][0],'y':points[0][1]}]})
@@ -62,7 +62,7 @@ with sync_playwright() as p:
         # New games with the same image/count must replace, rather than reuse, cuts.
         page.locator('#back-gallery').click();page.locator('#start-lab').click();expect(page.locator('.piece-slot')).to_have_count(50)
         fresh=saved()
-        page.evaluate("async()=>{const {readSession,writeProgress}=await import('./session.js');const s=await readSession();await writeProgress('older-tab',s.progress.game,false)}")
+        page.evaluate("async()=>{const {readSession,writeProgress}=await import(new URL('session.js',new URL(document.querySelector('script[type=module]').src,location.href)));const s=await readSession();await writeProgress('older-tab',s.progress.game,false)}")
         assert saved()==fresh,'An older tab must not overwrite the active session'
         assert fresh['record']['pattern']['seed']!=before['record']['pattern']['seed'];assert fresh['record']['pattern']['pieces']!=before['record']['pattern']['pieces']
         for count in (100,150,200):
@@ -78,8 +78,8 @@ with sync_playwright() as p:
         context.close()
     # Storage denial must be visible; do not silently start an unsavable puzzle.
     context=browser.new_context();context.route(ORIGIN+'/**',serve);context.add_init_script("Object.defineProperty(window,'indexedDB',{value:{open(){throw Error('Storage denied for test')}}})")
-    page=context.new_page();page.goto(ORIGIN+'/small-apps/brittz-puzzle-palace/cutting/');page.locator('#source-file').set_input_files({'name':'Saved.png','mimeType':'image/png','buffer':blob});expect(page.locator('#gallery-message')).to_contain_text('Ready to shuffle');page.locator('#start-lab').click();expect(page.locator('#gallery-message')).to_contain_text('Unable to create the puzzle: Storage denied');expect(page.locator('#game-screen')).to_be_hidden();context.close()
-    context=browser.new_context();context.route(ORIGIN+'/**',serve);page=context.new_page();page.goto(ORIGIN+'/small-apps/brittz-puzzle-palace/cutting/');page.locator('#source-file').set_input_files({'name':'Saved.png','mimeType':'image/png','buffer':blob});expect(page.locator('#gallery-message')).to_contain_text('Ready to shuffle');page.locator('#start-lab').click();expect(page.locator('.piece-slot')).to_have_count(50)
+    page=context.new_page();page.goto(ORIGIN+os.environ.get('MOSAIC_ENTRY','/small-apps/brittz-puzzle-palace/cutting/'));page.locator('#source-file').set_input_files({'name':'Saved.png','mimeType':'image/png','buffer':blob});expect(page.locator('#gallery-message')).to_contain_text('Ready to shuffle');page.locator('#start-lab').click();expect(page.locator('#gallery-message')).to_contain_text('Unable to create the puzzle: Storage denied');expect(page.locator('#game-screen')).to_be_hidden();context.close()
+    context=browser.new_context();context.route(ORIGIN+'/**',serve);page=context.new_page();page.goto(ORIGIN+os.environ.get('MOSAIC_ENTRY','/small-apps/brittz-puzzle-palace/cutting/'));page.locator('#source-file').set_input_files({'name':'Saved.png','mimeType':'image/png','buffer':blob});expect(page.locator('#gallery-message')).to_contain_text('Ready to shuffle');page.locator('#start-lab').click();expect(page.locator('.piece-slot')).to_have_count(50)
     page.evaluate("()=>{const transaction=IDBDatabase.prototype.transaction;IDBDatabase.prototype.transaction=function(names,mode,...args){if(mode==='readwrite')throw Error('Storage full for test');return transaction.call(this,names,mode,...args)};}")
     page.locator('.piece-slot').first.click();expect(page.locator('#lab-save-status')).to_be_visible();expect(page.locator('#lab-save-status')).to_contain_text('Progress could not be saved');expect(page.locator('#art>.loose')).to_have_count(1);context.close();browser.close()
 print('PASS storage denial before play, later progress-write warnings, and older-tab protection.')

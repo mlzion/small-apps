@@ -51,6 +51,9 @@ def assert_precision_layout(page):
     assert max(z['y'] for z in geometry['zoom'])-min(z['y'] for z in geometry['zoom'])<.5,geometry
     assert geometry['panel']['y']>=geometry['canvas']['bottom']-.5,geometry
     assert not geometry['overflow'],geometry
+    if geometry['selecting']:
+        assert page.locator('#tray').evaluate('e=>getComputedStyle(e).backgroundColor')=='rgb(232, 232, 232)'
+        assert page.locator('.piece-slot').first.evaluate('e=>getComputedStyle(e).backgroundColor')=='rgb(232, 232, 232)'
     return geometry
 
 def exercise_controls(page,context,mobile,complete=True):
@@ -76,6 +79,9 @@ def exercise_controls(page,context,mobile,complete=True):
 
     def camera():
         return page.locator('#camera').evaluate('e=>{const t=e.transform.baseVal;return {x:t.getItem(0).matrix.e,y:t.getItem(0).matrix.f,zoom:t.getItem(1).matrix.a}}')
+
+    def highlight():
+        assert selected.locator('.image-outline').evaluate("e=>{const s=getComputedStyle(e);return s.stroke==='rgb(255, 32, 32)'&&parseFloat(s.strokeWidth)>=4&&s.vectorEffect==='non-scaling-stroke'}")
 
     def pose():
         return selected.evaluate('e=>{const t=e.transform.baseVal;return [t.getItem(0).matrix.e,t.getItem(0).matrix.f,t.getItem(1).angle]}')
@@ -114,6 +120,7 @@ def exercise_controls(page,context,mobile,complete=True):
         assert_precision_layout(page)
 
     def move(dx,dy):
+        highlight()
         pad=page.locator('#move-pad');pad.scroll_into_view_if_needed();box=pad.bounding_box()
         # Lift/reposition between strokes, as on a laptop trackpad.
         strokes=max(1,math.ceil(max(abs(dx),abs(dy))/42))
@@ -122,6 +129,7 @@ def exercise_controls(page,context,mobile,complete=True):
             drag([(x,y)]+[(x+dx/strokes*i/6,y+dy/strokes*i/6) for i in range(1,7)])
 
     def rotate(delta,start=15):
+        highlight()
         wheel=page.locator('#rotation-wheel');wheel.scroll_into_view_if_needed();b=wheel.bounding_box()
         cx=b['x']+b['width']/2;cy=b['y']+b['height']/2;r=b['width']*.47
         steps=max(2,math.ceil(abs(delta)/8))
@@ -253,7 +261,7 @@ def exercise_controls(page,context,mobile,complete=True):
     page.locator('#back-gallery').click();page.locator('#master-count').select_option('50');page.locator('#start-lab').click()
     expect(page.locator('.piece-slot')).to_have_count(50)
     assert page.locator('#workspace-select').get_attribute('aria-pressed')=='true'
-    targets=page.evaluate('''async()=>{const {mosaicPuzzle}=await import('./image-puzzle.js');const {readSession}=await import('./session.js');const {record}=await readSession();return mosaicPuzzle(record.pattern,{url:'unused',name:'Test'}).pieces.map(p=>({id:p.id,x:p.cx,y:p.cy}));}''')
+    targets=page.evaluate('''async()=>{const {mosaicPuzzle}=await import(new URL('image-puzzle.js',new URL(document.querySelector('script[type=module]').src,location.href)));const {readSession}=await import(new URL('session.js',new URL(document.querySelector('script[type=module]').src,location.href)));const {record}=await readSession();return mosaicPuzzle(record.pattern,{url:'unused',name:'Test'}).pieces.map(p=>({id:p.id,x:p.cx,y:p.cy}));}''')
     for done,piece in enumerate(targets,1):
         mode('select');page.locator(f'.piece-slot[data-piece="{piece["id"]}"]').click();assert page.locator('#workspace-select').get_attribute('aria-pressed')=='true'
         mode('move');current=pose();v=camera();angle=(current[2]+180)%360-180
@@ -262,6 +270,8 @@ def exercise_controls(page,context,mobile,complete=True):
             current=pose();scale=page.locator('#board').bounding_box()['width']/1000
             move((piece['x']-current[0])*scale,(piece['y']-current[1])*scale)
         expect(page.locator('#counter')).to_have_text(f'{done} / 50 pieces placed');assert camera()==v
+        assert page.locator('#art>.selected').count()==0
+        assert page.locator('#art .image-outline').evaluate_all("es=>es.every(e=>getComputedStyle(e).stroke!=='rgb(255, 32, 32)')")
         assert page.locator('#workspace-move').get_attribute('aria-pressed')=='true'
     expect(page.locator('#complete')).to_be_visible();expect(page.locator('#art image')).to_have_count(1)
     expect(page.locator('#move-pad')).to_be_disabled();expect(page.locator('#rotation-wheel')).to_be_disabled();assert_precision_layout(page)

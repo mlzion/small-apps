@@ -55,7 +55,7 @@ with sync_playwright() as p:
         errors=[]
         page.on('pageerror',lambda error:errors.append(str(error)))
         session=context.new_cdp_session(page) if mobile else None
-        page.goto(ORIGIN+'/small-apps/brittz-puzzle-palace/')
+        page.goto(ORIGIN+'/small-apps/brittz-puzzle-palace/legacy.html')
         expect(page.locator('[data-puzzle=clownfish]')).to_contain_text('45 pieces')
         page.locator('[data-puzzle=clownfish]').click()
         expect(page.locator('.piece-slot')).to_have_count(45)

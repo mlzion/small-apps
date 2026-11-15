@@ -61,7 +61,7 @@ with sync_playwright() as p:
         page.on('pageerror', lambda error: errors.append(str(error)))
         session = context.new_cdp_session(page) if mobile else None
         for prefix in ('/', '/small-apps/'):
-            url = ORIGIN+prefix+'brittz-puzzle-palace/'
+            url = ORIGIN+prefix+'brittz-puzzle-palace/legacy.html'
             page.goto(url)
             page.evaluate('localStorage.clear()')
             page.reload()

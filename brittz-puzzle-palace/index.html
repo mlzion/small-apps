@@ -1,22 +1,40 @@
 <!doctype html>
-<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="#101d27"><title>Brittz Puzzle Palace · Glass Collection</title><link rel="icon" href="../assets/favicon.svg"><link rel="stylesheet" href="style.css"><script type="module" src="game.js"></script></head>
+<html lang="en" data-cutting-lab="true" data-mosaic-main="true"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="#101d27"><title>Brittz Puzzle Palace · v1.0</title><link rel="icon" href="../assets/favicon.svg"><!-- Bump CSS URL versions when updating shared/panel styles; cached HTML and CSS may differ. --><link rel="stylesheet" href="style.css?v=main-1"><link rel="stylesheet" href="cutting/precision-controls.css?v=main-1"><script type="module" src="cutting/lab.js?v=main-1"></script></head>
 <body><main>
-<header><a class="back" href="../">← App Lab</a><span class="edition">THE GLASS COLLECTION</span><h1>Brittz <span>Puzzle Palace</span></h1><p>A little patience. A sea of color.</p></header>
+<header><a class="back" href="../">← App Lab</a><span class="edition">GEOMETRIC MOSAIC · v1.0</span><h1>Brittz <span>Puzzle Palace</span></h1><p>A little patience. A sea of color.</p></header>
 <section id="gallery-screen" aria-labelledby="gallery-title">
-<div class="gallery-heading"><h2 id="gallery-title" tabindex="-1">Choose your next picture</h2><p>Little pieces. Beautiful possibilities.</p></div>
-<p id="gallery-message" role="status" aria-live="polite"></p><button id="retry-catalog" hidden>Try again</button><div id="puzzle-cards"></div>
+<div class="gallery-heading"><h2 id="gallery-title" tabindex="-1">Create your puzzle</h2><p>Load a square JPG or PNG. Choose a piece count, then create a fresh geometric mosaic.</p></div>
+<p id="legacy-notice" class="instructions" hidden>Your original picture-puzzle saves are safe. <a href="legacy.html">Resume them in the original puzzle archive</a>.</p>
+<form id="lab-form" class="lab-settings">
+<label>Square image<input id="source-file" type="file" accept="image/jpeg,image/png,.jpg,.jpeg,.png"></label>
+<label>Piece count<select id="master-count"><option>50</option><option>100</option><option>150</option><option>200</option></select></label>
+
+<label class="lab-check"><input id="image-outlines" type="checkbox" checked> Piece outlines</label>
+<div><button type="button" id="sample-image">Use test picture</button> <button type="submit" id="start-lab">Shuffle &amp; play</button></div>
+</form><p class="instructions">Your latest puzzle is saved on this device. Creating a new puzzle replaces the current mosaic.</p><p id="gallery-message" role="status" aria-live="polite">Images stay in this browser. Your latest mosaic and progress are saved locally; creating a new puzzle replaces the lab save. Original picture-puzzle saves stay in the archive.</p><button id="resume-lab" type="button" hidden>Resume saved mosaic</button><button id="retry-catalog" hidden>Try again</button><div id="puzzle-cards" hidden></div>
 </section>
 <section id="game-screen" class="game" aria-label="Puzzle" hidden>
-<div class="game-nav"><button id="back-gallery">← Back to Gallery</button></div>
-<div class="topbar"><div><span id="puzzle-subtitle" class="eyebrow"></span><h2><span id="puzzle-title"></span> <span id="piece-count"></span></h2></div><div class="toggle" aria-label="Viewing mode"><button id="puzzle-view" aria-pressed="true">Puzzle</button><button id="reference-view" aria-pressed="false">Reference</button></div></div>
-<div class="viewport"><svg id="board" viewBox="0 0 720 480" role="application" aria-label="Puzzle board. Select a piece, drag its circle to move, or its line to rotate." tabindex="0"><defs><clipPath id="board-clip"><rect width="720" height="480"/></clipPath></defs><g clip-path="url(#board-clip)"><g id="camera"><rect class="paper" width="720" height="480"/><g id="art"></g></g></g><g id="controls"></g></svg><div id="empty-note">Your ocean starts here<span>Choose a piece below</span></div><div class="zoom"><button id="zoom-out" aria-label="Zoom out">−</button><button id="fit">Fit</button><button id="zoom-in" aria-label="Zoom in">+</button></div></div>
-<div class="statusbar"><p id="counter" role="status" aria-live="polite">0 / 23 pieces placed</p><button id="return" disabled>↩ Return piece</button></div>
-<div class="tray-heading"><span>YOUR GLASS PIECES</span><span>Swipe to explore →</span></div><div id="tray" aria-label="Puzzle piece tray"></div>
-<p class="instructions">Tap a piece · Drag the <strong>circle to move</strong> · Drag the <strong>line to rotate</strong><br>Drag empty space to pan · Pinch or use + / − to zoom</p>
+<div class="game-nav"><button id="back-gallery">← Image / pieces</button></div>
+<div class="topbar"><div><span id="puzzle-subtitle" class="eyebrow"></span><h2><span id="puzzle-title"></span> <span id="piece-count"></span></h2></div><div class="view-summary"><div class="toggle" aria-label="Viewing mode"><button id="puzzle-view" aria-pressed="true">Puzzle</button><button id="reference-view" aria-pressed="false">Reference</button></div><p id="counter" role="status" aria-live="polite">0 / 50 pieces placed</p></div></div>
+<div class="viewport"><svg id="board" viewBox="0 0 720 480" role="application" aria-label="Puzzle canvas. Tap a loose piece to select. Drag empty space to pan. Use the controls below to move, rotate and zoom." tabindex="0"><defs><clipPath id="board-clip"><rect width="720" height="480"/></clipPath></defs><g clip-path="url(#board-clip)"><g id="camera"><rect class="paper" width="720" height="480"/><g id="art"></g></g></g><g id="controls"></g></svg><div id="empty-note">Your ocean starts here<span>Choose a piece below</span></div></div>
+<section class="precision-panel" aria-label="Piece controls">
+<div class="workspace-toggle" role="group" aria-label="Workspace mode"><button id="workspace-select" type="button" aria-pressed="true" aria-controls="select-panel">SELECT</button><button id="workspace-move" type="button" aria-pressed="false" aria-controls="move-panel">MOVE</button></div>
+<div id="workspace-slot">
+<section id="select-panel" aria-label="Piece picker"><div id="tray" aria-label="Puzzle piece tray"></div></section>
+<section id="move-panel" aria-label="Movement controls" hidden>
+<p id="selection-status" role="status">Select a loose piece</p>
+<div class="precision-pair"><div class="precision-unit"><span>MOVE</span><button id="move-pad" class="move-pad" type="button" aria-label="Move selected piece using relative drags" disabled><span aria-hidden="true">↔<br>↕</span></button></div>
+<div class="precision-unit"><span>ROTATE</span><button id="rotation-wheel" class="rotation-wheel" type="button" aria-label="Rotate selected piece clockwise or counterclockwise" disabled><span class="wheel-face" aria-hidden="true"></span></button></div></div>
+</section></div>
+<div class="precision-zoom" role="group" aria-label="Zoom and piece actions"><button id="fit" type="button">Fit</button><button id="zoom-out" type="button" aria-label="Zoom out">−</button><button id="zoom-in" type="button" aria-label="Zoom in">+</button><button id="return" type="button" aria-label="Return piece to tray" disabled>Return</button></div>
+</section>
+
+<p id="lab-save-status" class="instructions" role="status" hidden></p><p class="instructions">SELECT to pick pieces · MOVE to position and rotate<br>Drag empty canvas to pan · Use Fit, − and + to zoom</p>
 <div id="complete" hidden role="status"><h2 id="completion-title"></h2><p id="completion-message"></p>
 <form id="certificate-form"><label for="player-name">Your name on the certificate</label><div class="certificate-fields"><input id="player-name" name="name" autocomplete="name" maxlength="80" required><button id="export-certificate" type="submit" disabled>Export JPG</button></div></form>
 <p id="certificate-status" aria-live="polite"></p><a id="certificate-download" hidden>Download JPG</a><button id="replay">Play again</button></div>
 <footer><button id="restart">Restart puzzle</button><button id="sound" aria-pressed="true">Sound on</button></footer>
-</section><p class="footnote">ORIGINAL STAINED GLASS · BRITTZ PUZZLE PALACE · v0.2</p>
+</section><p class="footnote">ORIGINAL IMAGE · UNIQUE MOSAIC · BRITTZ PUZZLE PALACE · v1.0</p>
+<p class="footnote"><a href="legacy.html">Original puzzle archive</a> · <a href="cutting/">Development lab</a></p>
 <dialog id="restart-dialog"><h2>Start a fresh puzzle?</h2><p>Only this puzzle’s progress will be cleared.</p><form method="dialog"><button value="cancel">Keep playing</button><button value="restart">Restart puzzle</button></form></dialog>
 <noscript>This puzzle needs JavaScript enabled.</noscript></main></body></html>

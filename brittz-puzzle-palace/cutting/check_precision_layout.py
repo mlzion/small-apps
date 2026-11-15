@@ -92,8 +92,8 @@ try:
                     # The old URL was fetched once, during warmup. New HTML must use
                     # fresh versioned URLs without relying on a hard refresh/cache clear.
                     assert state['requests'].count('/small-apps/brittz-puzzle-palace/style.css')==1,state['requests']
-                assert any('/style.css?v=precision-layout-1' in path for path in state['requests']),state['requests']
-                assert any('/precision-controls.css?v=compact-2' in path for path in state['requests']),state['requests']
+                assert any('/style.css?v=main-1' in path for path in state['requests']),state['requests']
+                assert any('/precision-controls.css?v=main-1' in path for path in state['requests']),state['requests']
                 assert not errors,errors
                 context.close()
                 print(f'PASS {width}px / {"cached pre-1B CSS" if cached else "fresh"}: 120×120 enabled/disabled controls, horizontal row, labels/zoom/tray bounds, no overflow; generic button conflicts resisted.',flush=True)
