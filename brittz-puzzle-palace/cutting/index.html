@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="en" data-cutting-lab="true"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="#101d27"><title>Brittz Puzzle Palace · Cutting Lab</title><link rel="icon" href="../../assets/favicon.svg"><!-- Bump CSS URL versions when updating shared/panel styles; cached HTML and CSS may differ. --><link rel="stylesheet" href="../style.css?v=precision-layout-1"><link rel="stylesheet" href="precision-controls.css?v=2"><script type="module" src="lab.js?v=workspace-1c"></script></head>
+<html lang="en" data-cutting-lab="true"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="#101d27"><title>Brittz Puzzle Palace · Cutting Lab</title><link rel="icon" href="../../assets/favicon.svg"><!-- Bump CSS URL versions when updating shared/panel styles; cached HTML and CSS may differ. --><link rel="stylesheet" href="../style.css?v=precision-layout-1"><link rel="stylesheet" href="precision-controls.css?v=compact-1"><script type="module" src="lab.js?v=compact-1"></script></head>
 <body><main>
 <header><a class="back" href="../">← Puzzle gallery</a><span class="edition">CUTTING ENGINE · PHASE 1C</span><h1>Brittz <span>Puzzle Palace</span></h1><p>A little patience. A sea of color.</p></header>
 <section id="gallery-screen" aria-labelledby="gallery-title">
@@ -14,7 +14,7 @@
 </section>
 <section id="game-screen" class="game" aria-label="Puzzle" hidden>
 <div class="game-nav"><button id="back-gallery">← Image / pattern</button></div>
-<div class="topbar"><div><span id="puzzle-subtitle" class="eyebrow"></span><h2><span id="puzzle-title"></span> <span id="piece-count"></span></h2></div><div class="toggle" aria-label="Viewing mode"><button id="puzzle-view" aria-pressed="true">Puzzle</button><button id="reference-view" aria-pressed="false">Reference</button></div></div>
+<div class="topbar"><div><span id="puzzle-subtitle" class="eyebrow"></span><h2><span id="puzzle-title"></span> <span id="piece-count"></span></h2></div><div class="view-summary"><div class="toggle" aria-label="Viewing mode"><button id="puzzle-view" aria-pressed="true">Puzzle</button><button id="reference-view" aria-pressed="false">Reference</button></div><p id="counter" role="status" aria-live="polite">0 / 50 pieces placed</p></div></div>
 <div class="viewport"><svg id="board" viewBox="0 0 720 480" role="application" aria-label="Puzzle canvas. Tap a loose piece to select. Drag empty space to pan. Use the controls below to move, rotate and zoom." tabindex="0"><defs><clipPath id="board-clip"><rect width="720" height="480"/></clipPath></defs><g clip-path="url(#board-clip)"><g id="camera"><rect class="paper" width="720" height="480"/><g id="art"></g></g></g><g id="controls"></g></svg><div id="empty-note">Your ocean starts here<span>Choose a piece below</span></div></div>
 <section class="precision-panel" aria-label="Piece controls">
 <div class="workspace-toggle" role="group" aria-label="Workspace mode"><button id="workspace-select" type="button" aria-pressed="true" aria-controls="select-panel">SELECT</button><button id="workspace-move" type="button" aria-pressed="false" aria-controls="move-panel">MOVE</button></div>
@@ -23,11 +23,10 @@
 <section id="move-panel" aria-label="Movement controls" hidden>
 <p id="selection-status" role="status">Select a loose piece</p>
 <div class="precision-pair"><div class="precision-unit"><span>MOVE</span><button id="move-pad" class="move-pad" type="button" aria-label="Move selected piece using relative drags" disabled><span aria-hidden="true">↔<br>↕</span></button></div>
-<div class="precision-unit"><span>ROTATE</span><button id="rotation-wheel" class="rotation-wheel" type="button" aria-label="Rotate selected piece clockwise or counterclockwise" disabled><span class="wheel-face" aria-hidden="true"><svg viewBox="0 0 100 100"><path d="M50 4V16" stroke="#f5d48d" stroke-width="4" stroke-linecap="round"/></svg><span id="rotation-value">—</span></span></button></div></div>
+<div class="precision-unit"><span>ROTATE</span><button id="rotation-wheel" class="rotation-wheel" type="button" aria-label="Rotate selected piece clockwise or counterclockwise" disabled><span class="wheel-face" aria-hidden="true"></span></button></div></div>
 </section></div>
-<div class="precision-zoom" role="group" aria-label="Zoom"><span>ZOOM</span><button id="fit" type="button">Fit</button><button id="zoom-out" type="button" aria-label="Zoom out">−</button><button id="zoom-in" type="button" aria-label="Zoom in">+</button></div>
+<div class="precision-zoom" role="group" aria-label="Zoom and piece actions"><button id="fit" type="button">Fit</button><button id="zoom-out" type="button" aria-label="Zoom out">−</button><button id="zoom-in" type="button" aria-label="Zoom in">+</button><button id="return" type="button" aria-label="Return piece to tray" disabled>Return</button></div>
 </section>
-<div class="statusbar"><p id="counter" role="status" aria-live="polite">0 / 23 pieces placed</p><button id="return" disabled>↩ Return piece</button></div>
 
 <p class="instructions">SELECT to pick pieces · MOVE to position and rotate<br>Drag empty canvas to pan · Use Fit, − and + to zoom</p>
 <div id="complete" hidden role="status"><h2 id="completion-title"></h2><p id="completion-message"></p>

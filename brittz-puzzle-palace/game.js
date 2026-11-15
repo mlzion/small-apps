@@ -23,7 +23,7 @@ function local(e){const r=board.getBoundingClientRect();return {x:(e.clientX-r.l
 function world(point){const v=view();return {x:(point.x-v.x)/v.zoom,y:(point.y-v.y)/v.zoom};}
 function camera(){if(!puzzle||!game||$('game-screen').hidden)return;const v=view();if(!isLab){v.x=Math.max(W*(1-v.zoom),Math.min(0,v.x));v.y=Math.max(H*(1-v.zoom),Math.min(0,v.y));}$('camera').setAttribute('transform',`translate(${v.x} ${v.y}) scale(${v.zoom})`);drawControls();}
 function drawControls(){controls.replaceChildren();
- if(isLab){precision?.setEnabled(workspaceMode==='move'&&!reference&&!!selected);const status=reference?'Reference view':selected?'Piece selected':'Select a loose piece';if($('selection-status').textContent!==status)$('selection-status').textContent=status;if(selected){const angle=((game.states[selected].angle%360)+360)%360;$('rotation-value').textContent=`${angle.toFixed(1)}°`;$('rotation-wheel').style.setProperty('--wheel-angle',`${angle}deg`);}else $('rotation-value').textContent='—';return;}
+ if(isLab){precision?.setEnabled(workspaceMode==='move'&&!reference&&!!selected);const status=reference?'Reference view':selected?'Piece selected':'Select a loose piece';if($('selection-status').textContent!==status)$('selection-status').textContent=status;return;}
  if(reference||!selected)return;
  const p=lookup.get(selected),s=game.states[selected],v=view(),k=W/board.getBoundingClientRect().width;
  const center={x:s.x*v.zoom+v.x,y:s.y*v.zoom+v.y};

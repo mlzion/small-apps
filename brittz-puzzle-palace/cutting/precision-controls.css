@@ -91,19 +91,6 @@
   background: #1a3038;
   pointer-events: none;
 }
-[data-cutting-lab] .precision-panel .wheel-face > span {
-  color: #cfdfd8;
-  font: 12px monospace;
-}
-[data-cutting-lab] .precision-panel .wheel-face svg {
-  position: absolute;
-  left: -12px;
-  top: -12px;
-  width: 96px;
-  height: 96px;
-  transform: rotate(var(--wheel-angle, 0deg));
-  pointer-events: none;
-}
 [data-cutting-lab] .precision-panel #move-pad.operating,
 [data-cutting-lab] .precision-panel #rotation-wheel.operating .wheel-face {
   border-color: #f6cc79;
@@ -115,10 +102,9 @@
   flex-flow: row nowrap;
   align-items: center;
   justify-content: center;
-  gap: 8px;
-  margin: 10px 0 4px;
+  gap: 6px;
+  margin: 4px 0;
 }
-[data-cutting-lab] .precision-panel .precision-zoom > span { margin-right: 8px; }
 [data-cutting-lab] .precision-panel .precision-zoom button {
   box-sizing: border-box;
   flex: 0 0 48px;
@@ -204,4 +190,39 @@
 [data-cutting-lab] #select-panel .piece-slot svg {
   width: 100%;
   height: 64px;
+}
+
+/* Four shared actions fit even at 320px; Return retains a full touch target. */
+[data-cutting-lab] .precision-panel .precision-zoom #return {
+  flex-basis: 76px;
+  width: 76px;
+  min-width: 76px;
+  max-width: 76px;
+}
+[data-cutting-lab] .view-summary { flex-shrink: 0; }
+[data-cutting-lab] #counter {
+  margin: 4px 0 0;
+  text-align: center;
+  font-size: 11px;
+  line-height: 1.3;
+  color: #b6d6cc;
+}
+[data-cutting-lab] .instructions { margin-block: 6px 8px; line-height: 1.5; }
+[data-cutting-lab] footer { padding-block: 8px; }
+@media (max-width: 540px) {
+  /* Compact only the active lab's chrome; do not reduce the board or controls. */
+  [data-cutting-lab]:has(#game-screen:not([hidden])) main { padding-block: 8px; }
+  [data-cutting-lab]:has(#game-screen:not([hidden])) header { padding-bottom: 8px; }
+  [data-cutting-lab]:has(#game-screen:not([hidden])) header h1 { font-size: 24px; margin: 5px 0 0; }
+  [data-cutting-lab]:has(#game-screen:not([hidden])) header p,
+  [data-cutting-lab]:has(#game-screen:not([hidden])) header .edition { display: none; }
+  [data-cutting-lab] .game-nav { padding: 6px 10px 0; }
+  [data-cutting-lab] .topbar { gap: 8px; padding: 6px 10px; }
+  [data-cutting-lab] .topbar .eyebrow,
+  [data-cutting-lab] #piece-count { display: none; }
+  [data-cutting-lab] .topbar h2 { font-size: 13px; margin: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  [data-cutting-lab] .topbar #puzzle-title { display: inline; margin: 0; font: inherit; }
+  [data-cutting-lab] .precision-panel { padding-top: 6px; }
+  [data-cutting-lab] .precision-panel .workspace-toggle { margin-bottom: 4px; }
+  [data-cutting-lab] .footnote { margin-block: 10px; }
 }

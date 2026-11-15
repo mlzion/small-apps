@@ -1,4 +1,5 @@
 """Shared browser checks for the Phase 1C workspace; no game-state injection."""
+import re
 import math
 import io
 from PIL import Image
@@ -11,14 +12,22 @@ def assert_precision_layout(page):
         const rect=e=>{const r=e.getBoundingClientRect();return {x:r.x,y:r.y,width:r.width,height:r.height,right:r.right,bottom:r.bottom};};
         return {move:rect(panel.querySelector('#move-pad')),wheel:rect(panel.querySelector('#rotation-wheel')),
           face:rect(panel.querySelector('.wheel-face')),labels:[...panel.querySelectorAll('.precision-unit>span')].map(rect),
-          zoom:[...panel.querySelectorAll('.precision-zoom button')].map(rect),panel:rect(panel),slot:rect(panel.querySelector('#workspace-slot')),
+          zoom:[...panel.querySelectorAll('.precision-zoom button')].map(rect),actions:[...panel.querySelectorAll('.precision-zoom button')].map(e=>e.id),counter:rect(document.getElementById('counter')),viewToggle:rect(document.querySelector('.view-summary .toggle')),panel:rect(panel),slot:rect(panel.querySelector('#workspace-slot')),
           select:rect(panel.querySelector('#select-panel')),movePanel:rect(panel.querySelector('#move-panel')),
           selecting:panel.querySelector('#workspace-select').getAttribute('aria-pressed')==='true',
           rows:getComputedStyle(document.getElementById('tray')).gridTemplateRows.split(' ').length,
           canvas:rect(document.getElementById('board')),tray:rect(document.getElementById('tray')),
           viewport:innerWidth,overflow:document.documentElement.scrollWidth>innerWidth};
     }''')
-    assert len(geometry['labels'])==2 and len(geometry['zoom'])==3,geometry
+    assert len(geometry['labels'])==2 and len(geometry['zoom'])==4,geometry
+    assert geometry['actions']==['fit','zoom-out','zoom-in','return'],geometry
+    assert geometry['counter']['y']>=geometry['viewToggle']['bottom'],geometry
+    assert geometry['counter']['bottom']<=geometry['canvas']['y'],geometry
+    assert abs(geometry['counter']['x']+geometry['counter']['width']/2-geometry['viewToggle']['x']-geometry['viewToggle']['width']/2)<.5,geometry
+    assert page.locator('.statusbar,#rotation-value,.wheel-face svg').count()==0
+    if geometry['viewport']<=390:
+        assert geometry['canvas']['width']>=geometry['viewport']-48,geometry
+        assert page.locator('#board').evaluate('e=>e.getBoundingClientRect().top+scrollY')<210
     assert abs(geometry['slot']['height']-188)<.5,geometry
     if geometry['selecting']:
         assert geometry['select']['height']==geometry['slot']['height'] and geometry['movePanel']['height']==0,geometry
@@ -36,6 +45,8 @@ def assert_precision_layout(page):
         assert abs(geometry['face']['width']-96)<.5 and abs(geometry['face']['height']-96)<.5,geometry
     for zoom in geometry['zoom']:
         assert zoom['y']>=geometry['slot']['bottom'] and zoom['width']>=44 and zoom['height']>=44,geometry
+        assert zoom['x']>=0 and zoom['right']<=geometry['viewport']+.5,geometry
+    assert all(a['right']<=b['x'] for a,b in zip(geometry['zoom'],geometry['zoom'][1:])),geometry
     assert max(z['y'] for z in geometry['zoom'])-min(z['y'] for z in geometry['zoom'])<.5,geometry
     assert geometry['panel']['y']>=geometry['canvas']['bottom']-.5,geometry
     assert not geometry['overflow'],geometry
@@ -71,7 +82,7 @@ def exercise_controls(page,context,mobile,complete=True):
     def tap_piece(id):
         page.locator('#board').scroll_into_view_if_needed()
         target=page.locator(f'#art [data-piece="{id}"]')
-        pixel=target.evaluate('''e=>{const b=e.querySelector('.glass').getBoundingClientRect(),board=document.getElementById('board').getBoundingClientRect();for(let y=Math.max(1,b.top,board.top)+3;y<Math.min(innerHeight,b.bottom,board.bottom);y+=2)for(let x=Math.max(1,b.left,board.left)+3;x<Math.min(innerWidth,b.right,board.right);x+=2)if(document.elementFromPoint(x,y)?.closest('[data-piece]')===e)return [x,y];throw Error('No visible piece pixel');}''')
+        pixel=target.evaluate('''e=>{const b=e.querySelector('.glass').getBoundingClientRect(),board=document.getElementById('board').getBoundingClientRect();for(let y=Math.max(1,b.top,board.top)+3;y<Math.min(innerHeight,b.bottom,board.bottom);y+=2)for(let x=Math.max(1,b.left,board.left)+3;x<Math.min(innerWidth,b.right,board.right);x+=2)if([-4,0,4].every(dy=>[-4,0,4].every(dx=>document.elementFromPoint(x+dx,y+dy)?.closest('[data-piece]')===e)))return [x,y];throw Error('No visible piece pixel');}''')
         if mobile:page.touchscreen.tap(*pixel)
         else:page.mouse.click(*pixel)
 
@@ -116,7 +127,14 @@ def exercise_controls(page,context,mobile,complete=True):
         points=[]
         for i in range(steps+1):
             a=math.radians(start+delta*i/steps);points.append((cx+r*math.cos(a),cy+r*math.sin(a)))
+        wheel_markup=wheel.inner_html()
         drag(points)
+        assert wheel.inner_html()==wheel_markup
+        assert wheel.locator('.wheel-face').inner_html()==''
+        assert wheel.evaluate("e=>[e,...e.querySelectorAll('*')].every(n=>getComputedStyle(n).transform==='none')")
+        assert wheel.get_attribute('style') is None
+        assert wheel.aria_snapshot().replace(' [disabled]','')=='- button "Rotate selected piece clockwise or counterclockwise"'
+        assert not re.search(r'\d|°|degrees|angle',page.locator('#selection-status').inner_text(),re.I)
 
     # The two rows scroll together; every remaining identity can reach the window.
     tray=page.locator('#tray');tray.scroll_into_view_if_needed();box=tray.bounding_box()
@@ -127,6 +145,7 @@ def exercise_controls(page,context,mobile,complete=True):
         tray.hover();page.mouse.wheel(350,0)
     page.wait_for_function('document.getElementById("tray").scrollLeft>10')
     expect(page.locator('#art>[data-piece]')).to_have_count(0)
+    expect(page.locator('#counter')).to_have_text('0 / 200 pieces placed')
     seen=tray.evaluate('''e=>{const seen=new Set();for(let x=0;x<=e.scrollWidth+e.clientWidth;x+=e.clientWidth*.8){e.scrollLeft=x;const r=e.getBoundingClientRect();for(const b of e.children){const t=b.getBoundingClientRect();if(t.right>r.left+2&&t.left<r.right-2)seen.add(b.dataset.piece);}}e.scrollLeft=0;return [...seen];}''')
     assert len(seen)==200 and len(set(seen))==200
     assert page.locator('#workspace-select').get_attribute('aria-pressed')=='true'
@@ -179,6 +198,7 @@ def exercise_controls(page,context,mobile,complete=True):
     tap_piece('piece-002');assert selected.get_attribute('data-piece')=='piece-002'
     mode('move')
     page.locator('#return').click();expect(page.locator('#move-pad')).to_be_disabled();assert camera()==v
+    expect(page.locator('#counter')).to_have_text('0 / 200 pieces placed')
     assert page.locator('#workspace-move').get_attribute('aria-pressed')=='true'
     page.locator('#board').scroll_into_view_if_needed()
     tap_piece('piece-001')
