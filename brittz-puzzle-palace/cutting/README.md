@@ -105,3 +105,19 @@ python brittz-puzzle-palace/cutting/check_images.py
 The new math tests cover 320/360/390/842-pixel board sizes and multiple zooms, continuous wrap-around rotation, exact selected/visible-center anchoring including limits, unchanged camera objects, and non-jumping boundary recovery. The mouse/touch browser checks use a 360 × 800 phone viewport for Samsung Galaxy A17-class CSS dimensions. They check repeated strokes, both rotation directions, center dead-zone crossing, edge rotation without translation, no camera changes during selection/manipulation, zoom-out anchors, reference switching, canvas piece-drag blocking, empty-space panning, disabled pinch/wheel zoom, cancellation, non-overlapping controls/tray, all 50 pieces assembled with the new panel, completion and replay. The existing image-pixel suite invokes the same panel protocol instead of the retired lab handle/line protocol. Screenshots are written to `/tmp/precision-mobile.png` and `/tmp/precision-desktop.png`.
 
 Physical Samsung Galaxy A17 touch ergonomics remain a device-testing item; automated touch emulation does not replace that check. Lab upload/progress lifetime, image limits and other Phase 1 limitations above still apply.
+
+### Precision layout fix and cache regression
+
+The panel now loads `precision-controls.css?v=1` after a versioned shared stylesheet. Its scoped ID selectors explicitly fix MOVE/ROTATE to 120 × 120 border-box pixels, including min/max dimensions, padding and native button appearance. A two-column grid prevents intrinsic button sizing or flex shrinking from stacking the controls. Labels stay in the row above each control; zoom is a separate row. The original shared rules remain as a fallback for older cached HTML. Increment the CSS URL versions when changing these assets.
+
+Investigation found no overriding size rule in the fresh checked-in CSS: fresh mobile Chromium already rendered the old rules at 120 × 120. Serving current markup with a cached stylesheet from before Phase 1B reproduced the reported narrow, vertically stacked controls (approximately 42 × 54). This is a confirmed reproduction of a cache mismatch, not confirmation of the physical Samsung's network/cache state. The fix protects against both stale shared CSS and later generic button/disabled-button theme rules.
+
+The previous browser checks used Playwright request routing, which disables HTTP caching. They therefore always tested current local CSS. The old layout assertion also checked only minimum widths and panel ordering at 360px/desktop; it did not check heights, horizontal alignment, 320/390px widths, or compare enabled and disabled geometry.
+
+```sh
+python brittz-puzzle-palace/cutting/check_precision_layout.py
+```
+
+This regression uses a self-cleaning loopback HTTP server **without Playwright routing**, so real browser caching stays enabled. At 320, 360 and 390 CSS pixels (touch/mobile mode, DPR 2.75), it checks fresh navigation and navigation after caching pre-Phase-1B CSS, reproduces the broken arrangement, then verifies the new versioned resources load without clearing the cache. It measures `getBoundingClientRect()` for 120 × 120 control sizes, 96px wheel face, side-by-side placement, labels, separate zoom row, canvas/tray order and no horizontal overflow. It exercises initial-disabled, selected-enabled, Reference-disabled and returned-disabled states, and injects later generic button rules to check specificity. The shared gameplay browser helper now runs these stronger geometry assertions too. Screenshots go to `/tmp/precision-layout-{width}-{fresh|cached}.png`.
+
+Physical Galaxy A17 confirmation is still needed; browser emulation and the cache reproduction cannot establish which cached resource was present on that device.
