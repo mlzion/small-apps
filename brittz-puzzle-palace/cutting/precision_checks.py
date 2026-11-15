@@ -5,6 +5,32 @@ from PIL import Image
 from playwright.sync_api import expect
 
 
+def assert_precision_layout(page):
+    """Assert actual rendered geometry, including disabled controls, not CSS text."""
+    geometry=page.locator('.precision-panel').evaluate('''panel=>{
+        const rect=e=>{const r=e.getBoundingClientRect();return {x:r.x,y:r.y,width:r.width,height:r.height,right:r.right,bottom:r.bottom};};
+        return {move:rect(panel.querySelector('#move-pad')),wheel:rect(panel.querySelector('#rotation-wheel')),
+          face:rect(panel.querySelector('.wheel-face')),labels:[...panel.querySelectorAll('.precision-unit>span')].map(rect),
+          zoom:[...panel.querySelectorAll('.precision-zoom button')].map(rect),panel:rect(panel),
+          canvas:rect(document.getElementById('board')),tray:rect(document.getElementById('tray')),
+          viewport:innerWidth,overflow:document.documentElement.scrollWidth>innerWidth};
+    }''')
+    assert len(geometry['labels'])==2 and len(geometry['zoom'])==3,geometry
+    move,wheel=geometry['move'],geometry['wheel']
+    for control in (move,wheel):
+        assert abs(control['width']-120)<.5 and abs(control['height']-120)<.5,geometry
+        assert control['x']>=0 and control['right']<=geometry['viewport']+.5,geometry
+    assert abs(move['y']-wheel['y'])<.5 and move['right']<wheel['x'],geometry
+    for label,control in zip(geometry['labels'],(move,wheel)):
+        assert label['bottom']<=control['y'] and abs(label['x']+label['width']/2-control['x']-60)<.5,geometry
+    assert abs(geometry['face']['width']-96)<.5 and abs(geometry['face']['height']-96)<.5,geometry
+    for zoom in geometry['zoom']:
+        assert zoom['y']>=max(move['bottom'],wheel['bottom']) and zoom['width']>=44 and zoom['height']>=44,geometry
+    assert max(z['y'] for z in geometry['zoom'])-min(z['y'] for z in geometry['zoom'])<.5,geometry
+    assert geometry['panel']['y']>=geometry['canvas']['bottom']-.5 and geometry['tray']['y']>=geometry['panel']['bottom'],geometry
+    assert not geometry['overflow'],geometry
+    return geometry
+
 def exercise_controls(page,context,mobile):
     page.evaluate('localStorage.setItem("existing-save","do not touch")')
     image=Image.new('RGB',(128,128));pixels=image.load()
@@ -19,7 +45,7 @@ def exercise_controls(page,context,mobile):
     page.locator('#start-lab').click()
     expect(page.locator('.piece-slot')).to_have_count(200)
     assert page.locator('#tray').evaluate('e=>getComputedStyle(e).gridTemplateRows.split(" ").length')==3
-    expect(page.locator('#move-pad')).to_be_disabled();expect(page.locator('#rotation-wheel')).to_be_disabled()
+    expect(page.locator('#move-pad')).to_be_disabled();expect(page.locator('#rotation-wheel')).to_be_disabled();assert_precision_layout(page)
     expect(page.locator('#board .move-handle,#board .rotation-hit,.viewport .zoom')).to_have_count(0)
     geometry=page.locator('.piece-slot .glass').evaluate_all('els=>els.map(e=>e.getAttribute("d")).sort()')
     selected=page.locator('#art .selected')
@@ -72,7 +98,7 @@ def exercise_controls(page,context,mobile):
 
     # Selection does not move the camera, even after an explicit pan.
     page.locator('.piece-slot[data-piece=piece-001]').click()
-    v=camera();expect(page.locator('#move-pad')).to_be_enabled()
+    v=camera();expect(page.locator('#move-pad')).to_be_enabled();assert_precision_layout(page)
     for button in ['#zoom-in','#zoom-in','#zoom-in','#zoom-out','#fit']:
         page.locator('.precision-panel').scroll_into_view_if_needed()
         anchor=screen_center();page.locator(button).click()
@@ -139,10 +165,7 @@ def exercise_controls(page,context,mobile):
     assert page.locator('.piece-slot .glass').evaluate_all('els=>els.map(e=>e.getAttribute("d")).sort()')==geometry
     assert page.evaluate('localStorage.getItem("existing-save")')=='do not touch' and page.evaluate('localStorage.length')==1
     assert page.evaluate('document.documentElement.scrollWidth<=innerWidth')
-    # Controls are fully outside the artwork and above the tray on A17-sized widths.
-    panel=page.locator('.precision-panel').bounding_box();board=page.locator('#board').bounding_box();tray=page.locator('#tray').bounding_box()
-    assert panel['y']>=board['y']+board['height']-.1 and tray['y']>=panel['y']+panel['height']
-    assert page.locator('#move-pad').bounding_box()['width']>=112 and page.locator('#rotation-wheel').bounding_box()['width']>=112
+    assert_precision_layout(page)
     page.screenshot(path=f'/tmp/precision-{"mobile" if mobile else "desktop"}.png',full_page=True)
 
     # Complete a 50-piece image with the new panel, without injected game state.
@@ -157,6 +180,6 @@ def exercise_controls(page,context,mobile):
             move((piece['x']-current[0])*scale,(piece['y']-current[1])*scale)
         expect(page.locator('#counter')).to_have_text(f'{done} / 50 pieces placed');assert camera()==v
     expect(page.locator('#complete')).to_be_visible();expect(page.locator('#art image')).to_have_count(1)
-    expect(page.locator('#move-pad')).to_be_disabled();expect(page.locator('#rotation-wheel')).to_be_disabled()
+    expect(page.locator('#move-pad')).to_be_disabled();expect(page.locator('#rotation-wheel')).to_be_disabled();assert_precision_layout(page)
     page.locator('#replay').click();expect(page.locator('.piece-slot')).to_have_count(50)
     print(f'PASS precision controls / {"touch" if mobile else "mouse"}: camera stability, relative motion, continuous wheel, anchors, no pinch/wheel zoom, layout, 50-piece completion and replay.',flush=True)

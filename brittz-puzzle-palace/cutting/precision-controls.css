@@ -1,0 +1,132 @@
+/* Independently loaded/versioned so older shared CSS cannot collapse this panel.
+   Size selectors intentionally outrank shared button and disabled-button rules. */
+[data-cutting-lab] .precision-panel {
+  box-sizing: border-box;
+  min-width: 0;
+  padding: 10px 10px 4px;
+  border-bottom: 1px solid #31444c;
+}
+[data-cutting-lab] .precision-panel > p {
+  min-height: 16px;
+  margin: 0 0 8px;
+  color: #9dbabf;
+  text-align: center;
+  font-size: 11px;
+}
+[data-cutting-lab] .precision-panel .precision-pair {
+  display: grid;
+  grid-template-columns: repeat(2, 120px);
+  justify-content: center;
+  align-items: start;
+  column-gap: clamp(12px, 5vw, 30px);
+  min-width: 0;
+}
+[data-cutting-lab] .precision-panel .precision-unit {
+  display: grid;
+  grid-template-columns: 120px;
+  grid-template-rows: auto 120px;
+  justify-items: center;
+  align-items: start;
+  gap: 6px;
+  width: 120px;
+  min-width: 120px;
+  max-width: 120px;
+}
+[data-cutting-lab] .precision-panel .precision-unit > span,
+[data-cutting-lab] .precision-panel .precision-zoom > span {
+  color: #9dbabf;
+  font: 10px monospace;
+  letter-spacing: 1.6px;
+}
+[data-cutting-lab] .precision-panel #move-pad,
+[data-cutting-lab] .precision-panel #rotation-wheel {
+  box-sizing: border-box;
+  appearance: none;
+  -webkit-appearance: none;
+  display: grid;
+  place-items: center;
+  width: 120px;
+  min-width: 120px;
+  max-width: 120px;
+  height: 120px;
+  min-height: 120px;
+  max-height: 120px;
+  margin: 0;
+  padding: 0;
+  flex: 0 0 120px;
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+  overscroll-behavior: contain;
+}
+[data-cutting-lab] .precision-panel #move-pad {
+  border-radius: 12px;
+  background: radial-gradient(circle, #36525c 1px, transparent 2px) 0 0 / 14px 14px, #20363e;
+}
+[data-cutting-lab] .precision-panel #move-pad > span {
+  color: #b7d8c9;
+  font-size: 25px;
+  line-height: 1.1;
+  pointer-events: none;
+}
+[data-cutting-lab] .precision-panel #rotation-wheel {
+  border-radius: 50%;
+  border-color: transparent;
+  background: transparent;
+}
+[data-cutting-lab] .precision-panel .wheel-face {
+  position: relative;
+  box-sizing: border-box;
+  display: grid;
+  place-items: center;
+  width: 96px;
+  min-width: 96px;
+  max-width: 96px;
+  height: 96px;
+  min-height: 96px;
+  max-height: 96px;
+  border: 12px solid #547c7e;
+  border-radius: 50%;
+  box-shadow: inset 0 0 0 1px #b7d8c966, 0 0 0 1px #769c9d;
+  background: #1a3038;
+  pointer-events: none;
+}
+[data-cutting-lab] .precision-panel .wheel-face > span {
+  color: #cfdfd8;
+  font: 12px monospace;
+}
+[data-cutting-lab] .precision-panel .wheel-face svg {
+  position: absolute;
+  left: -12px;
+  top: -12px;
+  width: 96px;
+  height: 96px;
+  transform: rotate(var(--wheel-angle, 0deg));
+  pointer-events: none;
+}
+[data-cutting-lab] .precision-panel #move-pad.operating,
+[data-cutting-lab] .precision-panel #rotation-wheel.operating .wheel-face {
+  border-color: #f6cc79;
+}
+[data-cutting-lab] .precision-panel #rotation-wheel:hover { background: #29434b; }
+[data-cutting-lab] .precision-panel button:disabled { opacity: .35; cursor: default; }
+[data-cutting-lab] .precision-panel .precision-zoom {
+  display: flex;
+  flex-flow: row nowrap;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  margin: 10px 0 4px;
+}
+[data-cutting-lab] .precision-panel .precision-zoom > span { margin-right: 8px; }
+[data-cutting-lab] .precision-panel .precision-zoom button {
+  box-sizing: border-box;
+  flex: 0 0 48px;
+  width: 48px;
+  min-width: 48px;
+  max-width: 48px;
+  height: 44px;
+  min-height: 44px;
+  max-height: 44px;
+  padding: 6px;
+}
