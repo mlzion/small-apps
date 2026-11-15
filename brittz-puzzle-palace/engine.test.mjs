@@ -1,6 +1,8 @@
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
-import {pieces} from './puzzle.js';
+import {readFileSync} from 'node:fs';
+import {preparePuzzle} from './content.js';
+const {pieces}=preparePuzzle(JSON.parse(readFileSync(new URL('./puzzles/sea-turtle/puzzle.json',import.meta.url),'utf8')));
 import {canSnap,angleDistance,shuffledState,clampPiece,rotatedBounds} from './engine.js';
 test('snapping requires position AND orientation at every zoom',()=>{
  const p=pieces[15];

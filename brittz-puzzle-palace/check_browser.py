@@ -12,7 +12,7 @@ from playwright.sync_api import sync_playwright, expect
 
 ROOT = Path(__file__).resolve().parents[1]
 ORIGIN = 'http://puzzle.test'
-KEY = 'brittz-sea-turtle-v1'
+KEY = 'brittz-puzzle:sea-turtle-v1:v1'
 
 
 def serve(route):
@@ -65,6 +65,7 @@ with sync_playwright() as p:
             page.goto(url)
             page.evaluate('localStorage.clear()')
             page.reload()
+            page.locator('[data-puzzle=sea-turtle-v1]').click()
             expect(page.locator('.piece-slot')).to_have_count(23)
             assert page.evaluate('document.documentElement.scrollWidth <= innerWidth')
             if mobile:
@@ -75,12 +76,13 @@ with sync_playwright() as p:
                 expect(page.locator('#art > g')).to_have_count(0)
                 page.locator('#tray').evaluate('(el)=>el.scrollLeft=0')
             # Seed one loose piece in neutral space to isolate each manipulation mode.
-            page.locator('.piece-slot').first.click()
+            page.locator('.piece-slot[data-piece=\"shell-center\"]').click()
             data = saved(page)
             selected = next(k for k,v in data['states'].items() if v['location']=='board')
             data['states'][selected].update(x=360, y=240, angle=30)
             page.evaluate('([key,game]) => localStorage.setItem(key, JSON.stringify({game,sound:false}))', [KEY,data])
             page.reload()
+            page.locator('[data-puzzle=sea-turtle-v1]').click()
             page.locator(f'#art [data-piece="{selected}"] path').click()
             start = point(page, '.move-handle')
             drag(page,session,start,(start[0]+16,start[1]+8))
@@ -112,7 +114,7 @@ with sync_playwright() as p:
             expect(page.locator('.move-handle')).to_have_count(0)
             assert saved(page)['order']==data['order']
             # Completing the last piece uses the normal handle-release snap path.
-            geometry = page.evaluate('async()=> (await import("./puzzle.js")).pieces.map(p=>({id:p.id,cx:p.cx,cy:p.cy}))')
+            geometry = page.evaluate('async()=> (await import("./content.js")).preparePuzzle(await (await fetch("puzzles/sea-turtle/puzzle.json")).json()).pieces.map(p=>({id:p.id,cx:p.cx,cy:p.cy}))')
             data = saved(page)
             last = next(p for p in geometry if p['id']=='shell-center')
             for piece in geometry:
@@ -121,6 +123,7 @@ with sync_playwright() as p:
             for zoom in (1, 2, 3):
                 page.evaluate('([key,game])=>localStorage.setItem(key,JSON.stringify({game,sound:false}))',[KEY,data])
                 page.reload()
+                page.locator('[data-puzzle=sea-turtle-v1]').click()
                 page.locator('#art [data-piece="shell-center"] path').click()
                 for _ in range(zoom-1):
                     page.locator('#zoom-in').click()

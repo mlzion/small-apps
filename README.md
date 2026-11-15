@@ -60,4 +60,4 @@ See [space-shooter/README.md](space-shooter/README.md) for the portrait arcade g
 
 ## Brittz Puzzle Palace
 
-See [brittz-puzzle-palace/README.md](brittz-puzzle-palace/README.md) for the stained-glass turtle puzzle, controls, geometry validation, and verification.
+See [brittz-puzzle-palace/README.md](brittz-puzzle-palace/README.md) for the stained-glass puzzle collection, content publishing, personalized JPG certificates, controls, and verification.

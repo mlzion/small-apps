@@ -1,0 +1,21 @@
+{
+  "schemaVersion": 1,
+  "puzzles": [
+    {
+      "id": "sea-turtle-v1",
+      "version": 1,
+      "title": "Sea Turtle",
+      "pieceCount": 23,
+      "data": "puzzles/sea-turtle/puzzle.json",
+      "thumbnail": "puzzles/sea-turtle/thumbnail.svg"
+    },
+    {
+      "id": "tropical-gem",
+      "version": 1,
+      "title": "Tropical Gem",
+      "pieceCount": 4,
+      "data": "puzzles/tropical-gem/puzzle.json",
+      "thumbnail": "puzzles/tropical-gem/thumbnail.svg"
+    }
+  ]
+}
