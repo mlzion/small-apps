@@ -5,13 +5,13 @@ export async function loadMaster(count){
  if(!cached.has(count))cached.set(count,(async()=>{const response=await fetch(new URL(`patterns/${count}.json`,import.meta.url));if(!response.ok)throw Error(`Master ${count} could not load (HTTP ${response.status}).`);const data=await response.json();validatePattern(data);return data;})());
  try{return await cached.get(count);}catch(error){cached.delete(count);throw error;}
 }
-export async function openSquareImage(file){
+export async function openSquareImage(file,decoded=null){
  if(!(file instanceof Blob)||file.size>24*1024*1024)throw Error('Choose a JPG or PNG up to 24 MB.');
  const bytes=new Uint8Array(await file.slice(0,8).arrayBuffer());
  const png=[137,80,78,71,13,10,26,10].every((n,i)=>bytes[i]===n),jpg=bytes[0]===255&&bytes[1]===216&&bytes[2]===255;
  if(!png&&!jpg)throw Error('The source must be a JPG or PNG image.');
- const url=URL.createObjectURL(file),image=new Image();
- try{image.src=url;await image.decode();if(image.naturalWidth!==image.naturalHeight)throw Error('Choose a square image; the cutter never crops or stretches artwork.');if(image.naturalWidth<32||image.naturalWidth>8192)throw Error('Choose a square image between 32 and 8192 pixels wide.');
+ const url=decoded?.url||URL.createObjectURL(file),image=decoded?.image||new Image();
+ try{if(!decoded){image.src=url;await image.decode();}if(image.naturalWidth!==image.naturalHeight)throw Error('Choose a square image; the cutter never crops or stretches artwork.');if(image.naturalWidth<32||image.naturalWidth>8192)throw Error('Choose a square image between 32 and 8192 pixels wide.');
  return {blob:file,url,width:image.naturalWidth,height:image.naturalHeight,name:file.name||'Test picture',revoke:()=>URL.revokeObjectURL(url)};
  }catch(error){URL.revokeObjectURL(url);throw error;}
 }
