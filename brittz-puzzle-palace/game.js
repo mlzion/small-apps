@@ -1,4 +1,4 @@
-import {attachPrecisionControls,moveRelative,zoomAt,visibleCenter} from './precision-controls.js';
+import {attachPrecisionControls,moveRelative,visibleCenter,panCamera,zoomWorkspace} from './precision-controls.js?v=workspace-1c';
 import {imagePiece,completedImage,sourceImage} from './cutting/render.js';
 import {preparePuzzle,validateCatalog,matchEntry,detailMarkup} from './content.js';
 import {loadProgress,saveProgress,progressSummary,isComplete,playerName,rememberName} from './progress.js';
@@ -11,7 +11,7 @@ let game=null,selected=null,reference=false,sound=true,audio;
 let catalog=[],requestSerial=0,exportSerial=0,exporting=false,certificateURL=null;
 const cache=new Map();
 const isLab=document.documentElement.dataset.cuttingLab==='true';
-let precision=null,precisionActive=false;
+let precision=null,precisionActive=false,workspaceMode='select',trayScroll=0;
 const views={puzzle:{zoom:1,x:0,y:0},reference:{zoom:1,x:0,y:0}};
 let pointers=new Map(),gesture=null,trayDown=null;
 function save(){if(puzzle&&game&&!puzzle.ephemeral)saveProgress(puzzle,game,sound);}
@@ -23,7 +23,7 @@ function local(e){const r=board.getBoundingClientRect();return {x:(e.clientX-r.l
 function world(point){const v=view();return {x:(point.x-v.x)/v.zoom,y:(point.y-v.y)/v.zoom};}
 function camera(){if(!puzzle||!game||$('game-screen').hidden)return;const v=view();if(!isLab){v.x=Math.max(W*(1-v.zoom),Math.min(0,v.x));v.y=Math.max(H*(1-v.zoom),Math.min(0,v.y));}$('camera').setAttribute('transform',`translate(${v.x} ${v.y}) scale(${v.zoom})`);drawControls();}
 function drawControls(){controls.replaceChildren();
- if(isLab){precision?.setEnabled(!reference&&!!selected);const status=reference?'Reference view':selected?'Piece selected':'Select a loose piece';if($('selection-status').textContent!==status)$('selection-status').textContent=status;if(selected){const angle=((game.states[selected].angle%360)+360)%360;$('rotation-value').textContent=`${angle.toFixed(1)}°`;$('rotation-wheel').style.setProperty('--wheel-angle',`${angle}deg`);}else $('rotation-value').textContent='—';return;}
+ if(isLab){precision?.setEnabled(workspaceMode==='move'&&!reference&&!!selected);const status=reference?'Reference view':selected?'Piece selected':'Select a loose piece';if($('selection-status').textContent!==status)$('selection-status').textContent=status;if(selected){const angle=((game.states[selected].angle%360)+360)%360;$('rotation-value').textContent=`${angle.toFixed(1)}°`;$('rotation-wheel').style.setProperty('--wheel-angle',`${angle}deg`);}else $('rotation-value').textContent='—';return;}
  if(reference||!selected)return;
  const p=lookup.get(selected),s=game.states[selected],v=view(),k=W/board.getBoundingClientRect().width;
  const center={x:s.x*v.zoom+v.x,y:s.y*v.zoom+v.y};
@@ -70,8 +70,9 @@ function renderBoard(){
  $('certificate-download').hidden=reference||count!==pieces.length||!certificateURL;
  camera();
 }
-function renderTray(){tray.style.setProperty('--tray-rows',Math.max(1,Math.min(3,puzzle.trayRows)));
- const scroll=tray.scrollLeft;tray.replaceChildren();
+function renderTray(){tray.style.setProperty('--tray-rows',isLab?2:Math.max(1,Math.min(3,puzzle.trayRows)));
+ if(isLab&&tray.getClientRects().length)trayScroll=tray.scrollLeft;
+ const scroll=isLab?trayScroll:tray.scrollLeft;tray.replaceChildren();
  game.order.filter(id=>game.states[id].location==='tray').forEach(id=>{const p=lookup.get(id),s=game.states[id],b=rotatedBounds(p,s.angle),size=Math.max(b.right-b.left,b.bottom-b.top)+30;
  const button=document.createElement('button');button.className='piece-slot';button.dataset.piece=id;button.setAttribute('aria-label',`Select ${p.name}`);
  const image=svg('svg',{viewBox:`${(b.left+b.right-size)/2} ${(b.top+b.bottom-size)/2} ${size} ${size}`,'aria-hidden':'true'}),g=shape(p);
@@ -92,6 +93,7 @@ function select(id){if(reference)return;precision?.cancel();const s=game.states[
  revealSelected();save();renderBoard();board.focus({preventScroll:true});
 }
 // Native tray scrolling wins over selection: activation requires a short, stationary tap.
+tray.addEventListener('scroll',()=>{if(isLab&&tray.getClientRects().length)trayScroll=tray.scrollLeft;});
 tray.addEventListener('pointerdown',e=>{trayDown={id:e.pointerId,x:e.clientX,y:e.clientY,scroll:tray.scrollLeft,time:performance.now(),moved:false};});
 tray.addEventListener('pointermove',e=>{if(trayDown&&Math.hypot(e.clientX-trayDown.x,e.clientY-trayDown.y)>8)trayDown.moved=true;});
 tray.addEventListener('pointercancel',()=>{trayDown=null;});
@@ -113,7 +115,7 @@ board.addEventListener('pointerdown',e=>{
 board.addEventListener('pointermove',e=>{if(!pointers.has(e.pointerId))return;e.preventDefault();const point=local(e);pointers.set(e.pointerId,point);if(!gesture)return;
  if(isLab&&(gesture.type==='tap'||gesture.type==='blocked')){if(gesture.type==='tap'&&Math.hypot(point.x-gesture.start.x,point.y-gesture.start.y)>W/board.getBoundingClientRect().width*8)gesture.type='blocked';return;}
  if(gesture.type==='pinch'&&pointers.size>=2){const[a,b]=[...pointers.values()],v=view();v.zoom=Math.max(config.minZoom,Math.min(config.maxZoom,gesture.zoom*Math.hypot(b.x-a.x,b.y-a.y)/Math.max(1,gesture.distance)));v.x=(a.x+b.x)/2-gesture.anchor.x*v.zoom;v.y=(a.y+b.y)/2-gesture.anchor.y*v.zoom;camera();return;}
- if(gesture.type==='pan'){view().x=gesture.x+point.x-gesture.start.x;view().y=gesture.y+point.y-gesture.start.y;camera();return;}
+ if(gesture.type==='pan'){const x=gesture.x+point.x-gesture.start.x,y=gesture.y+point.y-gesture.start.y;if(isLab)Object.assign(view(),panCamera(view(),x,y,W,H));else{view().x=x;view().y=y;}camera();return;}
  if(!selected||reference)return;const s=game.states[selected],p=lookup.get(selected),w=world(point);
  if(gesture.type==='move'){s.x=gesture.x+w.x-gesture.start.x;s.y=gesture.y+w.y-gesture.start.y;}
  if(gesture.type==='rotate'){const next=Math.atan2(w.y-s.y,w.x-s.x);s.angle=gesture.angle+(next-gesture.startAngle)*180/Math.PI;revealSelected();}
@@ -127,7 +129,7 @@ function endPointer(e){if(!pointers.has(e.pointerId))return;const type=gesture?.
  gesture=isLab&&pointers.size?{type:'blocked'}:null;if(type==='pinch'){revealSelected();camera();}
 }
 board.addEventListener('pointerup',endPointer);board.addEventListener('pointercancel',endPointer);board.addEventListener('lostpointercapture',endPointer);
-function zoomBy(factor,point={x:(W/2),y:(H/2)}){if(isLab){precision?.cancel();pointers.clear();gesture=null;const anchor=!reference&&selected?game.states[selected]:visibleCenter(view(),W,H);Object.assign(view(),zoomAt(view(),factor,anchor,config.minZoom,config.maxZoom));camera();return;}const w=world(point),v=view();v.zoom=Math.max(config.minZoom,Math.min(config.maxZoom,v.zoom*factor));v.x=point.x-w.x*v.zoom;v.y=point.y-w.y*v.zoom;revealSelected();camera();}
+function zoomBy(factor,point={x:(W/2),y:(H/2)}){if(isLab){precision?.cancel();pointers.clear();gesture=null;const anchor=!reference&&selected?game.states[selected]:visibleCenter(view(),W,H);Object.assign(view(),zoomWorkspace(view(),factor,anchor,config.minZoom,config.maxZoom));camera();return;}const w=world(point),v=view();v.zoom=Math.max(config.minZoom,Math.min(config.maxZoom,v.zoom*factor));v.x=point.x-w.x*v.zoom;v.y=point.y-w.y*v.zoom;revealSelected();camera();}
 board.addEventListener('wheel',e=>{e.preventDefault();if(!isLab)zoomBy(e.deltaY<0?1.15:1/1.15,local(e));},{passive:false});
 $('zoom-in').onclick=()=>zoomBy(1.3);$('zoom-out').onclick=()=>zoomBy(1/1.3);$('fit').onclick=()=>{precision?.cancel();pointers.clear();gesture=null;Object.assign(view(),{zoom:1,x:0,y:0});camera();};
 function setView(ref){precision?.cancel();pointers.clear();gesture=null;reference=ref;$('puzzle-view').setAttribute('aria-pressed',String(!ref));$('reference-view').setAttribute('aria-pressed',String(ref));renderBoard();}
@@ -189,7 +191,8 @@ export function mountPuzzle(next,replay=false){
  $('empty-note').replaceChildren(document.createTextNode(puzzle.emptyMessage||'Your picture starts here'));const hint=document.createElement('span');hint.textContent='Choose a piece below';$('empty-note').append(hint);
  $('completion-title').textContent=puzzle.completionTitle||'A beautiful picture, piece by piece.';$('completion-message').textContent=puzzle.completionMessage||`You completed ${puzzle.title}!`;
  $('player-name').value=playerName();
- $('gallery-screen').hidden=true;$('game-screen').hidden=false;tray.scrollLeft=0;message('');
+ $('gallery-screen').hidden=true;$('game-screen').hidden=false;trayScroll=0;tray.scrollLeft=0;message('');
+ if(isLab)setWorkspace('select');
  soundLabel();renderTray();setView(false);save();if(replay)restart();$('back-gallery').focus({preventScroll:true});
  }
 $('player-name').addEventListener('input',()=>rememberName($('player-name').value));
@@ -213,10 +216,20 @@ async function loadCatalog(){
  catch(error){if(request!==requestSerial)return;message(`Unable to load the collection: ${error.message}`);$('retry-catalog').hidden=false;}
 }
 $('retry-catalog').onclick=loadCatalog;
+function setWorkspace(mode){
+ if(!isLab)return;
+ precision?.cancel();pointers.clear();gesture=null;if(!tray.hidden&&tray.getClientRects().length)trayScroll=tray.scrollLeft;workspaceMode=mode;
+ $('workspace-select').setAttribute('aria-pressed',String(mode==='select'));
+ $('workspace-move').setAttribute('aria-pressed',String(mode==='move'));
+ $('select-panel').hidden=mode!=='select';$('move-panel').hidden=mode!=='move';if(mode==='select')tray.scrollLeft=trayScroll;
+ if(puzzle)drawControls();
+}
 if(isLab){
+ $('workspace-select').onclick=()=>setWorkspace('select');
+ $('workspace-move').onclick=()=>setWorkspace('move');
  board.setAttribute('aria-label','Puzzle canvas. Tap a loose piece to select. Drag empty space to pan. Use the controls below to move, rotate and zoom.');
  precision=attachPrecisionControls({pad:$('move-pad'),wheel:$('rotation-wheel'),
- onStart(){if(reference||!selected)return false;pointers.clear();gesture=null;precisionActive=true;return true;},
+ onStart(){if(workspaceMode!=='move'||reference||!selected)return false;pointers.clear();gesture=null;precisionActive=true;return true;},
  onMove(dx,dy){if(!selected)return;const s=game.states[selected],b=rotatedBounds(lookup.get(selected),s.angle);Object.assign(s,moveRelative(s,b,view(),W,H,scale(),dx,dy));renderBoard();},
  onRotate(degrees){if(!selected)return;game.states[selected].angle+=degrees;renderBoard();},
  onEnd(commit){precisionActive=false;if(commit)snap();else save();}

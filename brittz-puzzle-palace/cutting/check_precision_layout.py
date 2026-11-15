@@ -62,6 +62,7 @@ try:
                     page.goto(origin+'/small-apps/brittz-puzzle-palace/cutting/cache-probe.html')
                     page.locator('#gallery-screen').evaluate('e=>e.hidden=true')
                     page.locator('#game-screen').evaluate('e=>e.hidden=false')
+                    page.locator('#select-panel').evaluate('e=>e.hidden=true');page.locator('#move-panel').evaluate('e=>e.hidden=false')
                     old=page.locator('#move-pad,#rotation-wheel').evaluate_all('es=>es.map(e=>{const r=e.getBoundingClientRect();return {width:r.width,height:r.height,y:r.y};})')
                     assert old[0]['width']<80 and old[1]['y']>old[0]['y'],old
                 state['legacy']=False
@@ -71,9 +72,10 @@ try:
                 page.locator('#start-lab').click()
                 expect(page.locator('.piece-slot')).to_have_count(50)
                 # Disabled, selected/enabled, Reference/disabled, and returned/disabled.
+                assert_precision_layout(page);page.locator('#workspace-move').click()
                 disabled=assert_precision_layout(page)
                 expect(page.locator('#move-pad')).to_be_disabled()
-                page.locator('.piece-slot').first.click()
+                page.locator('#workspace-select').click();page.locator('.piece-slot').first.click();page.locator('#workspace-move').click()
                 expect(page.locator('#move-pad')).to_be_enabled()
                 enabled=assert_precision_layout(page)
                 for key in ('move','wheel'):
@@ -84,14 +86,14 @@ try:
                 # Later generic container/button themes must not shrink/stack the controls.
                 page.add_style_tag(content='.precision-panel button{width:32px;max-width:40px;height:28px;min-height:0;padding:2px 6px}.precision-panel button:disabled{width:28px;height:24px}.precision-pair{display:flex;flex-direction:column}')
                 assert_precision_layout(page)
-                page.locator('.piece-slot').first.click();assert_precision_layout(page)
+                page.locator('#workspace-select').click();page.locator('.piece-slot').first.click();page.locator('#workspace-move').click();assert_precision_layout(page)
                 page.screenshot(path=f'/tmp/precision-layout-{width}-{"cached" if cached else "fresh"}.png',full_page=True)
                 if cached:
                     # The old URL was fetched once, during warmup. New HTML must use
                     # fresh versioned URLs without relying on a hard refresh/cache clear.
                     assert state['requests'].count('/small-apps/brittz-puzzle-palace/style.css')==1,state['requests']
                 assert any('/style.css?v=precision-layout-1' in path for path in state['requests']),state['requests']
-                assert any('/precision-controls.css?v=1' in path for path in state['requests']),state['requests']
+                assert any('/precision-controls.css?v=2' in path for path in state['requests']),state['requests']
                 assert not errors,errors
                 context.close()
                 print(f'PASS {width}px / {"cached pre-1B CSS" if cached else "fresh"}: 120×120 enabled/disabled controls, horizontal row, labels/zoom/tray bounds, no overflow; generic button conflicts resisted.',flush=True)

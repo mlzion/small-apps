@@ -19,13 +19,13 @@ def serve(route):
 
 with sync_playwright() as p:
     browser=p.chromium.launch(executable_path=os.environ.get('CHROMIUM_PATH','/usr/bin/chromium'))
-    for mobile in (False,True):
-        context=browser.new_context(viewport={'width':360 if mobile else 1100,'height':800 if mobile else 1100},has_touch=mobile,is_mobile=mobile)
+    for mobile,width in ((False,1100),(True,320),(True,360),(True,390)):
+        context=browser.new_context(viewport={'width':width,'height':800 if mobile else 1100},has_touch=mobile,is_mobile=mobile)
         context.route(ORIGIN+'/**',serve)
         page=context.new_page();errors=[]
         page.on('pageerror',lambda e:errors.append(str(e)))
         page.goto(ORIGIN+'/small-apps/brittz-puzzle-palace/cutting/')
-        exercise_controls(page,context,mobile)
+        exercise_controls(page,context,mobile,complete=width in (1100,360))
         assert not errors,errors
         context.close()
     browser.close()

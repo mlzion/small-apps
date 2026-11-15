@@ -130,3 +130,78 @@
   max-height: 44px;
   padding: 6px;
 }
+/* SELECT and MOVE deliberately share one fixed-height slot; only manual toggle
+   buttons change which panel is visible. No second tray exists outside it. */
+[data-cutting-lab] .precision-panel .workspace-toggle {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 4px;
+  padding: 3px;
+  margin: 0 0 8px;
+  border: 1px solid #415961;
+  border-radius: 9px;
+  background: #101e26;
+}
+[data-cutting-lab] .precision-panel .workspace-toggle button {
+  box-sizing: border-box;
+  display: block;
+  width: 100%;
+  max-width: none;
+  height: 44px;
+  max-height: 44px;
+  padding: 9px 6px;
+  min-width: 0;
+  min-height: 44px;
+  border: 0;
+  background: transparent;
+  font-weight: 600;
+  letter-spacing: 1px;
+}
+[data-cutting-lab] .precision-panel .workspace-toggle button[aria-pressed=true] {
+  background: #b7d8c9;
+  color: #153a3e;
+}
+[data-cutting-lab] #workspace-slot {
+  height: 188px;
+  min-width: 0;
+}
+[data-cutting-lab] #select-panel,
+[data-cutting-lab] #move-panel {
+  height: 100%;
+  min-width: 0;
+}
+[data-cutting-lab] #move-panel {
+  display: grid;
+  align-content: center;
+}
+[data-cutting-lab] #selection-status {
+  min-height: 16px;
+  margin: 0 0 8px;
+  color: #9dbabf;
+  text-align: center;
+  font-size: 11px;
+}
+[data-cutting-lab] #select-panel #tray {
+  box-sizing: border-box;
+  height: 100%;
+  min-width: 0;
+  grid-template-rows: repeat(2, 76px);
+  grid-auto-columns: 80px;
+  gap: 8px 6px;
+  align-content: start;
+  padding: 6px 8px;
+  overflow-x: auto;
+  overflow-y: hidden;
+}
+[data-cutting-lab] #select-panel .piece-slot {
+  box-sizing: border-box;
+  min-width: 0;
+  width: 80px;
+  min-height: 0;
+  height: 76px;
+  padding: 4px;
+}
+[data-cutting-lab] #select-panel .piece-slot svg {
+  width: 100%;
+  height: 64px;
+}

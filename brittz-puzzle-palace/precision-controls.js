@@ -52,3 +52,15 @@ export function attachPrecisionControls({pad,wheel,onStart,onMove,onRotate,onEnd
  const owner=pad.ownerDocument.defaultView;for(const type of ['pointerup','pointercancel'])owner.addEventListener(type,e=>{contacts.delete(e.pointerId);if(active?.id===e.pointerId)finish(type==='pointerup');},true);
  return {cancel(){finish(false);contacts.clear();},setEnabled(enabled){if(!enabled)this.cancel();pad.disabled=wheel.disabled=!enabled;}};
 }
+
+// Explicit camera gestures have bounds; painting and piece manipulation do not.
+export function panCamera(view,x,y,width,height){
+ if(view.zoom<=1+1e-9)return {zoom:1,x:0,y:0};
+ return {zoom:view.zoom,x:Math.max(width*(1-view.zoom),Math.min(0,x)),y:Math.max(height*(1-view.zoom),Math.min(0,y))};
+}
+export function zoomWorkspace(view,factor,anchor,min=1,max=4){
+ const next=zoomAt(view,factor,anchor,min,max);
+ // At 1× the entire square must be visible. Exact off-center anchoring cannot
+ // coexist with a full-frame 1× image; this final step intentionally fits it.
+ return next.zoom<=1+1e-9?{zoom:1,x:0,y:0}:next;
+}

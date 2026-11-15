@@ -120,4 +120,4 @@ with sync_playwright() as p:
     page.locator('#source-file').set_input_files({'name':'invalid.jpg','mimeType':'image/jpeg','buffer':b'not an image'})
     expect(page.locator('#gallery-message')).to_contain_text('JPG or PNG')
     context.close();browser.close()
-print('PASS: master image clipping/reconstruction, shared mouse/touch controls, 3-row tray, zoom targets, return, fixed restart geometry, isolated saves, and invalid inputs.')
+print('PASS: master image clipping/reconstruction, shared mouse/touch controls, two-row workspace, zoom targets, return, fixed restart geometry, isolated saves, and invalid inputs.')
