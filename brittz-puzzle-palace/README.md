@@ -1,8 +1,20 @@
-# Brittz Puzzle Palace v1.1
+# Brittz Puzzle Palace v1.2
 
-A buildless, phone-first geometric mosaic game. Launch **`brittz-puzzle-palace/`** from App Lab, or `/small-apps/brittz-puzzle-palace/` on GitHub Pages. Upload a square JPG/PNG, choose **50, 100, 150 or 200 pieces**, optionally show piece outlines, then **Shuffle & play**. Images remain in the browser; there is no backend, runtime dependency or build step.
+A buildless, phone-first geometric mosaic game. Launch **`brittz-puzzle-palace/`** from App Lab, or `/small-apps/brittz-puzzle-palace/` on GitHub Pages. Choose a built-in picture or upload a JPG/PNG, choose **50, 100, 150 or 200 pieces**, optionally show piece outlines, then **Shuffle & play**. Uploaded images remain in the browser; there is no backend, runtime dependency or build step.
 
 Every new puzzle receives a fresh validated mosaic. Restart and replay reshuffle its existing pieces; resuming never regenerates cuts. The proven v0.4 generator, geometric constraints, image renderer, snapping rules and persistence schema are unchanged. See [cutting/README.md](cutting/README.md) for the algorithm, exact geometry checks and limits.
+
+## Ocean & Islands — Volume 1
+
+**Choose Your Photo**, **Puzzle Gallery**, and manual **Crop Photo** are the setup image options. The main app no longer offers the development test picture. **Shuffle & Play** and **Resume Saved Mosaic** share a two-column row, including at 320px. Resume is available when a mosaic exists.
+
+The gallery includes the twelve supplied original JPGs: Dolphins, Octopus, Humpback Whale, Sea Cucumber, Coral Reef, Sea Turtle, Clownfish, Tropical Island, Tropical Beach, 1950s Waikiki Surfers, Manta Ray and Hawaiian Sunset. All are actually **1280 × 1280**. Originals in `assets/ocean-islands/` keep their display-title filenames and exact uploaded bytes; SHA-256 fingerprints in `gallery.json` document them. Separate 256px thumbnails use lazy loading and asynchronous decoding. Opening the gallery never loads full-size originals. Selecting a picture fetches only that original and prepares it in memory through existing square-image validation, bypassing the cropper. The selected source preview updates for gallery, upload, crop handoff and restored saves alike.
+
+Choosing an image does not create geometry or replace a saved mosaic. Only Shuffle & Play writes a new session; resuming restores the saved original JPG/PNG, exact geometry and progress. Setup retains its existing replacement notice and restart confirmation behavior. Gallery originals and uploaded images use the same unchanged IndexedDB schema and certificate renderer.
+
+To publish more pictures **without changing JavaScript**, add a collection to `gallery.json`, or append an image entry to a collection. Each collection has a unique `id`, `title`, and `images` array. Each image has a unique `id`, display `title`, app-relative `image` and `thumbnail` paths, square `width`/`height`, and the original file's `sha256`. Use square JPG/PNG originals and small square thumbnail derivatives; filenames with spaces are supported. Keep originals unchanged, update fingerprints, and run the browser/content checks. All runtime paths resolve relative to the app module, including GitHub Pages `/small-apps/`.
+
+See [gallery screenshot](docs/v1.2/gallery-360.png) and [setup screenshot](docs/v1.2/setup-360.png).
 
 ## Crop a photo and use fullscreen
 
@@ -52,6 +64,7 @@ Run from the repository root with Node. Browser checks use development-only Pyth
 
 ```sh
 node --test brittz-puzzle-palace/cropper.test.mjs brittz-puzzle-palace/migration.test.mjs brittz-puzzle-palace/cutting/mosaic.test.mjs brittz-puzzle-palace/cutting/patterns.test.mjs brittz-puzzle-palace/content.test.mjs brittz-puzzle-palace/engine.test.mjs brittz-puzzle-palace/precision-controls.test.mjs
+PLAYWRIGHT_BROWSERS_PATH=/path/to/browsers python brittz-puzzle-palace/check_gallery.py
 python brittz-puzzle-palace/check_main.py
 python brittz-puzzle-palace/check_cropper.py
 # Optional Safari/WebKit engine checks when installed:
@@ -74,3 +87,9 @@ The user confirmed v0.4 generation/gameplay/save-resume on a physical Android ph
 The v1.1 crop/fullscreen tests also check portrait/landscape/square/EXIF images, downloaded JPG pixels, clamped crop edges, original-image integrity, canceled/failed downloads, in-memory handoff, existing-save protection, title alignment and API fallback behavior. Chromium and persistent-profile WebKit runs passed; see [CROPPER.md](CROPPER.md) for the limits of iOS emulation and physical-device follow-up.
 
 Automatic-selection routing is transactional: decoding and cropping do not replace the current setup image. Cancel/Back restores its ready message and file selection, and invalid files retain it. Only Continue to Puzzle accepts the exported JPG; only Shuffle & play replaces the saved puzzle. Regressions cover empty/prior selection cancellation, square readiness, portrait/landscape/EXIF automatic loading, manual square reframing and save/continue on Chromium and persistent WebKit profiles.
+
+### v1.2 changes
+
+`gallery.json`, `picture-gallery.js`, `gallery.css`, the original JPGs and their thumbnails add collection content independently of gameplay. `index.html`/`setup.js` add the gallery and setup refinements. `cutting/lab.js` adds an optional preview and makes its test-picture listener optional so the development lab retains that button. No changes to mosaic generation, clipping, snapping, controls, certificates, persistence schema, SVG archive, or unrelated apps.
+
+`check_gallery.py` checks all twelve file hashes and dimensions, actual thumbnail loading, no early original-image fetches, all twelve playable originals across all four counts in Chromium and WebKit, 320/360/390px layout, save safety, reload/resume, and completed-picture JPG certificate fidelity. Existing cropper/fullscreen and gameplay regressions remain separate. Browser automation does not replace testing real iPhone/iPad downloads, device photo pickers, native fullscreen or real Android finger gestures.
