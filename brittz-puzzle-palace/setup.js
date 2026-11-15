@@ -1,4 +1,4 @@
-import {setupReady,chooseSetupImage,setSetupImageSelectionHandler,restoreSetupImageSelection} from './cutting/lab.js?v=auto-crop-1';
+import {setupReady,chooseSetupImage,setSetupImageSelectionHandler,restoreSetupImageSelection} from './cutting/lab.js?v=gallery-1';
 import {attachFullscreen} from './fullscreen.js?v=crop-1';
 import {attachCropper} from './cropper.js?v=auto-crop-1';
 import {decodePhoto} from './photo-input.js?v=auto-crop-1';
@@ -17,3 +17,6 @@ setSetupImageSelectionHandler(async file=>{
  finally{photo?.revoke();if(current===selection){button.disabled=false;document.getElementById('source-file').disabled=false;}}
 });
 await cropperReady;
+
+const {attachPictureGallery}=await import('./picture-gallery.js?v=gallery-1');
+attachPictureGallery({chooseImage:chooseSetupImage});

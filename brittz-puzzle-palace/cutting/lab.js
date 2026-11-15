@@ -15,19 +15,19 @@ async function resume(){
  try{const session=await readSession();if(!session){$('resume-lab').hidden=true;return;}const stored=session.record.blob;if(stored.size>24*1024*1024)throw Error('Saved photo exceeds the 24 MB limit');
  // Keep restored source bytes alive independently when a new puzzle replaces
  // this IndexedDB entry (some WebKit ports expose its backing file directly).
- const restored=await openSquareImage(new Blob([await stored.arrayBuffer()],{type:stored.type}));if(current!==request){restored.revoke();return;}source?.revoke();source=restored;source.name=session.record.name;saved=session.record;play(saved,session.progress);}
+ const restored=await openSquareImage(new Blob([await stored.arrayBuffer()],{type:stored.type}));if(current!==request){restored.revoke();return;}source?.revoke();source=restored;source.name=session.record.name;updatePreview();saved=session.record;play(saved,session.progress);}
  catch(error){$('gallery-message').textContent=`Saved mosaic could not be restored: ${error.message}. Choose an image to create a new puzzle.`;}
 }
-async function choose(file,decoded=null){const current=++request;$('gallery-message').textContent='Reading the source image…';try{const next=await openSquareImage(file,decoded);if(current!==request){next.revoke();return false;}source?.revoke();source=next;$('gallery-message').textContent=`${source.name} · ${source.width} × ${source.height}. Ready to shuffle.`;return true;}catch(error){if(current===request){restoreSetupImageSelection();$('gallery-message').textContent=error.message+(source?' Previous selection retained.':'');}return false;}}
+async function choose(file,decoded=null){const current=++request;$('gallery-message').textContent='Reading the source image…';try{const next=await openSquareImage(file,decoded);if(current!==request){next.revoke();return false;}source?.revoke();source=next;updatePreview();$('gallery-message').textContent=`${source.name} · ${source.width} × ${source.height}. Ready to shuffle.`;return true;}catch(error){if(current===request){restoreSetupImageSelection();$('gallery-message').textContent=error.message+(source?' Previous selection retained.':'');}return false;}}
 $('source-file').addEventListener('change',e=>{if(e.target.files[0]){if(imageSelectionHandler)imageSelectionHandler(e.target.files[0]);else choose(e.target.files[0]);}});
-$('sample-image').onclick=()=>{
+if($('sample-image'))$('sample-image').onclick=()=>{
  const canvas=document.createElement('canvas');canvas.width=canvas.height=800;const ctx=canvas.getContext('2d');
  const gradient=ctx.createLinearGradient(0,0,800,800);gradient.addColorStop(0,'#0aa9c2');gradient.addColorStop(.5,'#fee2a0');gradient.addColorStop(1,'#744bb3');ctx.fillStyle=gradient;ctx.fillRect(0,0,800,800);
  for(let row=0;row<8;row++)for(let col=0;col<8;col++){ctx.fillStyle=(row+col)%2?'#183e4960':'#ffffff60';ctx.fillRect(col*100,row*100,100,100);ctx.fillStyle='#123743';ctx.font='24px system-ui';ctx.fillText(`${col+1} / ${row+1}`,col*100+15,row*100+55);}
  canvas.toBlob(blob=>choose(new File([blob],'Coordinate test picture.png',{type:'image/png'})),'image/png');
 };
 $('lab-form').addEventListener('submit',async e=>{
- e.preventDefault();if(!source){$('gallery-message').textContent='Choose a square JPG or PNG, or use the test picture.';return;}
+ e.preventDefault();if(!source){$('gallery-message').textContent=($('sample-image')?'Choose a square JPG or PNG, or use the test picture.':'Choose Your Photo or open Puzzle Gallery.');return;}
  const current=++request,active=source;$('start-lab').disabled=true;$('gallery-message').textContent='Building and validating your geometric mosaic…';
  try{
  let seed=crypto.getRandomValues(new Uint32Array(1))[0];if(seed===saved?.pattern.seed)seed=(seed+1)>>>0;
@@ -38,7 +38,7 @@ $('lab-form').addEventListener('submit',async e=>{
  finally{$('start-lab').disabled=false;}
 });
 $('resume-lab').onclick=resume;
-$('start-lab').disabled=true;export const setupReady=resume().finally(()=>{if(!saved&&!source)$('gallery-message').textContent=$('gallery-message').textContent==='Restoring your saved mosaic…'?'Choose an image or use the test picture. Your latest mosaic will be saved locally.':$('gallery-message').textContent;$('start-lab').disabled=false;});
+$('start-lab').disabled=true;export const setupReady=resume().finally(()=>{if(!saved&&!source)$('gallery-message').textContent=$('gallery-message').textContent==='Restoring your saved mosaic…'?($('sample-image')?'Choose an image or use the test picture. Your latest mosaic will be saved locally.':'Choose Your Photo or open Puzzle Gallery. Your latest mosaic will be saved locally.'):$('gallery-message').textContent;$('start-lab').disabled=false;});
 window.addEventListener('pagehide',e=>{if(!e.persisted)source?.revoke();});
 
 // Legacy vector saves stay in their existing namespace and remain playable.
@@ -59,3 +59,5 @@ export function restoreSetupImageSelection(){
  try{const transfer=new DataTransfer();if(source)transfer.items.add(source.blob instanceof File?source.blob:new File([source.blob],source.name,{type:source.blob.type}));input.files=transfer.files;}catch{input.value='';}
  $('gallery-message').textContent=source?`${source.name} · ${source.width} × ${source.height}. Ready to shuffle.`:'Choose a square JPG or PNG, or crop a photo.';
 }
+
+function updatePreview(){const preview=$('setup-preview');if(preview&&source){preview.src=source.url;preview.hidden=false;preview.alt=`Selected puzzle: ${source.name}`;}}
