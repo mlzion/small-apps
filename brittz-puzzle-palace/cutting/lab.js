@@ -12,10 +12,13 @@ function play(record,progress){
 }
 async function resume(){
  const current=++request;$('gallery-message').textContent='Restoring your saved mosaic…';
- try{const session=await readSession();if(!session){$('resume-lab').hidden=true;return;}const restored=await openSquareImage(session.record.blob);if(current!==request){restored.revoke();return;}source?.revoke();source=restored;source.name=session.record.name;saved=session.record;play(saved,session.progress);}
+ try{const session=await readSession();if(!session){$('resume-lab').hidden=true;return;}const stored=session.record.blob;if(stored.size>24*1024*1024)throw Error('Saved photo exceeds the 24 MB limit');
+ // Keep restored source bytes alive independently when a new puzzle replaces
+ // this IndexedDB entry (some WebKit ports expose its backing file directly).
+ const restored=await openSquareImage(new Blob([await stored.arrayBuffer()],{type:stored.type}));if(current!==request){restored.revoke();return;}source?.revoke();source=restored;source.name=session.record.name;saved=session.record;play(saved,session.progress);}
  catch(error){$('gallery-message').textContent=`Saved mosaic could not be restored: ${error.message}. Choose an image to create a new puzzle.`;}
 }
-async function choose(file){const current=++request;source?.revoke();source=null;$('gallery-message').textContent='Reading the source image…';try{const next=await openSquareImage(file);if(current!==request){next.revoke();return;}source=next;$('gallery-message').textContent=`${source.name} · ${source.width} × ${source.height}. Ready to shuffle.`;}catch(error){if(current===request)$('gallery-message').textContent=error.message;}}
+async function choose(file){const current=++request;source?.revoke();source=null;$('gallery-message').textContent='Reading the source image…';try{const next=await openSquareImage(file);if(current!==request){next.revoke();return false;}source=next;$('gallery-message').textContent=`${source.name} · ${source.width} × ${source.height}. Ready to shuffle.`;return true;}catch(error){if(current===request)$('gallery-message').textContent=error.message;return false;}}
 $('source-file').addEventListener('change',e=>{if(e.target.files[0])choose(e.target.files[0]);});
 $('sample-image').onclick=()=>{
  const canvas=document.createElement('canvas');canvas.width=canvas.height=800;const ctx=canvas.getContext('2d');
@@ -35,9 +38,16 @@ $('lab-form').addEventListener('submit',async e=>{
  finally{$('start-lab').disabled=false;}
 });
 $('resume-lab').onclick=resume;
-$('start-lab').disabled=true;resume().finally(()=>{if(!saved&&!source)$('gallery-message').textContent=$('gallery-message').textContent==='Restoring your saved mosaic…'?'Choose an image or use the test picture. Your latest mosaic will be saved locally.':$('gallery-message').textContent;$('start-lab').disabled=false;});
+$('start-lab').disabled=true;export const setupReady=resume().finally(()=>{if(!saved&&!source)$('gallery-message').textContent=$('gallery-message').textContent==='Restoring your saved mosaic…'?'Choose an image or use the test picture. Your latest mosaic will be saved locally.':$('gallery-message').textContent;$('start-lab').disabled=false;});
 window.addEventListener('pagehide',e=>{if(!e.persisted)source?.revoke();});
 
 // Legacy vector saves stay in their existing namespace and remain playable.
 const legacyNotice=$('legacy-notice');
 if(legacyNotice)try{legacyNotice.hidden=!Object.keys(localStorage).some(key=>key==='brittz-sea-turtle-v1'||key.startsWith('brittz-puzzle:'));}catch{/* Archive link remains available when storage is restricted. */}
+
+// In-memory crop handoff uses the same validation as the normal file picker.
+export async function chooseSetupImage(file){
+ const accepted=await choose(file);
+ if(accepted)try{const transfer=new DataTransfer();transfer.items.add(file);$('source-file').files=transfer.files;}catch{/* The ready message still identifies the selected in-memory photo. */}
+ return accepted;
+}

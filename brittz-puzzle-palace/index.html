@@ -1,10 +1,11 @@
 <!doctype html>
-<html lang="en" data-cutting-lab="true" data-mosaic-main="true"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="#101d27"><title>Brittz Puzzle Palace · v1.0</title><link rel="icon" href="../assets/favicon.svg"><!-- Bump CSS URL versions when updating shared/panel styles; cached HTML and CSS may differ. --><link rel="stylesheet" href="style.css?v=main-1"><link rel="stylesheet" href="cutting/precision-controls.css?v=main-1"><script type="module" src="cutting/lab.js?v=main-1"></script></head>
+<html lang="en" data-cutting-lab="true" data-mosaic-main="true"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="#101d27"><title>Brittz Puzzle Palace · v1.1</title><link rel="icon" href="../assets/favicon.svg"><!-- Bump CSS URL versions when updating shared/panel styles; cached HTML and CSS may differ. --><link rel="stylesheet" href="style.css?v=main-1"><link rel="stylesheet" href="cutting/precision-controls.css?v=main-1"><script type="module" src="cutting/lab.js?v=crop-1"></script><link rel="stylesheet" href="cropper.css?v=crop-1"><meta name="apple-mobile-web-app-capable" content="yes"><script type="module" src="setup.js?v=crop-1"></script></head>
 <body><main>
-<header><a class="back" href="../">← App Lab</a><span class="edition">GEOMETRIC MOSAIC · v1.0</span><h1>Brittz <span>Puzzle Palace</span></h1><p>A little patience. A sea of color.</p></header>
+<header><a class="back" href="../">← App Lab</a><span class="edition">GEOMETRIC MOSAIC · v1.1</span><div class="title-row"><h1>Brittz <span>Puzzle Palace</span></h1><button id="fullscreen" type="button" aria-label="Fullscreen options" aria-pressed="false" aria-controls="fullscreen-status"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M9 3H3v6m12-6h6v6M3 15v6h6m12-6v6h-6"/></svg></button></div><p id="fullscreen-status" role="status" hidden></p><p>A little patience. A sea of color.</p></header>
 <section id="gallery-screen" aria-labelledby="gallery-title">
 <div class="gallery-heading"><h2 id="gallery-title" tabindex="-1">Create your puzzle</h2><p>Load a square JPG or PNG. Choose a piece count, then create a fresh geometric mosaic.</p></div>
 <p id="legacy-notice" class="instructions" hidden>Your original picture-puzzle saves are safe. <a href="legacy.html">Resume them in the original puzzle archive</a>.</p>
+<p><button id="open-crop" type="button" disabled>Crop Photo</button></p>
 <form id="lab-form" class="lab-settings">
 <label>Square image<input id="source-file" type="file" accept="image/jpeg,image/png,.jpg,.jpeg,.png"></label>
 <label>Piece count<select id="master-count"><option>50</option><option>100</option><option>150</option><option>200</option></select></label>
@@ -12,6 +13,19 @@
 <label class="lab-check"><input id="image-outlines" type="checkbox" checked> Piece outlines</label>
 <div><button type="button" id="sample-image">Use test picture</button> <button type="submit" id="start-lab">Shuffle &amp; play</button></div>
 </form><p class="instructions">Your latest puzzle is saved on this device. Creating a new puzzle replaces the current mosaic.</p><p id="gallery-message" role="status" aria-live="polite">Images stay in this browser. Your latest mosaic and progress are saved locally; creating a new puzzle replaces the lab save. Original picture-puzzle saves stay in the archive.</p><button id="resume-lab" type="button" hidden>Resume saved mosaic</button><button id="retry-catalog" hidden>Try again</button><div id="puzzle-cards" hidden></div>
+</section>
+<section id="photo-cropper" hidden aria-labelledby="crop-title">
+<div class="crop-heading"><h2 id="crop-title" tabindex="-1">Crop Photo</h2><button id="close-crop" type="button">Back to setup</button></div>
+<label id="crop-file-label" for="crop-file">Choose Photo<input id="crop-file" type="file" accept="image/*"></label><p id="crop-source">Choose a photo to frame a square crop.</p>
+<div id="crop-frame" tabindex="0" role="region" aria-label="Photo framing preview. Drag to move the photo; arrow keys also move it." aria-disabled="true"><canvas id="crop-canvas" aria-hidden="true"></canvas><div id="crop-square" aria-hidden="true"></div></div>
+<fieldset id="crop-controls" disabled style="border:0;padding:0;margin:0;min-width:0">
+<label class="crop-zoom" for="crop-zoom">Zoom <input id="crop-zoom" type="range" min="1" max="5" step=".01" value="1"><output id="crop-zoom-value" for="crop-zoom">100%</output></label>
+<div class="crop-tools"><button id="crop-left" type="button">↶ Left 90°</button><button id="crop-right" type="button">Right 90° ↷</button><button id="crop-reset" type="button">Reset</button></div>
+<label class="crop-name" for="crop-name">Filename<input id="crop-name" type="text" value="cropped-photo.jpg" maxlength="140" autocomplete="off" spellcheck="false"></label>
+<button id="crop-save" type="button">Save cropped JPG</button>
+</fieldset>
+<p id="crop-status" role="status" aria-live="polite">The original photo stays unchanged. Drag under the fixed square, then save a new JPG.</p>
+<div class="crop-tools"><a id="crop-download" hidden>Download JPG</a><button id="crop-start" type="button" hidden>Start Puzzle</button></div>
 </section>
 <section id="game-screen" class="game" aria-label="Puzzle" hidden>
 <div class="game-nav"><button id="back-gallery">← Image / pieces</button></div>
@@ -34,7 +48,7 @@
 <form id="certificate-form"><label for="player-name">Your name on the certificate</label><div class="certificate-fields"><input id="player-name" name="name" autocomplete="name" maxlength="80" required><button id="export-certificate" type="submit" disabled>Export JPG</button></div></form>
 <p id="certificate-status" aria-live="polite"></p><a id="certificate-download" hidden>Download JPG</a><button id="replay">Play again</button></div>
 <footer><button id="restart">Restart puzzle</button><button id="sound" aria-pressed="true">Sound on</button></footer>
-</section><p class="footnote">ORIGINAL IMAGE · UNIQUE MOSAIC · BRITTZ PUZZLE PALACE · v1.0</p>
+</section><p class="footnote">ORIGINAL IMAGE · UNIQUE MOSAIC · BRITTZ PUZZLE PALACE · v1.1</p>
 <p class="footnote"><a href="legacy.html">Original puzzle archive</a> · <a href="cutting/">Development lab</a></p>
 <dialog id="restart-dialog"><h2>Start a fresh puzzle?</h2><p>Only this puzzle’s progress will be cleared.</p><form method="dialog"><button value="cancel">Keep playing</button><button value="restart">Restart puzzle</button></form></dialog>
 <noscript>This puzzle needs JavaScript enabled.</noscript></main></body></html>
