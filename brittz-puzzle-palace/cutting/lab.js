@@ -1,4 +1,4 @@
-import {mountPuzzle} from '../game.js?v=workspace-1c';
+import {mountPuzzle} from '../game.js?v=compact-1';
 import {loadMaster,openSquareImage,imagePuzzle} from './image-puzzle.js';
 const $=id=>document.getElementById(id);
 let source=null,request=0;

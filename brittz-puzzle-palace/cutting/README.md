@@ -108,7 +108,7 @@ Physical Samsung Galaxy A17 touch ergonomics remain a device-testing item; autom
 
 ### Precision layout fix and cache regression
 
-The panel now loads `precision-controls.css?v=2` after a versioned shared stylesheet. Its scoped ID selectors explicitly fix MOVE/ROTATE to 120 × 120 border-box pixels, including min/max dimensions, padding and native button appearance. A two-column MOVE grid prevents intrinsic button sizing or flex shrinking from stacking the controls. Labels stay in the row above each control; zoom is a separate row. The original shared rules remain as a fallback for older cached HTML. Increment the CSS URL versions when changing these assets.
+The panel now loads `precision-controls.css?v=compact-2` after a versioned shared stylesheet. Its scoped ID selectors explicitly fix MOVE/ROTATE to 120 × 120 border-box pixels, including min/max dimensions, padding and native button appearance. A two-column MOVE grid prevents intrinsic button sizing or flex shrinking from stacking the controls. Labels stay in the row above each control; zoom is a separate row. The original shared rules remain as a fallback for older cached HTML. Increment the CSS URL versions when changing these assets.
 
 Investigation found no overriding size rule in the fresh checked-in CSS: fresh mobile Chromium already rendered the old rules at 120 × 120. Serving current markup with a cached stylesheet from before Phase 1B reproduced the reported narrow, vertically stacked controls (approximately 42 × 54). This is a confirmed reproduction of a cache mismatch, not confirmation of the physical Samsung's network/cache state. The fix protects against both stale shared CSS and later generic button/disabled-button theme rules.
 
@@ -155,3 +155,14 @@ python brittz-puzzle-palace/cutting/check_images.py
 ```
 
 The cached-CSS layout regression now switches modes explicitly and measures the visible panel rather than assuming that the picker and precision controls are simultaneously visible. Physical Galaxy A17 ergonomics remain unverified; the earlier image-lab lifetime and input limits still apply.
+
+
+## Compact UI and rotation display
+
+The lab's shared action row is **Fit | − | + | Return**, with 44px-high targets (48px zoom buttons and 76px Return) at 320/360/390px widths. The original status row is removed. The live piece counter now sits directly under Puzzle/Reference, above the canvas.
+
+On phones, the active game uses a smaller header, single-line puzzle title, and reduced navigation, instruction and footer spacing. The setup page keeps its original header. The canvas width, 188px SELECT/MOVE slot, two-row picker, and 120px movement/rotation targets are unchanged; scrolling remains available on shorter screens rather than shrinking the artwork or controls.
+
+The wheel is a stationary, unmarked ring. There is no numeric readout, tick, absolute-angle transform or accessible angle announcement. Internal piece angles, pointer math, sensitivity, snapping, progress and camera policies are unchanged. Lab entry/controller/style URLs are bumped together to avoid loading old degree-display code against the new markup.
+
+The shared browser regressions measure the four-button row and counter placement, guard canvas size and compact phone chrome, and check after each rotation that the wheel markup is unchanged, its face has no markings, no element has a transform, and its accessible name/status contain no angle information. Existing native mouse/touch completion, return, manual workspace, picker, camera and image-pixel checks continue to run. Physical Samsung Galaxy A17 testing remains pending.
