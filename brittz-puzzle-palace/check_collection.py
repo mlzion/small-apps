@@ -74,7 +74,7 @@ with sync_playwright() as p:
         for prefix in ('/', '/small-apps/'):
             url = ORIGIN+prefix+'brittz-puzzle-palace/'
             page.goto(url)
-            expect(page.locator('.puzzle-card')).to_have_count(2)
+            expect(page.locator('.puzzle-card')).to_have_count(len(CATALOG['puzzles']))
             expect(page.locator('#game-screen')).to_be_hidden()
             for width in (320, 390, 768, 1100):
                 page.set_viewport_size({'width': width, 'height': 1000})
@@ -194,7 +194,7 @@ with sync_playwright() as p:
             expect(page.locator('.launch-link[href="brittz-puzzle-palace/"]')).to_be_visible()
             assert not errors,errors
         context.close()
-    # Simulate publishing a third content-only puzzle without modifying engine JS.
+    # Simulate publishing an additional content-only puzzle without modifying engine JS.
     context = browser.new_context()
     context.route(ORIGIN+'/**',serve)
     demo = json.loads((APP/'examples/puzzle.template.json').read_text())
@@ -204,7 +204,7 @@ with sync_playwright() as p:
     context.route('**/puzzles/new/puzzle.json',lambda route:route.fulfill(json=demo))
     page = context.new_page()
     page.goto(ORIGIN+'/small-apps/brittz-puzzle-palace/')
-    expect(page.locator('.puzzle-card')).to_have_count(3)
+    expect(page.locator('.puzzle-card')).to_have_count(len(catalog['puzzles']))
     choose(page,'my-puzzle')
     expect(page.locator('.piece-slot')).to_have_count(4)
     expect(page.locator('#puzzle-title')).to_have_text('My Puzzle')

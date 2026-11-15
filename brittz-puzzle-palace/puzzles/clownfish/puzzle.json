@@ -1,0 +1,2911 @@
+{
+  "schemaVersion": 1,
+  "id": "clownfish",
+  "version": 1,
+  "title": "Clownfish",
+  "width": 1400,
+  "height": 1000,
+  "pieceCount": 45,
+  "trayRows": 1,
+  "subtitle": "ANEMONE GARDEN",
+  "emptyMessage": "A colorful reef awaits",
+  "completionTitle": "A reef full of color.",
+  "completionMessage": "You brought the clownfish garden to life!",
+  "pieces": [
+    {
+      "id": "body-1-upper",
+      "name": "Tail ribbon upper",
+      "color": "#fff1b3",
+      "points": [
+        [
+          400,
+          355
+        ],
+        [
+          520,
+          306
+        ],
+        [
+          525,
+          378
+        ],
+        [
+          550,
+          446
+        ],
+        [
+          477,
+          422
+        ],
+        [
+          400,
+          418
+        ]
+      ],
+      "correct": {
+        "x": 475,
+        "y": 376,
+        "angle": 0
+      },
+      "details": []
+    },
+    {
+      "id": "body-1-lower",
+      "name": "Tail ribbon lower",
+      "color": "#e8d68d",
+      "points": [
+        [
+          400,
+          418
+        ],
+        [
+          477,
+          422
+        ],
+        [
+          550,
+          446
+        ],
+        [
+          520,
+          544
+        ],
+        [
+          450,
+          532
+        ],
+        [
+          400,
+          481
+        ]
+      ],
+      "correct": {
+        "x": 475,
+        "y": 481,
+        "angle": 0
+      },
+      "details": []
+    },
+    {
+      "id": "body-2-upper",
+      "name": "Vermilion shoulder upper",
+      "color": "#ff7d20",
+      "points": [
+        [
+          520,
+          306
+        ],
+        [
+          650,
+          285
+        ],
+        [
+          640,
+          355
+        ],
+        [
+          650,
+          425
+        ],
+        [
+          550,
+          446
+        ],
+        [
+          525,
+          378
+        ]
+      ],
+      "correct": {
+        "x": 585,
+        "y": 365.5,
+        "angle": 0
+      },
+      "details": []
+    },
+    {
+      "id": "body-2-lower",
+      "name": "Vermilion shoulder lower",
+      "color": "#ec4c22",
+      "points": [
+        [
+          550,
+          446
+        ],
+        [
+          650,
+          425
+        ],
+        [
+          645,
+          503
+        ],
+        [
+          660,
+          579
+        ],
+        [
+          585,
+          583
+        ],
+        [
+          520,
+          544
+        ]
+      ],
+      "correct": {
+        "x": 590,
+        "y": 504,
+        "angle": 0
+      },
+      "details": []
+    },
+    {
+      "id": "body-3-upper",
+      "name": "Middle ribbon upper",
+      "color": "#fff5c7",
+      "points": [
+        [
+          650,
+          285
+        ],
+        [
+          725,
+          291
+        ],
+        [
+          800,
+          278
+        ],
+        [
+          780,
+          350
+        ],
+        [
+          780,
+          425
+        ],
+        [
+          650,
+          425
+        ],
+        [
+          640,
+          355
+        ]
+      ],
+      "correct": {
+        "x": 720,
+        "y": 351.5,
+        "angle": 0
+      },
+      "details": []
+    },
+    {
+      "id": "body-3-lower",
+      "name": "Middle ribbon lower",
+      "color": "#f5df99",
+      "points": [
+        [
+          650,
+          425
+        ],
+        [
+          780,
+          425
+        ],
+        [
+          780,
+          507
+        ],
+        [
+          800,
+          586
+        ],
+        [
+          730,
+          573
+        ],
+        [
+          660,
+          579
+        ],
+        [
+          645,
+          503
+        ]
+      ],
+      "correct": {
+        "x": 722.5,
+        "y": 505.5,
+        "angle": 0
+      },
+      "details": []
+    },
+    {
+      "id": "body-4-upper",
+      "name": "Amber flank upper",
+      "color": "#f45122",
+      "points": [
+        [
+          800,
+          278
+        ],
+        [
+          930,
+          299
+        ],
+        [
+          890,
+          425
+        ],
+        [
+          780,
+          425
+        ],
+        [
+          780,
+          350
+        ]
+      ],
+      "correct": {
+        "x": 855,
+        "y": 351.5,
+        "angle": 0
+      },
+      "details": [
+        {
+          "type": "circle",
+          "cx": 850,
+          "cy": 365,
+          "r": 33,
+          "fill": "#173844"
+        },
+        {
+          "type": "circle",
+          "cx": 850,
+          "cy": 365,
+          "r": 28,
+          "fill": "#ffb349"
+        },
+        {
+          "type": "circle",
+          "cx": 825,
+          "cy": 365,
+          "r": 33,
+          "fill": "#f45122"
+        }
+      ]
+    },
+    {
+      "id": "body-4-lower",
+      "name": "Amber flank lower",
+      "color": "#ef6b20",
+      "points": [
+        [
+          780,
+          425
+        ],
+        [
+          890,
+          425
+        ],
+        [
+          895,
+          497
+        ],
+        [
+          920,
+          565
+        ],
+        [
+          800,
+          586
+        ],
+        [
+          780,
+          507
+        ]
+      ],
+      "correct": {
+        "x": 850,
+        "y": 505.5,
+        "angle": 0
+      },
+      "details": []
+    },
+    {
+      "id": "body-5-upper",
+      "name": "Head ribbon upper",
+      "color": "#fff0af",
+      "points": [
+        [
+          930,
+          299
+        ],
+        [
+          1060,
+          313
+        ],
+        [
+          1030,
+          432
+        ],
+        [
+          960,
+          419
+        ],
+        [
+          890,
+          425
+        ]
+      ],
+      "correct": {
+        "x": 975,
+        "y": 365.5,
+        "angle": 0
+      },
+      "details": []
+    },
+    {
+      "id": "body-5-lower",
+      "name": "Head ribbon lower",
+      "color": "#ead18b",
+      "points": [
+        [
+          890,
+          425
+        ],
+        [
+          960,
+          419
+        ],
+        [
+          1030,
+          432
+        ],
+        [
+          1050,
+          565
+        ],
+        [
+          920,
+          565
+        ],
+        [
+          895,
+          497
+        ]
+      ],
+      "correct": {
+        "x": 970,
+        "y": 492,
+        "angle": 0
+      },
+      "details": []
+    },
+    {
+      "id": "body-6-upper",
+      "name": "Clownfish face upper",
+      "color": "#ff9a24",
+      "points": [
+        [
+          1060,
+          313
+        ],
+        [
+          1153,
+          328
+        ],
+        [
+          1230,
+          383
+        ],
+        [
+          1260,
+          439
+        ],
+        [
+          1145,
+          426
+        ],
+        [
+          1030,
+          432
+        ]
+      ],
+      "correct": {
+        "x": 1145,
+        "y": 376,
+        "angle": 0
+      },
+      "details": [
+        {
+          "type": "circle",
+          "cx": 1130,
+          "cy": 390,
+          "r": 29,
+          "fill": "#173844"
+        },
+        {
+          "type": "circle",
+          "cx": 1130,
+          "cy": 390,
+          "r": 23,
+          "fill": "#ffd06b"
+        },
+        {
+          "type": "circle",
+          "cx": 1130,
+          "cy": 390,
+          "r": 18,
+          "fill": "#152f3c"
+        },
+        {
+          "type": "circle",
+          "cx": 1124,
+          "cy": 382,
+          "r": 6,
+          "fill": "#fff9df"
+        }
+      ]
+    },
+    {
+      "id": "body-6-lower",
+      "name": "Clownfish face lower",
+      "color": "#f8771e",
+      "points": [
+        [
+          1030,
+          432
+        ],
+        [
+          1145,
+          426
+        ],
+        [
+          1260,
+          439
+        ],
+        [
+          1230,
+          495
+        ],
+        [
+          1148,
+          551
+        ],
+        [
+          1050,
+          565
+        ]
+      ],
+      "correct": {
+        "x": 1145,
+        "y": 495.5,
+        "angle": 0
+      },
+      "details": [
+        {
+          "type": "circle",
+          "cx": 1215,
+          "cy": 465,
+          "r": 18,
+          "fill": "#173844"
+        },
+        {
+          "type": "circle",
+          "cx": 1214,
+          "cy": 460,
+          "r": 17,
+          "fill": "#f8771e"
+        }
+      ]
+    },
+    {
+      "id": "dorsal-rear",
+      "name": "Rising dorsal rays",
+      "color": "#f99521",
+      "points": [
+        [
+          520,
+          306
+        ],
+        [
+          500,
+          208
+        ],
+        [
+          610,
+          159
+        ],
+        [
+          650,
+          285
+        ]
+      ],
+      "correct": {
+        "x": 575,
+        "y": 232.5,
+        "angle": 0
+      },
+      "details": [
+        {
+          "type": "circle",
+          "cx": 585,
+          "cy": 282,
+          "r": 3.6,
+          "fill": "#663c2e"
+        },
+        {
+          "type": "circle",
+          "cx": 583,
+          "cy": 278,
+          "r": 3.6,
+          "fill": "#663c2e"
+        },
+        {
+          "type": "circle",
+          "cx": 582,
+          "cy": 274,
+          "r": 3.6,
+          "fill": "#663c2e"
+        },
+        {
+          "type": "circle",
+          "cx": 580,
+          "cy": 270,
+          "r": 3.6,
+          "fill": "#663c2e"
+        },
+        {
+          "type": "circle",
+          "cx": 579,
+          "cy": 266,
+          "r": 3.6,
+          "fill": "#663c2e"
+        },
+        {
+          "type": "circle",
+          "cx": 577,
+          "cy": 263,
+          "r": 3.6,
+          "fill": "#663c2e"
+        },
+        {
+          "type": "circle",
+          "cx": 576,
+          "cy": 259,
+          "r": 3.6,
+          "fill": "#663c2e"
+        },
+        {
+          "type": "circle",
+          "cx": 574,
+          "cy": 255,
+          "r": 3.6,
+          "fill": "#663c2e"
+        },
+        {
+          "type": "circle",
+          "cx": 572,
+          "cy": 251,
+          "r": 3.6,
+          "fill": "#663c2e"
+        },
+        {
+          "type": "circle",
+          "cx": 571,
+          "cy": 247,
+          "r": 3.6,
+          "fill": "#663c2e"
+        },
+        {
+          "type": "circle",
+          "cx": 569,
+          "cy": 243,
+          "r": 3.6,
+          "fill": "#663c2e"
+        },
+        {
+          "type": "circle",
+          "cx": 568,
+          "cy": 239,
+          "r": 3.6,
+          "fill": "#663c2e"
+        },
+        {
+          "type": "circle",
+          "cx": 566,
+          "cy": 235,
+          "r": 3.6,
+          "fill": "#663c2e"
+        },
+        {
+          "type": "circle",
+          "cx": 564,
+          "cy": 231,
+          "r": 3.6,
+          "fill": "#663c2e"
+        },
+        {
+          "type": "circle",
+          "cx": 563,
+          "cy": 227,
+          "r": 3.6,
+          "fill": "#663c2e"
+        },
+        {
+          "type": "circle",
+          "cx": 561,
+          "cy": 224,
+          "r": 3.6,
+          "fill": "#663c2e"
+        },
+        {
+          "type": "circle",
+          "cx": 560,
+          "cy": 220,
+          "r": 3.6,
+          "fill": "#663c2e"
+        },
+        {
+          "type": "circle",
+          "cx": 558,
+          "cy": 216,
+          "r": 3.6,
+          "fill": "#663c2e"
+        },
+        {
+          "type": "circle",
+          "cx": 557,
+          "cy": 212,
+          "r": 3.6,
+          "fill": "#663c2e"
+        },
+        {
+          "type": "circle",
+          "cx": 555,
+          "cy": 208,
+          "r": 3.6,
+          "fill": "#663c2e"
+        }
+      ]
+    },
+    {
+      "id": "dorsal-center",
+      "name": "Sunlit dorsal rays",
+      "color": "#ffb331",
+      "points": [
+        [
+          650,
+          285
+        ],
+        [
+          610,
+          159
+        ],
+        [
+          683,
+          130
+        ],
+        [
+          760,
+          145
+        ],
+        [
+          770,
+          214
+        ],
+        [
+          800,
+          278
+        ],
+        [
+          725,
+          291
+        ]
+      ],
+      "correct": {
+        "x": 705,
+        "y": 210.5,
+        "angle": 0
+      },
+      "details": [
+        {
+          "type": "circle",
+          "cx": 720,
+          "cy": 271,
+          "r": 4.3,
+          "fill": "#663c2e"
+        },
+        {
+          "type": "circle",
+          "cx": 718,
+          "cy": 266,
+          "r": 4.3,
+          "fill": "#663c2e"
+        },
+        {
+          "type": "circle",
+          "cx": 717,
+          "cy": 261,
+          "r": 4.3,
+          "fill": "#663c2e"
+        },
+        {
+          "type": "circle",
+          "cx": 715,
+          "cy": 257,
+          "r": 4.3,
+          "fill": "#663c2e"
+        },
+        {
+          "type": "circle",
+          "cx": 714,
+          "cy": 252,
+          "r": 4.3,
+          "fill": "#663c2e"
+        },
+        {
+          "type": "circle",
+          "cx": 712,
+          "cy": 247,
+          "r": 4.3,
+          "fill": "#663c2e"
+        },
+        {
+          "type": "circle",
+          "cx": 711,
+          "cy": 242,
+          "r": 4.3,
+          "fill": "#663c2e"
+        },
+        {
+          "type": "circle",
+          "cx": 709,
+          "cy": 237,
+          "r": 4.3,
+          "fill": "#663c2e"
+        },
+        {
+          "type": "circle",
+          "cx": 707,
+          "cy": 233,
+          "r": 4.3,
+          "fill": "#663c2e"
+        },
+        {
+          "type": "circle",
+          "cx": 706,
+          "cy": 228,
+          "r": 4.3,
+          "fill": "#663c2e"
+        },
+        {
+          "type": "circle",
+          "cx": 704,
+          "cy": 223,
+          "r": 4.3,
+          "fill": "#663c2e"
+        },
+        {
+          "type": "circle",
+          "cx": 703,
+          "cy": 218,
+          "r": 4.3,
+          "fill": "#663c2e"
+        },
+        {
+          "type": "circle",
+          "cx": 701,
+          "cy": 214,
+          "r": 4.3,
+          "fill": "#663c2e"
+        },
+        {
+          "type": "circle",
+          "cx": 699,
+          "cy": 209,
+          "r": 4.3,
+          "fill": "#663c2e"
+        },
+        {
+          "type": "circle",
+          "cx": 698,
+          "cy": 204,
+          "r": 4.3,
+          "fill": "#663c2e"
+        },
+        {
+          "type": "circle",
+          "cx": 696,
+          "cy": 199,
+          "r": 4.3,
+          "fill": "#663c2e"
+        },
+        {
+          "type": "circle",
+          "cx": 695,
+          "cy": 194,
+          "r": 4.3,
+          "fill": "#663c2e"
+        },
+        {
+          "type": "circle",
+          "cx": 693,
+          "cy": 190,
+          "r": 4.3,
+          "fill": "#663c2e"
+        },
+        {
+          "type": "circle",
+          "cx": 692,
+          "cy": 185,
+          "r": 4.3,
+          "fill": "#663c2e"
+        },
+        {
+          "type": "circle",
+          "cx": 690,
+          "cy": 180,
+          "r": 4.3,
+          "fill": "#663c2e"
+        }
+      ]
+    },
+    {
+      "id": "dorsal-front",
+      "name": "Scarlet dorsal rays",
+      "color": "#f3671f",
+      "points": [
+        [
+          800,
+          278
+        ],
+        [
+          770,
+          214
+        ],
+        [
+          760,
+          145
+        ],
+        [
+          832,
+          145
+        ],
+        [
+          890,
+          187
+        ],
+        [
+          930,
+          299
+        ]
+      ],
+      "correct": {
+        "x": 845,
+        "y": 222,
+        "angle": 0
+      },
+      "details": [
+        {
+          "type": "circle",
+          "cx": 845,
+          "cy": 278,
+          "r": 3.8,
+          "fill": "#663c2e"
+        },
+        {
+          "type": "circle",
+          "cx": 845,
+          "cy": 273,
+          "r": 3.8,
+          "fill": "#663c2e"
+        },
+        {
+          "type": "circle",
+          "cx": 845,
+          "cy": 269,
+          "r": 3.8,
+          "fill": "#663c2e"
+        },
+        {
+          "type": "circle",
+          "cx": 845,
+          "cy": 264,
+          "r": 3.8,
+          "fill": "#663c2e"
+        },
+        {
+          "type": "circle",
+          "cx": 845,
+          "cy": 260,
+          "r": 3.8,
+          "fill": "#663c2e"
+        },
+        {
+          "type": "circle",
+          "cx": 845,
+          "cy": 255,
+          "r": 3.8,
+          "fill": "#663c2e"
+        },
+        {
+          "type": "circle",
+          "cx": 845,
+          "cy": 251,
+          "r": 3.8,
+          "fill": "#663c2e"
+        },
+        {
+          "type": "circle",
+          "cx": 845,
+          "cy": 247,
+          "r": 3.8,
+          "fill": "#663c2e"
+        },
+        {
+          "type": "circle",
+          "cx": 845,
+          "cy": 242,
+          "r": 3.8,
+          "fill": "#663c2e"
+        },
+        {
+          "type": "circle",
+          "cx": 845,
+          "cy": 238,
+          "r": 3.8,
+          "fill": "#663c2e"
+        },
+        {
+          "type": "circle",
+          "cx": 845,
+          "cy": 233,
+          "r": 3.8,
+          "fill": "#663c2e"
+        },
+        {
+          "type": "circle",
+          "cx": 845,
+          "cy": 229,
+          "r": 3.8,
+          "fill": "#663c2e"
+        },
+        {
+          "type": "circle",
+          "cx": 845,
+          "cy": 225,
+          "r": 3.8,
+          "fill": "#663c2e"
+        },
+        {
+          "type": "circle",
+          "cx": 845,
+          "cy": 220,
+          "r": 3.8,
+          "fill": "#663c2e"
+        },
+        {
+          "type": "circle",
+          "cx": 845,
+          "cy": 216,
+          "r": 3.8,
+          "fill": "#663c2e"
+        },
+        {
+          "type": "circle",
+          "cx": 845,
+          "cy": 211,
+          "r": 3.8,
+          "fill": "#663c2e"
+        },
+        {
+          "type": "circle",
+          "cx": 845,
+          "cy": 207,
+          "r": 3.8,
+          "fill": "#663c2e"
+        },
+        {
+          "type": "circle",
+          "cx": 845,
+          "cy": 202,
+          "r": 3.8,
+          "fill": "#663c2e"
+        },
+        {
+          "type": "circle",
+          "cx": 845,
+          "cy": 198,
+          "r": 3.8,
+          "fill": "#663c2e"
+        }
+      ]
+    },
+    {
+      "id": "ventral-rear",
+      "name": "Golden pelvic fin",
+      "color": "#ffac37",
+      "points": [
+        [
+          660,
+          579
+        ],
+        [
+          730,
+          573
+        ],
+        [
+          800,
+          586
+        ],
+        [
+          761,
+          648
+        ],
+        [
+          740,
+          719
+        ],
+        [
+          630,
+          663
+        ]
+      ],
+      "correct": {
+        "x": 715,
+        "y": 646,
+        "angle": 0
+      },
+      "details": [
+        {
+          "type": "circle",
+          "cx": 705,
+          "cy": 604,
+          "r": 3,
+          "fill": "#663c2e"
+        },
+        {
+          "type": "circle",
+          "cx": 704,
+          "cy": 607,
+          "r": 3,
+          "fill": "#663c2e"
+        },
+        {
+          "type": "circle",
+          "cx": 704,
+          "cy": 611,
+          "r": 3,
+          "fill": "#663c2e"
+        },
+        {
+          "type": "circle",
+          "cx": 703,
+          "cy": 614,
+          "r": 3,
+          "fill": "#663c2e"
+        },
+        {
+          "type": "circle",
+          "cx": 703,
+          "cy": 618,
+          "r": 3,
+          "fill": "#663c2e"
+        },
+        {
+          "type": "circle",
+          "cx": 702,
+          "cy": 621,
+          "r": 3,
+          "fill": "#663c2e"
+        },
+        {
+          "type": "circle",
+          "cx": 702,
+          "cy": 625,
+          "r": 3,
+          "fill": "#663c2e"
+        },
+        {
+          "type": "circle",
+          "cx": 701,
+          "cy": 628,
+          "r": 3,
+          "fill": "#663c2e"
+        },
+        {
+          "type": "circle",
+          "cx": 701,
+          "cy": 632,
+          "r": 3,
+          "fill": "#663c2e"
+        },
+        {
+          "type": "circle",
+          "cx": 700,
+          "cy": 635,
+          "r": 3,
+          "fill": "#663c2e"
+        },
+        {
+          "type": "circle",
+          "cx": 700,
+          "cy": 639,
+          "r": 3,
+          "fill": "#663c2e"
+        },
+        {
+          "type": "circle",
+          "cx": 699,
+          "cy": 642,
+          "r": 3,
+          "fill": "#663c2e"
+        },
+        {
+          "type": "circle",
+          "cx": 699,
+          "cy": 646,
+          "r": 3,
+          "fill": "#663c2e"
+        },
+        {
+          "type": "circle",
+          "cx": 698,
+          "cy": 649,
+          "r": 3,
+          "fill": "#663c2e"
+        },
+        {
+          "type": "circle",
+          "cx": 698,
+          "cy": 653,
+          "r": 3,
+          "fill": "#663c2e"
+        },
+        {
+          "type": "circle",
+          "cx": 697,
+          "cy": 656,
+          "r": 3,
+          "fill": "#663c2e"
+        },
+        {
+          "type": "circle",
+          "cx": 697,
+          "cy": 660,
+          "r": 3,
+          "fill": "#663c2e"
+        },
+        {
+          "type": "circle",
+          "cx": 696,
+          "cy": 663,
+          "r": 3,
+          "fill": "#663c2e"
+        },
+        {
+          "type": "circle",
+          "cx": 696,
+          "cy": 667,
+          "r": 3,
+          "fill": "#663c2e"
+        },
+        {
+          "type": "circle",
+          "cx": 695,
+          "cy": 670,
+          "r": 3,
+          "fill": "#663c2e"
+        }
+      ]
+    },
+    {
+      "id": "ventral-front",
+      "name": "Coral anal fin",
+      "color": "#f78325",
+      "points": [
+        [
+          800,
+          586
+        ],
+        [
+          920,
+          565
+        ],
+        [
+          880,
+          670
+        ],
+        [
+          817,
+          715
+        ],
+        [
+          740,
+          719
+        ],
+        [
+          761,
+          648
+        ]
+      ],
+      "correct": {
+        "x": 830,
+        "y": 642,
+        "angle": 0
+      },
+      "details": [
+        {
+          "type": "circle",
+          "cx": 845,
+          "cy": 597,
+          "r": 3,
+          "fill": "#663c2e"
+        },
+        {
+          "type": "circle",
+          "cx": 844,
+          "cy": 600,
+          "r": 3,
+          "fill": "#663c2e"
+        },
+        {
+          "type": "circle",
+          "cx": 843,
+          "cy": 604,
+          "r": 3,
+          "fill": "#663c2e"
+        },
+        {
+          "type": "circle",
+          "cx": 843,
+          "cy": 607,
+          "r": 3,
+          "fill": "#663c2e"
+        },
+        {
+          "type": "circle",
+          "cx": 842,
+          "cy": 611,
+          "r": 3,
+          "fill": "#663c2e"
+        },
+        {
+          "type": "circle",
+          "cx": 841,
+          "cy": 614,
+          "r": 3,
+          "fill": "#663c2e"
+        },
+        {
+          "type": "circle",
+          "cx": 840,
+          "cy": 618,
+          "r": 3,
+          "fill": "#663c2e"
+        },
+        {
+          "type": "circle",
+          "cx": 839,
+          "cy": 621,
+          "r": 3,
+          "fill": "#663c2e"
+        },
+        {
+          "type": "circle",
+          "cx": 839,
+          "cy": 625,
+          "r": 3,
+          "fill": "#663c2e"
+        },
+        {
+          "type": "circle",
+          "cx": 838,
+          "cy": 628,
+          "r": 3,
+          "fill": "#663c2e"
+        },
+        {
+          "type": "circle",
+          "cx": 837,
+          "cy": 632,
+          "r": 3,
+          "fill": "#663c2e"
+        },
+        {
+          "type": "circle",
+          "cx": 836,
+          "cy": 635,
+          "r": 3,
+          "fill": "#663c2e"
+        },
+        {
+          "type": "circle",
+          "cx": 836,
+          "cy": 639,
+          "r": 3,
+          "fill": "#663c2e"
+        },
+        {
+          "type": "circle",
+          "cx": 835,
+          "cy": 642,
+          "r": 3,
+          "fill": "#663c2e"
+        },
+        {
+          "type": "circle",
+          "cx": 834,
+          "cy": 646,
+          "r": 3,
+          "fill": "#663c2e"
+        },
+        {
+          "type": "circle",
+          "cx": 833,
+          "cy": 649,
+          "r": 3,
+          "fill": "#663c2e"
+        },
+        {
+          "type": "circle",
+          "cx": 832,
+          "cy": 653,
+          "r": 3,
+          "fill": "#663c2e"
+        },
+        {
+          "type": "circle",
+          "cx": 832,
+          "cy": 656,
+          "r": 3,
+          "fill": "#663c2e"
+        },
+        {
+          "type": "circle",
+          "cx": 831,
+          "cy": 660,
+          "r": 3,
+          "fill": "#663c2e"
+        },
+        {
+          "type": "circle",
+          "cx": 830,
+          "cy": 663,
+          "r": 3,
+          "fill": "#663c2e"
+        }
+      ]
+    },
+    {
+      "id": "tail-upper",
+      "name": "Upper fan tail",
+      "color": "#ff9b26",
+      "points": [
+        [
+          400,
+          418
+        ],
+        [
+          290,
+          405
+        ],
+        [
+          180,
+          411
+        ],
+        [
+          160,
+          313
+        ],
+        [
+          240,
+          285
+        ],
+        [
+          311,
+          340
+        ],
+        [
+          400,
+          355
+        ]
+      ],
+      "correct": {
+        "x": 280,
+        "y": 351.5,
+        "angle": 0
+      },
+      "details": [
+        {
+          "type": "circle",
+          "cx": 370,
+          "cy": 380,
+          "r": 6.6,
+          "fill": "#663c2e"
+        },
+        {
+          "type": "circle",
+          "cx": 363,
+          "cy": 378,
+          "r": 6.6,
+          "fill": "#663c2e"
+        },
+        {
+          "type": "circle",
+          "cx": 355,
+          "cy": 375,
+          "r": 6.6,
+          "fill": "#663c2e"
+        },
+        {
+          "type": "circle",
+          "cx": 348,
+          "cy": 373,
+          "r": 6.6,
+          "fill": "#663c2e"
+        },
+        {
+          "type": "circle",
+          "cx": 341,
+          "cy": 370,
+          "r": 6.6,
+          "fill": "#663c2e"
+        },
+        {
+          "type": "circle",
+          "cx": 333,
+          "cy": 368,
+          "r": 6.6,
+          "fill": "#663c2e"
+        },
+        {
+          "type": "circle",
+          "cx": 326,
+          "cy": 365,
+          "r": 6.6,
+          "fill": "#663c2e"
+        },
+        {
+          "type": "circle",
+          "cx": 318,
+          "cy": 363,
+          "r": 6.6,
+          "fill": "#663c2e"
+        },
+        {
+          "type": "circle",
+          "cx": 311,
+          "cy": 361,
+          "r": 6.6,
+          "fill": "#663c2e"
+        },
+        {
+          "type": "circle",
+          "cx": 304,
+          "cy": 358,
+          "r": 6.6,
+          "fill": "#663c2e"
+        },
+        {
+          "type": "circle",
+          "cx": 296,
+          "cy": 356,
+          "r": 6.6,
+          "fill": "#663c2e"
+        },
+        {
+          "type": "circle",
+          "cx": 289,
+          "cy": 353,
+          "r": 6.6,
+          "fill": "#663c2e"
+        },
+        {
+          "type": "circle",
+          "cx": 282,
+          "cy": 351,
+          "r": 6.6,
+          "fill": "#663c2e"
+        },
+        {
+          "type": "circle",
+          "cx": 274,
+          "cy": 349,
+          "r": 6.6,
+          "fill": "#663c2e"
+        },
+        {
+          "type": "circle",
+          "cx": 267,
+          "cy": 346,
+          "r": 6.6,
+          "fill": "#663c2e"
+        },
+        {
+          "type": "circle",
+          "cx": 259,
+          "cy": 344,
+          "r": 6.6,
+          "fill": "#663c2e"
+        },
+        {
+          "type": "circle",
+          "cx": 252,
+          "cy": 341,
+          "r": 6.6,
+          "fill": "#663c2e"
+        },
+        {
+          "type": "circle",
+          "cx": 245,
+          "cy": 339,
+          "r": 6.6,
+          "fill": "#663c2e"
+        },
+        {
+          "type": "circle",
+          "cx": 237,
+          "cy": 336,
+          "r": 6.6,
+          "fill": "#663c2e"
+        },
+        {
+          "type": "circle",
+          "cx": 230,
+          "cy": 334,
+          "r": 6.6,
+          "fill": "#663c2e"
+        }
+      ]
+    },
+    {
+      "id": "tail-lower",
+      "name": "Lower fan tail",
+      "color": "#f47722",
+      "points": [
+        [
+          400,
+          481
+        ],
+        [
+          310,
+          504
+        ],
+        [
+          240,
+          565
+        ],
+        [
+          160,
+          530
+        ],
+        [
+          180,
+          411
+        ],
+        [
+          290,
+          405
+        ],
+        [
+          400,
+          418
+        ]
+      ],
+      "correct": {
+        "x": 280,
+        "y": 485,
+        "angle": 0
+      },
+      "details": [
+        {
+          "type": "circle",
+          "cx": 370,
+          "cy": 464,
+          "r": 6.7,
+          "fill": "#663c2e"
+        },
+        {
+          "type": "circle",
+          "cx": 362,
+          "cy": 466,
+          "r": 6.7,
+          "fill": "#663c2e"
+        },
+        {
+          "type": "circle",
+          "cx": 355,
+          "cy": 468,
+          "r": 6.7,
+          "fill": "#663c2e"
+        },
+        {
+          "type": "circle",
+          "cx": 347,
+          "cy": 470,
+          "r": 6.7,
+          "fill": "#663c2e"
+        },
+        {
+          "type": "circle",
+          "cx": 339,
+          "cy": 472,
+          "r": 6.7,
+          "fill": "#663c2e"
+        },
+        {
+          "type": "circle",
+          "cx": 332,
+          "cy": 474,
+          "r": 6.7,
+          "fill": "#663c2e"
+        },
+        {
+          "type": "circle",
+          "cx": 324,
+          "cy": 476,
+          "r": 6.7,
+          "fill": "#663c2e"
+        },
+        {
+          "type": "circle",
+          "cx": 317,
+          "cy": 478,
+          "r": 6.7,
+          "fill": "#663c2e"
+        },
+        {
+          "type": "circle",
+          "cx": 309,
+          "cy": 480,
+          "r": 6.7,
+          "fill": "#663c2e"
+        },
+        {
+          "type": "circle",
+          "cx": 301,
+          "cy": 482,
+          "r": 6.7,
+          "fill": "#663c2e"
+        },
+        {
+          "type": "circle",
+          "cx": 294,
+          "cy": 484,
+          "r": 6.7,
+          "fill": "#663c2e"
+        },
+        {
+          "type": "circle",
+          "cx": 286,
+          "cy": 486,
+          "r": 6.7,
+          "fill": "#663c2e"
+        },
+        {
+          "type": "circle",
+          "cx": 278,
+          "cy": 488,
+          "r": 6.7,
+          "fill": "#663c2e"
+        },
+        {
+          "type": "circle",
+          "cx": 271,
+          "cy": 490,
+          "r": 6.7,
+          "fill": "#663c2e"
+        },
+        {
+          "type": "circle",
+          "cx": 263,
+          "cy": 492,
+          "r": 6.7,
+          "fill": "#663c2e"
+        },
+        {
+          "type": "circle",
+          "cx": 256,
+          "cy": 494,
+          "r": 6.7,
+          "fill": "#663c2e"
+        },
+        {
+          "type": "circle",
+          "cx": 248,
+          "cy": 496,
+          "r": 6.7,
+          "fill": "#663c2e"
+        },
+        {
+          "type": "circle",
+          "cx": 240,
+          "cy": 498,
+          "r": 6.7,
+          "fill": "#663c2e"
+        },
+        {
+          "type": "circle",
+          "cx": 233,
+          "cy": 500,
+          "r": 6.7,
+          "fill": "#663c2e"
+        },
+        {
+          "type": "circle",
+          "cx": 225,
+          "cy": 502,
+          "r": 6.7,
+          "fill": "#663c2e"
+        }
+      ]
+    },
+    {
+      "id": "water-1",
+      "name": "Reef water glass 1",
+      "color": "#27cbe0",
+      "points": [
+        [
+          300,
+          0
+        ],
+        [
+          550,
+          0
+        ],
+        [
+          610,
+          159
+        ],
+        [
+          500,
+          208
+        ]
+      ],
+      "correct": {
+        "x": 455,
+        "y": 104,
+        "angle": 0
+      },
+      "details": []
+    },
+    {
+      "id": "water-2",
+      "name": "Reef water glass 2",
+      "color": "#42dce1",
+      "points": [
+        [
+          550,
+          0
+        ],
+        [
+          800,
+          0
+        ],
+        [
+          890,
+          187
+        ],
+        [
+          832,
+          145
+        ],
+        [
+          760,
+          145
+        ],
+        [
+          683,
+          130
+        ],
+        [
+          610,
+          159
+        ]
+      ],
+      "correct": {
+        "x": 720,
+        "y": 93.5,
+        "angle": 0
+      },
+      "details": []
+    },
+    {
+      "id": "water-3",
+      "name": "Reef water glass 3",
+      "color": "#17b7d6",
+      "points": [
+        [
+          800,
+          0
+        ],
+        [
+          1050,
+          0
+        ],
+        [
+          930,
+          299
+        ],
+        [
+          890,
+          187
+        ]
+      ],
+      "correct": {
+        "x": 925,
+        "y": 149.5,
+        "angle": 0
+      },
+      "details": []
+    },
+    {
+      "id": "water-4",
+      "name": "Reef water glass 4",
+      "color": "#0988bf",
+      "points": [
+        [
+          1050,
+          0
+        ],
+        [
+          1400,
+          0
+        ],
+        [
+          1400,
+          200
+        ],
+        [
+          1060,
+          313
+        ],
+        [
+          930,
+          299
+        ]
+      ],
+      "correct": {
+        "x": 1165,
+        "y": 156.5,
+        "angle": 0
+      },
+      "details": [
+        {
+          "type": "circle",
+          "cx": 1220,
+          "cy": 150,
+          "r": 45,
+          "fill": "#153844"
+        },
+        {
+          "type": "circle",
+          "cx": 1220,
+          "cy": 150,
+          "r": 40,
+          "fill": "#a0edf0"
+        },
+        {
+          "type": "circle",
+          "cx": 1223,
+          "cy": 153,
+          "r": 34,
+          "fill": "#60cddd"
+        },
+        {
+          "type": "circle",
+          "cx": 1207.4,
+          "cy": 136.5,
+          "r": 8.1,
+          "fill": "#e9ffff"
+        }
+      ]
+    },
+    {
+      "id": "water-5",
+      "name": "Reef water glass 5",
+      "color": "#1765a4",
+      "points": [
+        [
+          1400,
+          200
+        ],
+        [
+          1400,
+          400
+        ],
+        [
+          1230,
+          383
+        ],
+        [
+          1153,
+          328
+        ],
+        [
+          1060,
+          313
+        ]
+      ],
+      "correct": {
+        "x": 1230,
+        "y": 300,
+        "angle": 0
+      },
+      "details": [
+        {
+          "type": "circle",
+          "cx": 1270,
+          "cy": 285,
+          "r": 28,
+          "fill": "#153844"
+        },
+        {
+          "type": "circle",
+          "cx": 1270,
+          "cy": 285,
+          "r": 23,
+          "fill": "#a0edf0"
+        },
+        {
+          "type": "circle",
+          "cx": 1273,
+          "cy": 288,
+          "r": 17,
+          "fill": "#60cddd"
+        },
+        {
+          "type": "circle",
+          "cx": 1262.16,
+          "cy": 276.6,
+          "r": 5.04,
+          "fill": "#e9ffff"
+        }
+      ]
+    },
+    {
+      "id": "water-6",
+      "name": "Reef water glass 6",
+      "color": "#168eae",
+      "points": [
+        [
+          1400,
+          400
+        ],
+        [
+          1400,
+          720
+        ],
+        [
+          1290,
+          650
+        ],
+        [
+          1050,
+          565
+        ],
+        [
+          1148,
+          551
+        ],
+        [
+          1230,
+          495
+        ],
+        [
+          1260,
+          439
+        ],
+        [
+          1230,
+          383
+        ]
+      ],
+      "correct": {
+        "x": 1225,
+        "y": 551.5,
+        "angle": 0
+      },
+      "details": [
+        {
+          "type": "circle",
+          "cx": 1200,
+          "cy": 590,
+          "r": 24,
+          "fill": "#153844"
+        },
+        {
+          "type": "circle",
+          "cx": 1200,
+          "cy": 590,
+          "r": 19,
+          "fill": "#a0edf0"
+        },
+        {
+          "type": "circle",
+          "cx": 1203,
+          "cy": 593,
+          "r": 13,
+          "fill": "#60cddd"
+        },
+        {
+          "type": "circle",
+          "cx": 1193.28,
+          "cy": 582.8,
+          "r": 4.32,
+          "fill": "#e9ffff"
+        }
+      ]
+    },
+    {
+      "id": "water-7",
+      "name": "Reef water glass 7",
+      "color": "#157e9f",
+      "points": [
+        [
+          1290,
+          650
+        ],
+        [
+          1220,
+          702
+        ],
+        [
+          1180,
+          780
+        ],
+        [
+          1070,
+          720
+        ],
+        [
+          920,
+          565
+        ],
+        [
+          1050,
+          565
+        ]
+      ],
+      "correct": {
+        "x": 1105,
+        "y": 672.5,
+        "angle": 0
+      },
+      "details": [
+        {
+          "type": "circle",
+          "cx": 1090,
+          "cy": 650,
+          "r": 16,
+          "fill": "#153844"
+        },
+        {
+          "type": "circle",
+          "cx": 1090,
+          "cy": 650,
+          "r": 11,
+          "fill": "#a0edf0"
+        },
+        {
+          "type": "circle",
+          "cx": 1093,
+          "cy": 653,
+          "r": 5,
+          "fill": "#60cddd"
+        },
+        {
+          "type": "circle",
+          "cx": 1085.52,
+          "cy": 645.2,
+          "r": 2.88,
+          "fill": "#e9ffff"
+        }
+      ]
+    },
+    {
+      "id": "water-8",
+      "name": "Reef water glass 8",
+      "color": "#166997",
+      "points": [
+        [
+          1070,
+          720
+        ],
+        [
+          950,
+          780
+        ],
+        [
+          950,
+          850
+        ],
+        [
+          906,
+          919
+        ],
+        [
+          900,
+          1000
+        ],
+        [
+          880,
+          670
+        ],
+        [
+          920,
+          565
+        ]
+      ],
+      "correct": {
+        "x": 975,
+        "y": 782.5,
+        "angle": 0
+      },
+      "details": []
+    },
+    {
+      "id": "water-9",
+      "name": "Reef water glass 9",
+      "color": "#164b80",
+      "points": [
+        [
+          900,
+          1000
+        ],
+        [
+          540,
+          1000
+        ],
+        [
+          630,
+          663
+        ],
+        [
+          740,
+          719
+        ],
+        [
+          817,
+          715
+        ],
+        [
+          880,
+          670
+        ]
+      ],
+      "correct": {
+        "x": 720,
+        "y": 831.5,
+        "angle": 0
+      },
+      "details": []
+    },
+    {
+      "id": "water-10",
+      "name": "Reef water glass 10",
+      "color": "#127f9d",
+      "points": [
+        [
+          540,
+          1000
+        ],
+        [
+          530,
+          915
+        ],
+        [
+          503,
+          835
+        ],
+        [
+          460,
+          760
+        ],
+        [
+          520,
+          544
+        ],
+        [
+          585,
+          583
+        ],
+        [
+          660,
+          579
+        ],
+        [
+          630,
+          663
+        ]
+      ],
+      "correct": {
+        "x": 560,
+        "y": 772,
+        "angle": 0
+      },
+      "details": []
+    },
+    {
+      "id": "water-11",
+      "name": "Reef water glass 11",
+      "color": "#21a7bc",
+      "points": [
+        [
+          460,
+          760
+        ],
+        [
+          448,
+          682
+        ],
+        [
+          400,
+          620
+        ],
+        [
+          310,
+          648
+        ],
+        [
+          240,
+          710
+        ],
+        [
+          400,
+          481
+        ],
+        [
+          450,
+          532
+        ],
+        [
+          520,
+          544
+        ]
+      ],
+      "correct": {
+        "x": 380,
+        "y": 620.5,
+        "angle": 0
+      },
+      "details": []
+    },
+    {
+      "id": "water-12",
+      "name": "Reef water glass 12",
+      "color": "#2ac3c5",
+      "points": [
+        [
+          240,
+          710
+        ],
+        [
+          181,
+          648
+        ],
+        [
+          100,
+          620
+        ],
+        [
+          240,
+          565
+        ],
+        [
+          310,
+          504
+        ],
+        [
+          400,
+          481
+        ]
+      ],
+      "correct": {
+        "x": 250,
+        "y": 595.5,
+        "angle": 0
+      },
+      "details": []
+    },
+    {
+      "id": "water-13",
+      "name": "Reef water glass 13",
+      "color": "#119eb5",
+      "points": [
+        [
+          100,
+          620
+        ],
+        [
+          0,
+          680
+        ],
+        [
+          0,
+          260
+        ],
+        [
+          240,
+          285
+        ],
+        [
+          160,
+          313
+        ],
+        [
+          180,
+          411
+        ],
+        [
+          160,
+          530
+        ],
+        [
+          240,
+          565
+        ]
+      ],
+      "correct": {
+        "x": 120,
+        "y": 470,
+        "angle": 0
+      },
+      "details": []
+    },
+    {
+      "id": "water-14",
+      "name": "Reef water glass 14",
+      "color": "#1784b7",
+      "points": [
+        [
+          0,
+          260
+        ],
+        [
+          0,
+          0
+        ],
+        [
+          300,
+          0
+        ],
+        [
+          500,
+          208
+        ],
+        [
+          520,
+          306
+        ],
+        [
+          400,
+          355
+        ],
+        [
+          311,
+          340
+        ],
+        [
+          240,
+          285
+        ]
+      ],
+      "correct": {
+        "x": 260,
+        "y": 177.5,
+        "angle": 0
+      },
+      "details": []
+    },
+    {
+      "id": "seaweed-left",
+      "name": "Emerald seaweed",
+      "color": "#4f9f65",
+      "points": [
+        [
+          180,
+          1000
+        ],
+        [
+          0,
+          1000
+        ],
+        [
+          0,
+          680
+        ],
+        [
+          58,
+          788
+        ],
+        [
+          118,
+          895
+        ]
+      ],
+      "correct": {
+        "x": 90,
+        "y": 840,
+        "angle": 0
+      },
+      "details": []
+    },
+    {
+      "id": "anemone-1",
+      "name": "Purple anemone petal 1",
+      "color": "#7548b4",
+      "points": [
+        [
+          180,
+          1000
+        ],
+        [
+          118,
+          895
+        ],
+        [
+          58,
+          788
+        ],
+        [
+          0,
+          680
+        ],
+        [
+          100,
+          620
+        ],
+        [
+          124,
+          747
+        ],
+        [
+          151,
+          874
+        ]
+      ],
+      "correct": {
+        "x": 90,
+        "y": 810,
+        "angle": 0
+      },
+      "details": []
+    },
+    {
+      "id": "anemone-2",
+      "name": "Purple anemone petal 2",
+      "color": "#ae66c8",
+      "points": [
+        [
+          180,
+          1000
+        ],
+        [
+          151,
+          874
+        ],
+        [
+          124,
+          747
+        ],
+        [
+          100,
+          620
+        ],
+        [
+          181,
+          648
+        ],
+        [
+          240,
+          710
+        ],
+        [
+          217,
+          806
+        ],
+        [
+          197,
+          903
+        ]
+      ],
+      "correct": {
+        "x": 170,
+        "y": 810,
+        "angle": 0
+      },
+      "details": []
+    },
+    {
+      "id": "anemone-3",
+      "name": "Purple anemone petal 3",
+      "color": "#d48aca",
+      "points": [
+        [
+          180,
+          1000
+        ],
+        [
+          197,
+          903
+        ],
+        [
+          217,
+          806
+        ],
+        [
+          240,
+          710
+        ],
+        [
+          310,
+          648
+        ],
+        [
+          400,
+          620
+        ],
+        [
+          324,
+          745
+        ],
+        [
+          251,
+          872
+        ]
+      ],
+      "correct": {
+        "x": 290,
+        "y": 810,
+        "angle": 0
+      },
+      "details": []
+    },
+    {
+      "id": "anemone-4",
+      "name": "Purple anemone petal 4",
+      "color": "#9358c2",
+      "points": [
+        [
+          180,
+          1000
+        ],
+        [
+          251,
+          872
+        ],
+        [
+          324,
+          745
+        ],
+        [
+          400,
+          620
+        ],
+        [
+          448,
+          682
+        ],
+        [
+          460,
+          760
+        ],
+        [
+          365,
+          838
+        ],
+        [
+          272,
+          918
+        ]
+      ],
+      "correct": {
+        "x": 320,
+        "y": 810,
+        "angle": 0
+      },
+      "details": []
+    },
+    {
+      "id": "anemone-5",
+      "name": "Purple anemone petal 5",
+      "color": "#7046a4",
+      "points": [
+        [
+          180,
+          1000
+        ],
+        [
+          272,
+          918
+        ],
+        [
+          365,
+          838
+        ],
+        [
+          460,
+          760
+        ],
+        [
+          503,
+          835
+        ],
+        [
+          530,
+          915
+        ],
+        [
+          540,
+          1000
+        ]
+      ],
+      "correct": {
+        "x": 360,
+        "y": 880,
+        "angle": 0
+      },
+      "details": []
+    },
+    {
+      "id": "coral-1",
+      "name": "Golden coral crown",
+      "color": "#ffb052",
+      "points": [
+        [
+          950,
+          850
+        ],
+        [
+          950,
+          780
+        ],
+        [
+          1070,
+          720
+        ],
+        [
+          1100,
+          850
+        ],
+        [
+          1025,
+          847
+        ]
+      ],
+      "correct": {
+        "x": 1025,
+        "y": 785,
+        "angle": 0
+      },
+      "details": []
+    },
+    {
+      "id": "coral-2",
+      "name": "Branched coral crown",
+      "color": "#f99139",
+      "points": [
+        [
+          1100,
+          850
+        ],
+        [
+          1070,
+          720
+        ],
+        [
+          1180,
+          780
+        ],
+        [
+          1220,
+          702
+        ],
+        [
+          1290,
+          650
+        ],
+        [
+          1267,
+          749
+        ],
+        [
+          1250,
+          850
+        ],
+        [
+          1175,
+          847
+        ]
+      ],
+      "correct": {
+        "x": 1180,
+        "y": 750,
+        "angle": 0
+      },
+      "details": []
+    },
+    {
+      "id": "seaweed-right-upper",
+      "name": "Jade seaweed leaf",
+      "color": "#76bb59",
+      "points": [
+        [
+          1250,
+          850
+        ],
+        [
+          1267,
+          749
+        ],
+        [
+          1290,
+          650
+        ],
+        [
+          1400,
+          720
+        ],
+        [
+          1400,
+          850
+        ],
+        [
+          1325,
+          847
+        ]
+      ],
+      "correct": {
+        "x": 1325,
+        "y": 750,
+        "angle": 0
+      },
+      "details": []
+    },
+    {
+      "id": "coral-3",
+      "name": "Vermilion coral stem",
+      "color": "#e85d2b",
+      "points": [
+        [
+          900,
+          1000
+        ],
+        [
+          906,
+          919
+        ],
+        [
+          950,
+          850
+        ],
+        [
+          1025,
+          847
+        ],
+        [
+          1100,
+          850
+        ],
+        [
+          1087,
+          925
+        ],
+        [
+          1080,
+          1000
+        ]
+      ],
+      "correct": {
+        "x": 1000,
+        "y": 923.5,
+        "angle": 0
+      },
+      "details": []
+    },
+    {
+      "id": "coral-4",
+      "name": "Amber coral stem",
+      "color": "#f57f2e",
+      "points": [
+        [
+          1080,
+          1000
+        ],
+        [
+          1087,
+          925
+        ],
+        [
+          1100,
+          850
+        ],
+        [
+          1175,
+          847
+        ],
+        [
+          1250,
+          850
+        ],
+        [
+          1242,
+          925
+        ],
+        [
+          1240,
+          1000
+        ]
+      ],
+      "correct": {
+        "x": 1165,
+        "y": 923.5,
+        "angle": 0
+      },
+      "details": []
+    },
+    {
+      "id": "seaweed-right-lower",
+      "name": "Emerald seaweed stem",
+      "color": "#3f9564",
+      "points": [
+        [
+          1240,
+          1000
+        ],
+        [
+          1242,
+          925
+        ],
+        [
+          1250,
+          850
+        ],
+        [
+          1325,
+          847
+        ],
+        [
+          1400,
+          850
+        ],
+        [
+          1400,
+          1000
+        ]
+      ],
+      "correct": {
+        "x": 1320,
+        "y": 923.5,
+        "angle": 0
+      },
+      "details": []
+    }
+  ]
+}
