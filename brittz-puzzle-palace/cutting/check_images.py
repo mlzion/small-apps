@@ -104,73 +104,13 @@ with sync_playwright() as p:
         page.locator('#back-gallery').click()
     assert not errors,errors
     context.close()
-    # Shared gameplay controls on desktop and emulated touch, including 3-row trays.
+    # The Phase 1B protocol replaces the former on-canvas handle/line protocol.
+    from precision_checks import exercise_controls
     for mobile in (False,True):
-        context=browser.new_context(viewport={'width':390 if mobile else 1100,'height':1000},has_touch=mobile,is_mobile=mobile)
+        context=browser.new_context(viewport={'width':360 if mobile else 1100,'height':800 if mobile else 1100},has_touch=mobile,is_mobile=mobile)
         context.route(ORIGIN+'/**',serve)
         page=context.new_page();page.goto(ORIGIN+'/small-apps/brittz-puzzle-palace/cutting/')
-        page.evaluate('localStorage.setItem("existing-save","do not touch")')
-        choose_source(page);start(page,200,270)
-        assert page.locator('#tray').evaluate('el=>getComputedStyle(el).gridTemplateRows.split(" ").length')==3
-        geometry=page.locator('.piece-slot .glass').evaluate_all('els=>els.map(el=>el.getAttribute("d")).sort()')
-        # Select a corner, far from its destination, to isolate movement/rotation.
-        page.locator('.piece-slot[data-piece=piece-001]').click()
-        page.locator('#board').scroll_into_view_if_needed()
-        selected=page.locator('#art .selected')
-        before=selected.get_attribute('transform')
-        def pose():
-            return selected.evaluate('el=>{const t=el.transform.baseVal;return [t.getItem(0).matrix.e,t.getItem(0).matrix.f,t.getItem(1).angle]}')
-        start_pose=pose()
-        session=context.new_cdp_session(page) if mobile else None
-        def drag(points):
-            if mobile:
-                session.send('Input.dispatchTouchEvent',{'type':'touchStart','touchPoints':[{'x':points[0][0],'y':points[0][1]}]})
-                for x,y in points[1:]:session.send('Input.dispatchTouchEvent',{'type':'touchMove','touchPoints':[{'x':x,'y':y}]})
-                session.send('Input.dispatchTouchEvent',{'type':'touchEnd','touchPoints':[]})
-            else:
-                page.mouse.move(*points[0]);page.mouse.down()
-                for point in points[1:]:page.mouse.move(*point)
-                page.mouse.up()
-        box=page.locator('.move-handle').bounding_box();x=box['x']+box['width']/2;y=box['y']+box['height']/2
-        drag([(x,y)]+[(x+16*i/8,y+8*i/8) for i in range(1,9)])
-        moved=pose();assert moved[0]>start_pose[0] and moved[1]>start_pose[1] and abs(moved[2]-start_pose[2])<.01
-        a=page.locator('.rotation-hit').evaluate('(e)=>Object.fromEntries(["x1","y1","x2","y2"].map(k=>[k,+e.getAttribute(k)]))')
-        b=page.locator('#board').bounding_box();k=b['width']/1000;cx=b['x']+a['x1']*k;cy=b['y']+a['y1']*k;sx=b['x']+(a['x1']+a['x2'])/2*k;sy=b['y']+(a['y1']+a['y2'])/2*k
-        points=[(sx,sy)]
-        for i in range(1,9):
-            r=math.radians(25*i/8);points.append((cx+(sx-cx)*math.cos(r)-(sy-cy)*math.sin(r),cy+(sx-cx)*math.sin(r)+(sy-cy)*math.cos(r)))
-        drag(points);turned=pose();assert abs(turned[2]-moved[2]-25)<.1 and abs(turned[0]-moved[0])<.1 and abs(turned[1]-moved[1])<.1
-        page.locator('#reference-view').click();page.locator('#zoom-in').click();page.locator('#puzzle-view').click();assert pose()==turned
-        page.locator('#zoom-in').click();assert abs(float(page.locator('.move-handle').get_attribute('r'))*2*page.locator('#board').bounding_box()['width']/1000-44)<.1
-        page.locator('#return').click();expect(page.locator('.piece-slot')).to_have_count(200)
-        page.locator('#restart').click();page.locator('#restart-dialog [value=restart]').click()
-        assert page.locator('.piece-slot .glass').evaluate_all('els=>els.map(el=>el.getAttribute("d")).sort()')==geometry
-        assert page.evaluate('localStorage.getItem("existing-save")')=='do not touch'
-        assert page.evaluate('localStorage.length')==1,'Lab must not modify published progress/preferences'
-        assert page.evaluate('document.documentElement.scrollWidth<=innerWidth')
-        page.screenshot(path=f'/tmp/cutting-lab-{"mobile" if mobile else "desktop"}.png',full_page=True)
-        # Complete a 50-piece image via the real controls, without state injection.
-        page.locator('#back-gallery').click();start(page,50,90)
-        targets=page.evaluate('''async()=>{const {loadMaster,imagePuzzle}=await import('./image-puzzle.js');return imagePuzzle(await loadMaster(50),{url:'unused',name:'Test'},90).pieces.map(p=>({id:p.id,x:p.cx,y:p.cy}));}''')
-        for done,piece in enumerate(targets,1):
-            page.locator(f'.piece-slot[data-piece="{piece["id"]}"]').click();page.locator('#board').scroll_into_view_if_needed()
-            current=pose();angle=(current[2]+180)%360-180
-            if abs(angle)>.01:
-                a=page.locator('.rotation-hit').evaluate('(e)=>Object.fromEntries(["x1","y1","x2","y2"].map(k=>[k,+e.getAttribute(k)]))')
-                b=page.locator('#board').bounding_box();k=b['width']/1000;cx=b['x']+a['x1']*k;cy=b['y']+a['y1']*k;sx=b['x']+(a['x1']+a['x2'])/2*k;sy=b['y']+(a['y1']+a['y2'])/2*k
-                points=[(sx,sy)]
-                for i in range(1,17):
-                    r=math.radians(-angle*i/16);points.append((cx+(sx-cx)*math.cos(r)-(sy-cy)*math.sin(r),cy+(sx-cx)*math.sin(r)+(sy-cy)*math.cos(r)))
-                drag(points)
-            if selected.count():
-                current=pose();handle=page.locator('.move-handle').bounding_box();x=handle['x']+handle['width']/2;y=handle['y']+handle['height']/2
-                k=page.locator('#board').bounding_box()['width']/1000;dx=(piece['x']-current[0])*k;dy=(piece['y']-current[1])*k
-                drag([(x,y)]+[(x+dx*i/12,y+dy*i/12) for i in range(1,13)])
-            expect(page.locator('#counter')).to_have_text(f'{done} / 50 pieces placed')
-        expect(page.locator('#complete')).to_be_visible();expect(page.locator('#art image')).to_have_count(1)
-        expect(page.locator('#export-certificate')).to_be_disabled()
-        page.locator('#replay').click();expect(page.locator('.piece-slot')).to_have_count(50)
-        print(f'PASS full 50-piece image assembly/replay with {"emulated touch" if mobile else "mouse"}.',flush=True)
+        exercise_controls(page,context,mobile)
         context.close()
     # Input validation is visible and leaves setup usable.
     context=browser.new_context();context.route(ORIGIN+'/**',serve);page=context.new_page();page.goto(ORIGIN+'/small-apps/brittz-puzzle-palace/cutting/')

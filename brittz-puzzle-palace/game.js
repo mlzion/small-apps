@@ -1,3 +1,4 @@
+import {attachPrecisionControls,moveRelative,zoomAt,visibleCenter} from './precision-controls.js';
 import {imagePiece,completedImage,sourceImage} from './cutting/render.js';
 import {preparePuzzle,validateCatalog,matchEntry,detailMarkup} from './content.js';
 import {loadProgress,saveProgress,progressSummary,isComplete,playerName,rememberName} from './progress.js';
@@ -10,17 +11,20 @@ let game=null,selected=null,reference=false,sound=true,audio;
 let catalog=[],requestSerial=0,exportSerial=0,exporting=false,certificateURL=null;
 const cache=new Map();
 const isLab=document.documentElement.dataset.cuttingLab==='true';
+let precision=null,precisionActive=false;
 const views={puzzle:{zoom:1,x:0,y:0},reference:{zoom:1,x:0,y:0}};
 let pointers=new Map(),gesture=null,trayDown=null;
 function save(){if(puzzle&&game&&!puzzle.ephemeral)saveProgress(puzzle,game,sound);}
 function svg(tag,attrs={}){const el=document.createElementNS(ns,tag);for(const [k,v]of Object.entries(attrs))el.setAttribute(k,v);return el;}
 function shape(piece){if(puzzle.kind==='image')return imagePiece(puzzle,piece);const g=svg('g');g.append(svg('path',{d:piece.path,fill:piece.color,class:'glass'}));if(piece.details.length){const detail=svg('g',{'pointer-events':'none'});detail.innerHTML=detailMarkup(piece);g.append(detail);}return g;}
-const view=()=>views[reference?'reference':'puzzle'];
+const view=()=>views[isLab?'puzzle':reference?'reference':'puzzle'];
 function scale(){return board.getBoundingClientRect().width/puzzle.width*view().zoom;}
 function local(e){const r=board.getBoundingClientRect();return {x:(e.clientX-r.left)*W/r.width,y:(e.clientY-r.top)*H/r.height};}
 function world(point){const v=view();return {x:(point.x-v.x)/v.zoom,y:(point.y-v.y)/v.zoom};}
-function camera(){if(!puzzle||!game||$('game-screen').hidden)return;const v=view();v.x=Math.max(W*(1-v.zoom),Math.min(0,v.x));v.y=Math.max(H*(1-v.zoom),Math.min(0,v.y));$('camera').setAttribute('transform',`translate(${v.x} ${v.y}) scale(${v.zoom})`);drawControls();}
-function drawControls(){controls.replaceChildren();if(reference||!selected)return;
+function camera(){if(!puzzle||!game||$('game-screen').hidden)return;const v=view();if(!isLab){v.x=Math.max(W*(1-v.zoom),Math.min(0,v.x));v.y=Math.max(H*(1-v.zoom),Math.min(0,v.y));}$('camera').setAttribute('transform',`translate(${v.x} ${v.y}) scale(${v.zoom})`);drawControls();}
+function drawControls(){controls.replaceChildren();
+ if(isLab){precision?.setEnabled(!reference&&!!selected);const status=reference?'Reference view':selected?'Piece selected':'Select a loose piece';if($('selection-status').textContent!==status)$('selection-status').textContent=status;if(selected){const angle=((game.states[selected].angle%360)+360)%360;$('rotation-value').textContent=`${angle.toFixed(1)}°`;$('rotation-wheel').style.setProperty('--wheel-angle',`${angle}deg`);}else $('rotation-value').textContent='—';return;}
+ if(reference||!selected)return;
  const p=lookup.get(selected),s=game.states[selected],v=view(),k=W/board.getBoundingClientRect().width;
  const center={x:s.x*v.zoom+v.x,y:s.y*v.zoom+v.y};
  // Keep an independent, screen-sized control inside the viewport, even near corners.
@@ -33,7 +37,7 @@ function drawControls(){controls.replaceChildren();if(reference||!selected)retur
  const cross=svg('path',{d:`M${hx-6*k} ${hy}h${12*k}M${hx} ${hy-6*k}v${12*k}`,stroke:'#fff','stroke-width':1.5*k,'pointer-events':'none'});controls.append(cross);
 }
 function revealSelected(){
- if(reference||!selected)return;
+ if(isLab||reference||!selected)return;
  const p=lookup.get(selected),s=game.states[selected],v=view(),b=rotatedBounds(p,s.angle);
  // A selected piece must fit the viewing window. Zooming can still inspect locked glass.
  v.zoom=Math.min(v.zoom,W/(b.right-b.left+20),H/(b.bottom-b.top+20));
@@ -82,7 +86,7 @@ function snap(){if(!selected)return;const p=lookup.get(selected),s=game.states[s
  if(canSnap(p,s,scale())){Object.assign(s,{x:p.cx,y:p.cy,angle:0,location:'locked'});selected=null;tone(pieces.every(p=>game.states[p.id].location==='locked'));}
  save();renderBoard();
 }
-function select(id){if(reference)return;const s=game.states[id];if(s.location==='locked')return;
+function select(id){if(reference)return;precision?.cancel();const s=game.states[id];if(s.location==='locked')return;
  selected=id;
  if(s.location==='tray') {s.location='board';const center=world({x:(W/2),y:(H/2)});s.x=center.x;s.y=center.y;clampPiece(lookup.get(id),s,W,H);renderTray();}
  revealSelected();save();renderBoard();board.focus({preventScroll:true});
@@ -97,15 +101,17 @@ tray.addEventListener('click',e=>{const button=e.target.closest('[data-piece]');
 });
 function pinchStart(){const [a,b]=[...pointers.values()];gesture={type:'pinch',distance:Math.hypot(b.x-a.x,b.y-a.y),zoom:view().zoom,anchor:world({x:(a.x+b.x)/2,y:(a.y+b.y)/2})};}
 board.addEventListener('pointerdown',e=>{
- if(e.button!==0)return;e.preventDefault();board.focus({preventScroll:true});board.setPointerCapture(e.pointerId);const point=local(e);pointers.set(e.pointerId,point);
- if(pointers.size===2){pinchStart();return;}if(pointers.size>2)return;
+ if(e.button!==0||isLab&&precisionActive)return;e.preventDefault();board.focus({preventScroll:true});board.setPointerCapture(e.pointerId);const point=local(e);pointers.set(e.pointerId,point);
+ if(pointers.size===2){if(isLab)gesture={type:'blocked'};else pinchStart();return;}if(pointers.size>2)return;
  const action=e.target.dataset.action;
  if(!reference&&action&&selected){const s=game.states[selected];gesture={type:action,start:world(point),x:s.x,y:s.y,angle:s.angle,startAngle:Math.atan2(world(point).y-s.y,world(point).x-s.x)};return;}
  const id=e.target.closest('[data-piece]')?.dataset.piece;
- if(!reference&&id&&game.states[id].location==='board'){select(id);gesture={type:'select'};return;}
+ if(!reference&&id&&game.states[id].location==='board'){if(isLab)gesture={type:'tap',id,start:point};else{select(id);gesture={type:'select'};}return;}
+ if(isLab&&id){gesture={type:'blocked'};return;}
  gesture={type:'pan',start:point,x:view().x,y:view().y};
 });
 board.addEventListener('pointermove',e=>{if(!pointers.has(e.pointerId))return;e.preventDefault();const point=local(e);pointers.set(e.pointerId,point);if(!gesture)return;
+ if(isLab&&(gesture.type==='tap'||gesture.type==='blocked')){if(gesture.type==='tap'&&Math.hypot(point.x-gesture.start.x,point.y-gesture.start.y)>W/board.getBoundingClientRect().width*8)gesture.type='blocked';return;}
  if(gesture.type==='pinch'&&pointers.size>=2){const[a,b]=[...pointers.values()],v=view();v.zoom=Math.max(config.minZoom,Math.min(config.maxZoom,gesture.zoom*Math.hypot(b.x-a.x,b.y-a.y)/Math.max(1,gesture.distance)));v.x=(a.x+b.x)/2-gesture.anchor.x*v.zoom;v.y=(a.y+b.y)/2-gesture.anchor.y*v.zoom;camera();return;}
  if(gesture.type==='pan'){view().x=gesture.x+point.x-gesture.start.x;view().y=gesture.y+point.y-gesture.start.y;camera();return;}
  if(!selected||reference)return;const s=game.states[selected],p=lookup.get(selected),w=world(point);
@@ -115,19 +121,20 @@ board.addEventListener('pointermove',e=>{if(!pointers.has(e.pointerId))return;e.
 });
 function endPointer(e){if(!pointers.has(e.pointerId))return;const type=gesture?.type;pointers.delete(e.pointerId);
  if(board.hasPointerCapture(e.pointerId))board.releasePointerCapture(e.pointerId);
+ if(isLab&&type==='tap'&&e.type==='pointerup')select(gesture.id);
  if(e.type!=='pointercancel'&&(type==='move'||type==='rotate'))snap();else save();
  // A remaining finger after a pinch must start a fresh gesture; never turn into a piece drag.
- gesture=null;if(type==='pinch'){revealSelected();camera();}
+ gesture=isLab&&pointers.size?{type:'blocked'}:null;if(type==='pinch'){revealSelected();camera();}
 }
 board.addEventListener('pointerup',endPointer);board.addEventListener('pointercancel',endPointer);board.addEventListener('lostpointercapture',endPointer);
-function zoomBy(factor,point={x:(W/2),y:(H/2)}){const w=world(point),v=view();v.zoom=Math.max(config.minZoom,Math.min(config.maxZoom,v.zoom*factor));v.x=point.x-w.x*v.zoom;v.y=point.y-w.y*v.zoom;revealSelected();camera();}
-board.addEventListener('wheel',e=>{e.preventDefault();zoomBy(e.deltaY<0?1.15:1/1.15,local(e));},{passive:false});
-$('zoom-in').onclick=()=>zoomBy(1.3);$('zoom-out').onclick=()=>zoomBy(1/1.3);$('fit').onclick=()=>{Object.assign(view(),{zoom:1,x:0,y:0});camera();};
-function setView(ref){pointers.clear();gesture=null;reference=ref;$('puzzle-view').setAttribute('aria-pressed',String(!ref));$('reference-view').setAttribute('aria-pressed',String(ref));renderBoard();}
+function zoomBy(factor,point={x:(W/2),y:(H/2)}){if(isLab){precision?.cancel();pointers.clear();gesture=null;const anchor=!reference&&selected?game.states[selected]:visibleCenter(view(),W,H);Object.assign(view(),zoomAt(view(),factor,anchor,config.minZoom,config.maxZoom));camera();return;}const w=world(point),v=view();v.zoom=Math.max(config.minZoom,Math.min(config.maxZoom,v.zoom*factor));v.x=point.x-w.x*v.zoom;v.y=point.y-w.y*v.zoom;revealSelected();camera();}
+board.addEventListener('wheel',e=>{e.preventDefault();if(!isLab)zoomBy(e.deltaY<0?1.15:1/1.15,local(e));},{passive:false});
+$('zoom-in').onclick=()=>zoomBy(1.3);$('zoom-out').onclick=()=>zoomBy(1/1.3);$('fit').onclick=()=>{precision?.cancel();pointers.clear();gesture=null;Object.assign(view(),{zoom:1,x:0,y:0});camera();};
+function setView(ref){precision?.cancel();pointers.clear();gesture=null;reference=ref;$('puzzle-view').setAttribute('aria-pressed',String(!ref));$('reference-view').setAttribute('aria-pressed',String(ref));renderBoard();}
 $('puzzle-view').onclick=()=>setView(false);$('reference-view').onclick=()=>setView(true);
-function returnPiece(){if(!selected||reference)return;game.states[selected].location='tray';selected=null;save();renderTray();renderBoard();}
+function returnPiece(){if(!selected||reference)return;precision?.cancel();game.states[selected].location='tray';selected=null;save();renderTray();renderBoard();}
 $('return').onclick=returnPiece;
-function restart(){clearCertificate();game=shuffledState(pieces);selected=null;pointers.clear();gesture=null;Object.values(views).forEach(v=>Object.assign(v,{zoom:1,x:0,y:0}));save();setView(false);renderTray();}
+function restart(){precision?.cancel();clearCertificate();game=shuffledState(pieces);selected=null;pointers.clear();gesture=null;if(!isLab)Object.values(views).forEach(v=>Object.assign(v,{zoom:1,x:0,y:0}));save();setView(false);renderTray();}
 $('restart').onclick=()=>$('restart-dialog').showModal();$('restart-dialog').addEventListener('close',()=>{if($('restart-dialog').returnValue==='restart')restart();});$('replay').onclick=restart;
 function soundLabel(){$('sound').textContent=`Sound ${sound?'on':'off'}`;$('sound').setAttribute('aria-pressed',String(sound));}
 $('sound').onclick=()=>{sound=!sound;soundLabel();save();};
@@ -135,9 +142,10 @@ board.addEventListener('keydown',e=>{if(!selected||reference)return;const s=game
  if(['ArrowLeft','ArrowRight','ArrowUp','ArrowDown','[',']','Escape','Enter'].includes(e.key))e.preventDefault();else return;
  if(e.key==='Escape'){selected=null;renderBoard();return;}
  if(e.key==='ArrowLeft')s.x-=step;if(e.key==='ArrowRight')s.x+=step;if(e.key==='ArrowUp')s.y-=step;if(e.key==='ArrowDown')s.y+=step;if(e.key==='[')s.angle-=e.shiftKey?15:1;if(e.key===']')s.angle+=e.shiftKey?15:1;
- clampPiece(lookup.get(selected),s,W,H);snap();
+ if(!isLab)clampPiece(lookup.get(selected),s,W,H);snap();
 });
-window.addEventListener('blur',()=>{pointers.clear();gesture=null;save();});new ResizeObserver(()=>camera()).observe(board);
+window.addEventListener('resize',()=>precision?.cancel());
+window.addEventListener('blur',()=>{precision?.cancel();pointers.clear();gesture=null;save();});new ResizeObserver(()=>camera()).observe(board);
 board.setAttribute('aria-description','Keyboard: arrows move the selected piece; brackets rotate; Shift increases the step; Escape clears selection.');
 async function getJSON(path){const response=await fetch(path,{cache:'no-cache'});if(!response.ok)throw new Error(`Could not load ${path} (HTTP ${response.status}).`);return response.json();}
 function message(text){$('gallery-message').textContent=text;}
@@ -156,7 +164,7 @@ function renderGallery(){
  }
 }
 function clearCertificate(){exportSerial++;exporting=false;if(certificateURL)URL.revokeObjectURL(certificateURL);certificateURL=null;$('certificate-download').removeAttribute('href');$('certificate-download').hidden=true;$('certificate-status').textContent='';}
-function cancelGestures(){pointers.clear();gesture=null;trayDown=null;}
+function cancelGestures(){precision?.cancel();pointers.clear();gesture=null;trayDown=null;}
 function showGallery(){requestSerial++;save();cancelGestures();clearCertificate();$('restart-dialog').close();$('game-screen').hidden=true;$('gallery-screen').hidden=false;renderGallery();message('');$('gallery-title').focus({preventScroll:true});}
 $('back-gallery').onclick=showGallery;
 async function openPuzzle(entry,replay=false){
@@ -205,4 +213,12 @@ async function loadCatalog(){
  catch(error){if(request!==requestSerial)return;message(`Unable to load the collection: ${error.message}`);$('retry-catalog').hidden=false;}
 }
 $('retry-catalog').onclick=loadCatalog;
-if(!isLab)loadCatalog();
+if(isLab){
+ board.setAttribute('aria-label','Puzzle canvas. Tap a loose piece to select. Drag empty space to pan. Use the controls below to move, rotate and zoom.');
+ precision=attachPrecisionControls({pad:$('move-pad'),wheel:$('rotation-wheel'),
+ onStart(){if(reference||!selected)return false;pointers.clear();gesture=null;precisionActive=true;return true;},
+ onMove(dx,dy){if(!selected)return;const s=game.states[selected],b=rotatedBounds(lookup.get(selected),s.angle);Object.assign(s,moveRelative(s,b,view(),W,H,scale(),dx,dy));renderBoard();},
+ onRotate(degrees){if(!selected)return;game.states[selected].angle+=degrees;renderBoard();},
+ onEnd(commit){precisionActive=false;if(commit)snap();else save();}
+ });
+}else loadCatalog();

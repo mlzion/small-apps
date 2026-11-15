@@ -1,6 +1,6 @@
 # Image Cutting Engine — v0.3 Phase 1
 
-Open **`brittz-puzzle-palace/cutting/`** through the normal static server, including at `/small-apps/brittz-puzzle-palace/cutting/` on GitHub Pages. This development page is separate from the published gallery. Load a square JPG/PNG, choose 50/100/150/200 pieces and a 0°/90°/180°/270° cutting orientation, then **Shuffle & play**. **Use test picture** supplies a coordinate/checker image. The normal circular movement handle, line rotation, tray, return, snapping, zoom/pan, Puzzle/Reference, sound, restart and replay are shared with the published app.
+Open **`brittz-puzzle-palace/cutting/`** through the normal static server, including at `/small-apps/brittz-puzzle-palace/cutting/` on GitHub Pages. This development page is separate from the published gallery. Load a square JPG/PNG, choose 50/100/150/200 pieces and a 0°/90°/180°/270° cutting orientation, then **Shuffle & play**. **Use test picture** supplies a coordinate/checker image. The lab uses the Phase 1B external trackpad, rotation wheel and zoom row described below; tray, snapping, Puzzle/Reference, sound, return and restart remain shared with the published app.
 
 ## Fixed masters
 
@@ -47,7 +47,7 @@ Browsers anti-alias individual SVG clipping boundaries, which can leave a transi
 
 ## Gameplay architecture and compatibility
 
-The published `game.js` exposes a small `mountPuzzle()` entry point used by both the existing catalog loader and the separate lab. The existing pointer/keyboard handlers and `engine.js` snapping/shuffle/bounds rules are unchanged. Only rendering branches for `kind: 'image'`; vector puzzles still use their existing renderer, content validation, saved progress and JPG certificates. The catalog, existing puzzle data, gallery, other apps and published URLs are unchanged.
+The published `game.js` exposes a small `mountPuzzle()` entry point used by both the existing catalog loader and the separate lab. The original vector pointer controls and `engine.js` snapping/shuffle rules remain compatible; the image lab uses the Phase 1B input and camera policy below. Image rendering branches for `kind: 'image'` and the lab enables its Phase 1B input/camera policy; vector puzzles still use their existing renderer, content validation, saved progress and JPG certificates. The catalog, existing puzzle data, gallery, other apps and published URLs are unchanged.
 
 The lab is selected by `data-cutting-lab` on its own HTML document. Its setup form replaces only that page's gallery area; the play controls retain the existing phone layout. Large trays use the existing multi-row CSS scroller (one row for 50, two for 100/150, three for 200). Shared local-storage progress and sound preference writes are disabled for ephemeral lab sessions, so uploaded images/testing cannot overwrite published saves.
 
@@ -66,7 +66,7 @@ python brittz-puzzle-palace/check_browser.py
 python brittz-puzzle-palace/check_collection.py
 ```
 
-Browser tests use the existing local Playwright routing method, installed Chromium (or `CHROMIUM_PATH`), and Pillow; these are development-only dependencies. The image suite uses high-frequency PNG/JPG fixtures and all **32** image-format/pattern/quarter-turn combinations. It verifies original bytes, clipped interior pixels (maximum channel error 1; only a 2.5-pixel boundary band is excluded for SVG anti-aliasing), and **exact every-pixel equality** of the outline-free completion versus the same browser's reference rendering. It also completes a 50-piece image with real mouse and emulated-touch gestures (without injecting game state), checks completion/replay, and checks movement versus line rotation, preserved Puzzle/Reference state, zoom-independent handle dimensions, a three-row tray, return, unchanged cut geometry after restart, save isolation and invalid image errors. `CUTTING_SKIP_PIXELS=1` runs only the control/input checks when diagnosing those separately. Screenshots go to `/tmp/cutting-lab-*`.
+Browser tests use the existing local Playwright routing method, installed Chromium (or `CHROMIUM_PATH`), and Pillow; these are development-only dependencies. The image suite uses high-frequency PNG/JPG fixtures and all **32** image-format/pattern/quarter-turn combinations. It verifies original bytes, clipped interior pixels (maximum channel error 1; only a 2.5-pixel boundary band is excluded for SVG anti-aliasing), and **exact every-pixel equality** of the outline-free completion versus the same browser's reference rendering. It also completes a 50-piece image with the Phase 1B panel using real mouse and emulated-touch gestures (without injecting game state), checks completion/replay, and checks trackpad movement versus wheel rotation, preserved Puzzle/Reference state, external control dimensions, a three-row tray, return, unchanged cut geometry after restart, save isolation and invalid image errors. `CUTTING_SKIP_PIXELS=1` runs only the control/input checks when diagnosing those separately. Screenshots go to `/tmp/cutting-lab-*`.
 
 ## Phase 1 limitations
 
@@ -75,3 +75,33 @@ Browser tests use the existing local Playwright routing method, installed Chromi
 - Sources are limited to 24 MB and square dimensions from 32 through 8192 pixels to bound phone decoding/memory pressure. Animated PNG playback, non-square cropping, arbitrary cutting, and format conversion are outside this phase.
 - Browser decoding/color management follows the browser's normal JPG/PNG rendering, including embedded orientation. No image editor or custom color processing is applied.
 - Emulated touch is automated; physical Android touchscreen ergonomics, memory use with maximum-size images still require real-device testing. Tablet redesign remains deferred.
+
+## Phase 1B — precision control panel
+
+The image lab now uses external **MOVE**, **ROTATE** and **ZOOM** controls immediately below the canvas. The public gallery and all published vector puzzles keep their existing handle/line controls and save compatibility. The four permanent master files and validation fingerprints are unchanged.
+
+- **MOVE** is a 120 × 120 CSS pixel relative trackpad. Each drag starts from the finger's current position and adds only its motion; lifting and repositioning does not reset the piece. A CSS pixel of finger motion corresponds to a CSS pixel of piece motion at any board zoom. Higher zoom therefore gives smaller world-coordinate adjustments. Movement is constrained to the visible board where the piece fits; if a rotation or explicit pan put an extent outside that interval, the next stroke recovers gradually rather than teleporting it. If the piece is larger than the viewing window, its center is constrained instead.
+- **ROTATE** has a 120-pixel circular hit target around a compact 96-pixel wheel, including its outer ring. Incremental `atan2` differences are unwrapped across ±180°: clockwise gestures add positive rotation, counterclockwise gestures subtract it, and sub-degree changes are retained. Lifting/restarting a stroke preserves the existing angle. A small hub dead zone prevents a half-turn jump when a finger crosses the wheel's center. The wheel never changes piece x/y. Normal position-and-angle snapping remains on gesture release; a successful snap can of course correct the pose precisely.
+- Pad and wheel use pointer capture, cancel on blur, resize, pointer cancellation, selection/view change or restart, and ignore stale post-release motion. They are disabled without a loose selection and in Reference. Mouse and touch use the same implementation.
+- The canvas only selects loose pieces on a stationary tap and pans from empty space. Dragging a piece does not move/rotate it or pan. Locked pieces remain nonselectable. Multi-pointer canvas gestures are blocked until all fingers lift; pinch and mouse-wheel zoom are disabled. Keyboard piece controls remain available.
+- Fit, − and + are outside the canvas. Zoom stays between 1× and 4×. In Puzzle view a selected piece's current center is the anchor, preserving its exact screen position; otherwise the visible viewport center is the anchor. Fit is the explicit full-board reset.
+
+### Camera fix and architecture
+
+The former `revealSelected()` path changed camera zoom and translation during selection and rotation. It also ran before a render-time camera clamp, so its requested translation could be replaced again on the next frame. The rotation path additionally clamped piece coordinates against rotated bounds, moving a piece near an edge while turning it.
+
+For the lab, `camera()` now only paints the existing transform. Selection, movement, rotation, snapping, return and rendering never fit, translate or clamp the camera. Rotation does not clamp the piece center. Only explicit canvas panning, zoom buttons and Fit change the current camera after initial puzzle setup. Restart/replay preserves it. Puzzle and Reference share the lab camera, so switching views cannot jump to a separate remembered transform. The existing vector-camera policy remains unchanged.
+
+`../precision-controls.js` contains reusable, artwork-independent pointer controls and pure relative-motion/zoom/angle math. `game.js` supplies the selection, scale and scene callbacks. This keeps the panel suitable for eventual main-game adoption without enabling it on published puzzles in this phase. Selected-piece zoom deliberately does not clamp camera translation afterward: that would break the anchor, particularly when zooming out near an edge. Fit is always available to restore the full square. Explicit panning can take content outside the visible window; the controls never move the camera to compensate. At high zoom, a rotated piece can extend beyond the viewport while its center stays stationary.
+
+### Precision regressions
+
+```sh
+node brittz-puzzle-palace/precision-controls.test.mjs
+python brittz-puzzle-palace/cutting/check_precision.py
+python brittz-puzzle-palace/cutting/check_images.py
+```
+
+The new math tests cover 320/360/390/842-pixel board sizes and multiple zooms, continuous wrap-around rotation, exact selected/visible-center anchoring including limits, unchanged camera objects, and non-jumping boundary recovery. The mouse/touch browser checks use a 360 × 800 phone viewport for Samsung Galaxy A17-class CSS dimensions. They check repeated strokes, both rotation directions, center dead-zone crossing, edge rotation without translation, no camera changes during selection/manipulation, zoom-out anchors, reference switching, canvas piece-drag blocking, empty-space panning, disabled pinch/wheel zoom, cancellation, non-overlapping controls/tray, all 50 pieces assembled with the new panel, completion and replay. The existing image-pixel suite invokes the same panel protocol instead of the retired lab handle/line protocol. Screenshots are written to `/tmp/precision-mobile.png` and `/tmp/precision-desktop.png`.
+
+Physical Samsung Galaxy A17 touch ergonomics remain a device-testing item; automated touch emulation does not replace that check. Lab upload/progress lifetime, image limits and other Phase 1 limitations above still apply.
