@@ -1,7 +1,7 @@
 import {attachPrecisionControls,moveRelative,visibleCenter,panCamera,zoomWorkspace} from './precision-controls.js?v=workspace-1c';
 import {imagePiece,completedImage,sourceImage} from './cutting/render.js';
 import {preparePuzzle,validateCatalog,matchEntry,detailMarkup} from './content.js';
-import {loadProgress,saveProgress,progressSummary,isComplete,playerName,rememberName} from './progress.js';
+import {loadProgress,saveProgress,validGame,progressSummary,isComplete,playerName,rememberName} from './progress.js';
 import {certificateJPG,cleanName} from './certificate.js';
 import {canSnap,shuffledState,clampPiece,rotatedBounds,config} from './engine.js';
 const $=id=>document.getElementById(id), ns='http://www.w3.org/2000/svg';
@@ -14,7 +14,8 @@ const isLab=document.documentElement.dataset.cuttingLab==='true';
 let precision=null,precisionActive=false,workspaceMode='select',trayScroll=0;
 const views={puzzle:{zoom:1,x:0,y:0},reference:{zoom:1,x:0,y:0}};
 let pointers=new Map(),gesture=null,trayDown=null;
-function save(){if(puzzle&&game&&!puzzle.ephemeral)saveProgress(puzzle,game,sound);}
+function save(){if(!puzzle||!game)return;if(isLab&&puzzle.onProgress)puzzle.onProgress(structuredClone(game),sound);else if(!puzzle.ephemeral)saveProgress(puzzle,game,sound);}
+function newGame(){const next=shuffledState(pieces);if(isLab&&puzzle.mosaic)for(const state of Object.values(next.states))state.angle=Math.random()*360;return next;}
 function svg(tag,attrs={}){const el=document.createElementNS(ns,tag);for(const [k,v]of Object.entries(attrs))el.setAttribute(k,v);return el;}
 function shape(piece){if(puzzle.kind==='image')return imagePiece(puzzle,piece);const g=svg('g');g.append(svg('path',{d:piece.path,fill:piece.color,class:'glass'}));if(piece.details.length){const detail=svg('g',{'pointer-events':'none'});detail.innerHTML=detailMarkup(piece);g.append(detail);}return g;}
 const view=()=>views[isLab?'puzzle':reference?'reference':'puzzle'];
@@ -136,7 +137,7 @@ function setView(ref){precision?.cancel();pointers.clear();gesture=null;referenc
 $('puzzle-view').onclick=()=>setView(false);$('reference-view').onclick=()=>setView(true);
 function returnPiece(){if(!selected||reference)return;precision?.cancel();game.states[selected].location='tray';selected=null;save();renderTray();renderBoard();}
 $('return').onclick=returnPiece;
-function restart(){precision?.cancel();clearCertificate();game=shuffledState(pieces);selected=null;pointers.clear();gesture=null;if(!isLab)Object.values(views).forEach(v=>Object.assign(v,{zoom:1,x:0,y:0}));save();setView(false);renderTray();}
+function restart(){precision?.cancel();clearCertificate();game=newGame();selected=null;pointers.clear();gesture=null;if(!isLab)Object.values(views).forEach(v=>Object.assign(v,{zoom:1,x:0,y:0}));save();setView(false);renderTray();}
 $('restart').onclick=()=>$('restart-dialog').showModal();$('restart-dialog').addEventListener('close',()=>{if($('restart-dialog').returnValue==='restart')restart();});$('replay').onclick=restart;
 function soundLabel(){$('sound').textContent=`Sound ${sound?'on':'off'}`;$('sound').setAttribute('aria-pressed',String(sound));}
 $('sound').onclick=()=>{sound=!sound;soundLabel();save();};
@@ -181,7 +182,7 @@ async function openPuzzle(entry,replay=false){
 // Raster input is prepared separately; the gameplay model/input handlers are shared.
 export function mountPuzzle(next,replay=false){
  save();cancelGestures();clearCertificate();puzzle=next;pieces=puzzle.pieces;lookup=new Map(pieces.map(p=>[p.id,p]));W=puzzle.width;H=puzzle.height;
- ({game,sound}=puzzle.ephemeral?{game:shuffledState(pieces),sound}:loadProgress(puzzle));selected=null;reference=false;
+ ({game,sound}=puzzle.ephemeral?{game:isLab&&validGame(puzzle.resume?.game,pieces)?structuredClone(puzzle.resume.game):newGame(),sound:isLab&&typeof puzzle.resume?.sound==='boolean'?puzzle.resume.sound:sound}:loadProgress(puzzle));selected=null;reference=false;
  Object.values(views).forEach(v=>Object.assign(v,{zoom:1,x:0,y:0}));
  board.setAttribute('viewBox',`0 0 ${W} ${H}`);for(const rect of board.querySelectorAll('rect')){rect.setAttribute('width',W);rect.setAttribute('height',H);}
  document.querySelector('.viewport').style.aspectRatio=`${W} / ${H}`;

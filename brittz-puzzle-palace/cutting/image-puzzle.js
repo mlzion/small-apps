@@ -12,7 +12,7 @@ export async function openSquareImage(file){
  if(!png&&!jpg)throw Error('The source must be a JPG or PNG image.');
  const url=URL.createObjectURL(file),image=new Image();
  try{image.src=url;await image.decode();if(image.naturalWidth!==image.naturalHeight)throw Error('Choose a square image; the cutter never crops or stretches artwork.');if(image.naturalWidth<32||image.naturalWidth>8192)throw Error('Choose a square image between 32 and 8192 pixels wide.');
- return {url,width:image.naturalWidth,height:image.naturalHeight,name:file.name||'Test picture',revoke:()=>URL.revokeObjectURL(url)};
+ return {blob:file,url,width:image.naturalWidth,height:image.naturalHeight,name:file.name||'Test picture',revoke:()=>URL.revokeObjectURL(url)};
  }catch(error){URL.revokeObjectURL(url);throw error;}
 }
 export function imagePuzzle(master,source,degrees=0,{outlines=true}={}){
@@ -23,4 +23,10 @@ export function imagePuzzle(master,source,degrees=0,{outlines=true}={}){
  return {id:p.id,name:`Image piece ${p.id.slice(6)}`,points,bounds,cx:bounds.x+bounds.width/2,cy:bounds.y+bounds.height/2,path:`M${points.map(p=>p.join(',')).join('L')}Z`,details:[]};
  });
  return {kind:'image',ephemeral:true,id:`lab-${master.id}-${degrees}`,version:1,title:source.name,width:size,height:size,pieceCount:pieces.length,trayRows:Math.min(3,Math.ceil(pieces.length/75)),pieces,imageURL:source.url,outlines,masterId:master.id,patternRotation:degrees,subtitle:`IMAGE CUTTING LAB · ${degrees}° MASTER`,emptyMessage:'Your picture starts here',completionTitle:'Every detail, back in place.',completionMessage:'The original image is complete.'};
+}
+
+// The procedural runtime never rotates the mesh or transforms source pixels.
+export function mosaicPuzzle(pattern,source,options={}){
+ const puzzle=imagePuzzle(pattern,source,0,options);
+ return {...puzzle,mosaic:true,pattern,subtitle:'GEOMETRIC MOSAIC · IMAGE LAB',patternRotation:undefined};
 }

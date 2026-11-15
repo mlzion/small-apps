@@ -42,11 +42,11 @@ def choose_source(page,fmt='PNG'):
     expect(page.locator('#gallery-message')).to_contain_text('Ready to shuffle')
 
 
-def start(page,count=50,rotation=0,outlines=False):
+def start(page,count=50,outlines=False):
     page.locator('#master-count').select_option(str(count))
-    page.locator('#master-rotation').select_option(str(rotation))
     page.locator('#image-outlines').set_checked(outlines)
     page.locator('#start-lab').click()
+    expect(page.locator('#game-screen')).to_be_visible()
     expect(page.locator('.piece-slot')).to_have_count(count)
 
 
@@ -58,17 +58,19 @@ with sync_playwright() as p:
     page.on('pageerror',lambda e:errors.append(str(e)))
     for fmt in (() if os.environ.get('CUTTING_SKIP_PIXELS') else ('PNG','JPEG')):
         page.goto(ORIGIN+'/small-apps/brittz-puzzle-palace/cutting/')
+        expect(page.locator('#start-lab')).to_be_enabled()
+        if page.locator('#game-screen').is_visible():page.locator('#back-gallery').click()
         choose_source(page,fmt);start(page)
         url=page.locator('.piece-slot image').first.get_attribute('href')
         original=page.evaluate('async url=>Array.from(new Uint8Array(await (await fetch(url)).arrayBuffer()))',url)
         assert bytes(original)==image_bytes[fmt], 'Source bytes must be preserved, never traced/resampled/re-encoded'
         for count in (50,100,150,200):
-            for rotation in (0,90,180,270):
+            for seed in (1,2,3,4):
                 # Use exactly the production image renderer in an isolated pixel canvas.
-                page.evaluate('''async ({url,count,rotation,mode})=>{
-                    const {loadMaster,imagePuzzle}=await import('./image-puzzle.js');
+                page.evaluate('''async ({url,count,seed,mode})=>{
+                    const {mosaicPuzzle}=await import('./image-puzzle.js');const {generateMosaic}=await import('./mosaic.js');
                     const {imagePiece,completedImage,sourceImage}=await import('./render.js');
-                    const puzzle=imagePuzzle(await loadMaster(count),{url,name:'Original'},rotation,{outlines:false});
+                    const puzzle=mosaicPuzzle(generateMosaic(count,seed),{url,name:'Original'},{outlines:false});
                     document.getElementById('pixel-test')?.remove();
                     const holder=document.createElement('div');holder.id='pixel-test';holder.style='position:fixed;left:0;top:0;width:512px;height:512px;z-index:10000;background:white';
                     const root=document.createElementNS('http://www.w3.org/2000/svg','svg');root.setAttribute('viewBox','0 0 1000 1000');root.setAttribute('width','512');root.setAttribute('height','512');
@@ -76,15 +78,15 @@ with sync_playwright() as p:
                     else root.append(mode==='complete'?completedImage(puzzle):sourceImage(puzzle));
                     holder.append(root);document.body.append(holder);
                     await Promise.all(Array.from(root.querySelectorAll('image')).map(el=>new Promise((resolve,reject)=>{const image=new Image();image.onload=resolve;image.onerror=reject;image.src=el.getAttribute('href');})));
-                }''',{'url':url,'count':count,'rotation':rotation,'mode':'source'})
+                }''',{'url':url,'count':count,'seed':seed,'mode':'source'})
                 expected=Image.open(io.BytesIO(page.locator('#pixel-test').screenshot())).convert('RGB')
                 # Swap in the actual clipped pieces, each retaining the full image's origin.
-                page.evaluate('''async ({url,count,rotation})=>{
-                    const {loadMaster,imagePuzzle}=await import('./image-puzzle.js');const {imagePiece}=await import('./render.js');
-                    const puzzle=imagePuzzle(await loadMaster(count),{url,name:'Original'},rotation,{outlines:false});
+                page.evaluate('''async ({url,count,seed})=>{
+                    const {mosaicPuzzle}=await import('./image-puzzle.js');const {generateMosaic}=await import('./mosaic.js');const {imagePiece}=await import('./render.js');
+                    const puzzle=mosaicPuzzle(generateMosaic(count,seed),{url,name:'Original'},{outlines:false});
                     const root=document.querySelector('#pixel-test svg');root.replaceChildren(...puzzle.pieces.map(piece=>imagePiece(puzzle,piece)));
                     window.pixelGeometry=puzzle.pieces.map(p=>p.points);
-                }''',{'url':url,'count':count,'rotation':rotation})
+                }''',{'url':url,'count':count,'seed':seed})
                 page.wait_for_timeout(35)
                 actual=Image.open(io.BytesIO(page.locator('#pixel-test').screenshot())).convert('RGB')
                 mask=Image.new('L',(512,512),255);draw=ImageDraw.Draw(mask)
@@ -92,15 +94,15 @@ with sync_playwright() as p:
                     scaled=[(x*512/1000,y*512/1000) for x,y in points]
                     draw.line(scaled+[scaled[0]],fill=0,width=5)
                 diff=ImageChops.difference(actual,expected)
-                assert all(high<=1 for low,high in Image.composite(diff,Image.new('RGB',diff.size),mask).getextrema()),(fmt,count,rotation,'Clipped interiors changed source pixels')
-                page.evaluate('''async ({url,count,rotation})=>{
-                    const {loadMaster,imagePuzzle}=await import('./image-puzzle.js');const {completedImage}=await import('./render.js');
-                    document.querySelector('#pixel-test svg').replaceChildren(completedImage(imagePuzzle(await loadMaster(count),{url,name:'Original'},rotation,{outlines:false})));
-                }''',{'url':url,'count':count,'rotation':rotation})
+                assert all(high<=1 for low,high in Image.composite(diff,Image.new('RGB',diff.size),mask).getextrema()),(fmt,count,seed,'Clipped interiors changed source pixels')
+                page.evaluate('''async ({url,count,seed})=>{
+                    const {mosaicPuzzle}=await import('./image-puzzle.js');const {generateMosaic}=await import('./mosaic.js');const {completedImage}=await import('./render.js');
+                    document.querySelector('#pixel-test svg').replaceChildren(completedImage(mosaicPuzzle(generateMosaic(count,seed),{url,name:'Original'},{outlines:false})));
+                }''',{'url':url,'count':count,'seed':seed})
                 complete=Image.open(io.BytesIO(page.locator('#pixel-test').screenshot())).convert('RGB')
                 assert ImageChops.difference(complete,expected).getbbox() is None, 'Complete assembly must reproduce every source pixel, including seams'
                 page.evaluate('document.getElementById("pixel-test").remove()')
-            print(f'PASS {fmt} / {count}: all four cut rotations preserve bytes, clipped pixels and exact complete image.',flush=True)
+            print(f'PASS {fmt} / {count}: four seeded mosaics preserve bytes, clipped pixels and exact complete image.',flush=True)
         page.locator('#back-gallery').click()
     assert not errors,errors
     context.close()
@@ -120,4 +122,4 @@ with sync_playwright() as p:
     page.locator('#source-file').set_input_files({'name':'invalid.jpg','mimeType':'image/jpeg','buffer':b'not an image'})
     expect(page.locator('#gallery-message')).to_contain_text('JPG or PNG')
     context.close();browser.close()
-print('PASS: master image clipping/reconstruction, shared mouse/touch controls, two-row workspace, zoom targets, return, fixed restart geometry, isolated saves, and invalid inputs.')
+print('PASS: mosaic image clipping/reconstruction, shared mouse/touch controls, two-row workspace, zoom targets, return, stable restart geometry, isolated saves, and invalid inputs.')
