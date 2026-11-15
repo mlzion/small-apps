@@ -1,6 +1,6 @@
 # v1.1 photo cropper and fullscreen
 
-From the main setup screen, choose **Crop Photo**. The dedicated `#crop-photo` view stays in the same document so the original image, edit state and cropped JPG can remain in memory. Browser Back and **Back to setup** return to setup without changing the saved puzzle. A direct `brittz-puzzle-palace/#crop-photo` link also opens the crop view after normal startup/resume completes.
+The main setup picker decodes the selected image with native orientation handling. Square JPG/PNG images remain ready without cropping. Non-square photos automatically open the cropper already loaded. **Crop Photo** remains available to crop or reframe square images manually. The dedicated `#crop-photo` view stays in the same document so the original image, edit state and cropped JPG can remain in memory. Browser Back and **Back to setup** return to setup without changing the saved puzzle. A direct `brittz-puzzle-palace/#crop-photo` link also opens the crop view after normal startup/resume completes.
 
 ## Framing and export
 
@@ -8,8 +8,8 @@ From the main setup screen, choose **Crop Photo**. The dedicated `#crop-photo` v
 2. Drag under the fixed, centered square. The Zoom range controls relative magnification from 1× cover to 5×; the buttons rotate exactly 90° left/right. **Reset** restores centered, minimum-cover framing and the original decoded orientation. Arrow keys also move the photo.
 3. Edit the filename. It starts with the original basename plus `-cropped.jpg`; export sanitizes path/control characters and uses a JPG extension. The source File/photograph is never written, renamed or overwritten by the app.
 4. **Save cropped JPG** renders a new **1024 × 1024** JPEG at quality .95 directly from the decoded original. There are no intermediate resized tiles. Transparent source pixels composite over white. The preview and export use the identical transform, with EXIF orientation handled by the browser's native image decoder.
-5. The app requests a normal browser download and offers **Download JPG** to retry. It says **Download requested**, never **Saved**: browsers provide no reliable completion/cancellation notification to page scripts. Check Downloads/Files before choosing **Start Puzzle**. Where a browser opens an image preview instead, use its save/download action and return to the crop page. Editing the framing, photo or filename hides Start Puzzle until another export is requested.
-6. **Start Puzzle** transfers the prepared JPG File directly to the normal setup image-selection path. No filesystem search or second selection is needed. Choose 50/100/150/200 and press the existing **Shuffle & play** to generate cuts. Start Puzzle itself never starts a game, writes a puzzle save, or generates geometry. It removes the crop URL fragment without navigating back to another document, so a crop-page reload/Back cache cannot discard the new in-memory selection.
+5. The app requests a normal browser download and offers **Download JPG** to retry. It says **Download requested**, never **Saved**: browsers provide no reliable completion/cancellation notification to page scripts. Check Downloads/Files before choosing **Continue to Puzzle**. Where a browser opens an image preview instead, use its save/download action and return to the crop page. Editing the framing, photo or filename hides Continue to Puzzle until another export is requested.
+6. **Continue to Puzzle** transfers the prepared JPG File directly to the normal setup image-selection path. No filesystem search or second selection is needed. Choose 50/100/150/200 and press the existing **Shuffle & play** to generate cuts. Continue to Puzzle itself never starts a game, writes a puzzle save, or generates geometry. It removes the crop URL fragment without navigating back to another document, so a crop-page reload/Back cache cannot discard the new in-memory selection.
 
 The crop and handoff are in-memory only. Reloading or discarding the tab before Shuffle & play loses this temporary preparation; the downloaded JPG remains the recovery option. The current IndexedDB puzzle remains unchanged until the user explicitly creates another puzzle through Shuffle & play. Main/lab storage, geometry, certificates and controls retain their v1.0 behavior.
 
@@ -52,7 +52,7 @@ The browser suite uses generated color-block fixtures so independent source coor
 
 - Chromium desktop and **320/360/390px Android-style touch** layouts; WebKit **390px iPhone-like** and **768px iPad-like** layouts.
 - Portrait, landscape, square WebP and EXIF-oriented JPEGs; drag bounds, zoom/reset/90° rotation, square output matching the preview, edge coverage and unmodified original bytes.
-- Download initiation, cancellation/retry wording, failed canvas export and corrupt-file recovery; editing invalidates Start Puzzle.
+- Download initiation, cancellation/retry wording, failed canvas export and corrupt-file recovery; editing invalidates Continue to Puzzle.
 - Browser Back/direct crop links, in-memory handoff without geometry generation, all four difficulties, exact existing-save protection and reloads.
 - Header button position/touch size, actual native Chromium fullscreen entry/exit, prefixed API dispatch, unsupported iPhone help with zero fullscreen calls, rejected requests and no horizontal overflow.
 
@@ -69,3 +69,5 @@ Synthetic color-block photos are used for reproducible framing/pixel tests; no u
 ![360px crop view with fixed square and download-verification message](docs/v1.1/cropper-360.png)
 
 ![WebKit iPhone-like fullscreen fallback with visible title action](docs/v1.1/apple-fullscreen.png)
+
+Automatic-selection routing is transactional: decoding and cropping do not replace the current setup image. Cancel/Back restores its ready message and file selection, and invalid files retain it. Only Continue to Puzzle accepts the exported JPG; only Shuffle & play replaces the saved puzzle. Regressions cover empty/prior selection cancellation, square readiness, portrait/landscape/EXIF automatic loading, manual square reframing and save/continue on Chromium and persistent WebKit profiles.

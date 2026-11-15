@@ -1,3 +1,4 @@
+import {decodePhoto} from './photo-input.js?v=auto-crop-1';
 import {initialCrop,constrainCrop,moveCrop,zoomCrop,rotateCrop,cropFilename,paintPhoto} from './crop-math.js';
 export function attachCropper({onUseFile}){
  const $=id=>document.getElementById(id),view=$('photo-cropper'),frame=$('crop-frame'),canvas=$('crop-canvas'),ctx=canvas.getContext('2d');
@@ -20,21 +21,20 @@ export function attachCropper({onUseFile}){
  $('close-crop').onclick=()=>leave();
  window.addEventListener('popstate',()=>{if(location.hash==='#crop-photo')show();else if(!view.hidden)hide();});
  if(location.hash==='#crop-photo')show();
- $('crop-file').addEventListener('change',async event=>{
- const file=event.target.files?.[0];if(!file)return;
+ async function loadPhoto(file,decoded=null){
  const serial=++loadSerial;invalidate();contact=null;$('crop-controls').disabled=true;$('crop-file').disabled=true;status('Opening photo…');
- let nextURL;
+ let photo=decoded;
  try{
- if(file.size>32*1024*1024||file.size===0)throw Error('Choose a photo up to 32 MB.');
- nextURL=URL.createObjectURL(file);const next=new Image();await new Promise((resolve,reject)=>{next.onload=resolve;next.onerror=()=>reject(Error('This photo could not be opened. Choose a JPG, PNG or another image supported by this browser.'));next.src=nextURL;});
- if(serial!==loadSerial){URL.revokeObjectURL(nextURL);return;}
- if(!next.naturalWidth||!next.naturalHeight||next.naturalWidth*next.naturalHeight>64000000)throw Error('Choose a photo up to 64 megapixels.');
- if(imageURL)URL.revokeObjectURL(imageURL);imageURL=nextURL;nextURL=null;image=next;state=initialCrop();
+ photo??=await decodePhoto(file);
+ if(serial!==loadSerial)return false;
+ if(imageURL)URL.revokeObjectURL(imageURL);imageURL=photo.url;image=photo.image;photo=null;state=initialCrop();
+ try{const transfer=new DataTransfer();transfer.items.add(file);$('crop-file').files=transfer.files;}catch{/* The source caption identifies the loaded photo. */}
  const base=file.name.replace(/\.[^.]*$/,'')||'photo';$('crop-name').value=cropFilename(`${base}-cropped.jpg`);$('crop-source').textContent=`${file.name||'Photo'} · ${image.naturalWidth} × ${image.naturalHeight}`;frame.setAttribute('aria-disabled','false');
- status('Drag the photo, adjust zoom or turn it. Only the bright square will be saved.');draw();
- }catch(error){if(serial===loadSerial)status(`${error.message}${image?' The previous photo is still shown.':''}`);}
- finally{if(nextURL)URL.revokeObjectURL(nextURL);if(serial===loadSerial){$('crop-controls').disabled=!image;$('crop-file').disabled=false;}}
- });
+ status('Drag the photo, adjust zoom or turn it. Only the bright square will be saved.');draw();return true;
+ }catch(error){if(serial===loadSerial)status(`${error.message}${image?' The previous photo is still shown.':''}`);return false;}
+ finally{photo?.revoke();if(serial===loadSerial){$('crop-controls').disabled=!image;$('crop-file').disabled=false;}}
+ }
+ $('crop-file').addEventListener('change',event=>{const file=event.target.files?.[0];if(file)loadPhoto(file);});
  frame.addEventListener('pointerdown',event=>{if(!image||busy||contact||event.button!==0)return;event.preventDefault();frame.setPointerCapture(event.pointerId);contact={id:event.pointerId,x:event.clientX,y:event.clientY};});
  frame.addEventListener('pointermove',event=>{if(!contact||contact.id!==event.pointerId)return;event.preventDefault();const dx=(event.clientX-contact.x)/side,dy=(event.clientY-contact.y)/side;contact.x=event.clientX;contact.y=event.clientY;edit(moveCrop(image.naturalWidth,image.naturalHeight,state,dx,dy));});
  for(const type of ['pointerup','pointercancel','lostpointercapture'])frame.addEventListener(type,event=>{if(contact?.id===event.pointerId)contact=null;});
@@ -62,7 +62,7 @@ export function attachCropper({onUseFile}){
  const name=cropFilename($('crop-name').value),file=new File([bytes],name,{type:'image/jpeg'}),url=URL.createObjectURL(file);downloads.add(url);prepared={file,revision};$('crop-name').value=name;
  const link=$('crop-download');link.href=url;link.download=name;link.target='_blank';link.rel='noopener';link.hidden=false;
  link.click();$('crop-start').hidden=false;
- status('Download requested. This browser cannot confirm it finished. Verify the JPG in Downloads or Files before starting. If it was canceled or did not appear, tap Download JPG again.');
+ status('Download requested. This browser cannot confirm it finished. Verify the JPG in Downloads or Files before continuing. If it was canceled or did not appear, tap Download JPG again.');
  }catch(error){prepared=null;$('crop-start').hidden=true;status(`Could not export the crop: ${error.message}`);}
  finally{busy=false;$('crop-controls').disabled=!image;$('crop-file').disabled=false;}
  };
@@ -75,4 +75,5 @@ export function attachCropper({onUseFile}){
  new ResizeObserver(draw).observe(frame);
  window.addEventListener('pagehide',event=>{if(event.persisted)return;if(imageURL)URL.revokeObjectURL(imageURL);for(const url of downloads)URL.revokeObjectURL(url);});
  $('open-crop').disabled=false;
+ return {openPhoto(decoded){if(location.hash!=='#crop-photo')history.pushState({photoCropper:true},'','#crop-photo');show();return loadPhoto(decoded.file,decoded);}};
 }

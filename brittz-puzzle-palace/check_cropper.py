@@ -58,18 +58,38 @@ try:
             if engine=='webkit':options['user_agent']='Mozilla/5.0 (iPad; CPU OS 18_0 like Mac OS X) AppleWebKit/605.1.15 Version/18.0 Mobile/15E148 Safari/604.1' if width==768 else 'Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 Version/18.0 Mobile/15E148 Safari/604.1'
             context=make_context(engine,options);page=context.new_page();errors=[];requests=[];page.on('pageerror',lambda e:errors.append(str(e)));page.on('request',lambda r:requests.append(r.url))
             page.goto(ORIGIN+'/small-apps/brittz-puzzle-palace/')
+            # With no prior selection, auto-crop cancel leaves setup empty and no save.
+            portrait,photo_bytes,photo_fmt=fixtures['portrait']
+            page.locator('#source-file').set_input_files({'name':'First.jpeg','mimeType':'image/jpeg','buffer':photo_bytes});expect(page.locator('#photo-cropper')).to_be_visible();expect(page.locator('#crop-source')).to_contain_text('First.jpeg · 300 × 600');expect(page.locator('#crop-start')).to_be_hidden()
+            page.locator('#close-crop').click();expect(page.locator('#gallery-screen')).to_be_visible();assert page.locator('#source-file').evaluate('e=>e.files.length')==0;assert read_save(page) is None
             # Preserve a real saved puzzle throughout opening/editing/downloading.
             image,data,fmt=fixtures['square'];page.locator('#source-file').set_input_files({'name':'Old.png','mimeType':'image/webp','buffer':data})
             # The ordinary setup correctly rejects WebP; seed its valid square PNG instead.
             expect(page.locator('#gallery-message')).to_contain_text('JPG or PNG');b=io.BytesIO();image.save(b,'PNG');page.locator('#source-file').set_input_files({'name':'Old.png','mimeType':'image/png','buffer':b.getvalue()});expect(page.locator('#gallery-message')).to_contain_text('Ready to shuffle');page.locator('#start-lab').click();expect(page.locator('.piece-slot')).to_have_count(50);page.locator('.piece-slot').first.click();page.locator('#back-gallery').click();old=read_save(page)
+            # A square is ready directly. Canceling a later non-square candidate
+            # restores this unsaved selection as well as preserving the saved game.
+            candidate=io.BytesIO();Image.new('RGB',(128,128),'orange').save(candidate,'PNG');square_bytes=candidate.getvalue()
+            page.locator('#source-file').set_input_files({'name':'Selected-square.png','mimeType':'image/png','buffer':square_bytes});expect(page.locator('#gallery-message')).to_contain_text('Selected-square.png · 128 × 128. Ready to shuffle.');expect(page.locator('#photo-cropper')).to_be_hidden();assert read_save(page)==old
+            for cancel in ('button','back'):
+                page.locator('#source-file').set_input_files({'name':'Canceled.jpeg','mimeType':'image/jpeg','buffer':photo_bytes});expect(page.locator('#photo-cropper')).to_be_visible();expect(page.locator('#crop-source')).to_contain_text('Canceled.jpeg · 300 × 600');assert read_save(page)==old
+                if cancel=='button':page.locator('#close-crop').click()
+                else:page.go_back()
+                expect(page.locator('#gallery-screen')).to_be_visible();expect(page.locator('#gallery-message')).to_contain_text('Selected-square.png · 128 × 128. Ready to shuffle.');assert page.locator('#source-file').evaluate('e=>e.files[0].name')=='Selected-square.png';assert read_save(page)==old
+            # The real Shuffle path proves cancellation retained the internal source.
+            page.locator('#start-lab').click();expect(page.locator('#game-screen')).to_be_visible();expect(page.locator('.piece-slot')).to_have_count(50);assert bytes(read_save(page)['record']['blob'])==square_bytes;page.locator('.piece-slot').first.click();page.locator('#back-gallery').click();old=read_save(page)
             fs=page.locator('#fullscreen');assert fs.is_visible();boxes=page.locator('.title-row h1,#fullscreen').evaluate_all('es=>es.map(e=>{const r=e.getBoundingClientRect();return {x:r.x,right:r.right,y:r.y,bottom:r.bottom,w:r.width,h:r.height}})');assert boxes[0]['right']<=boxes[1]['x'] and boxes[1]['w']>=44 and boxes[1]['h']>=44;assert boxes[1]['right']<=width
             def activate(selector):
                 target=page.locator(selector)
                 target.tap() if mobile else target.click()
             workers=sum('mosaic-worker.js' in url for url in requests)
             for kind,(original,data,fmt) in fixtures.items():
-                activate('#open-crop');expect(page.locator('#photo-cropper')).to_be_visible();assert page.url.endswith('#crop-photo')
-                page.locator('#crop-file').set_input_files({'name':f'{kind}.{fmt}','mimeType':f'image/{fmt}','buffer':data});expect(page.locator('#crop-save')).to_be_enabled();expect(page.locator('#crop-start')).to_be_hidden()
+                if original.width!=original.height:
+                    page.locator('#source-file').set_input_files({'name':f'{kind}.{fmt}','mimeType':f'image/{fmt}','buffer':data})
+                    expect(page.locator('#photo-cropper')).to_be_visible();expect(page.locator('#crop-source')).to_contain_text(f'{kind}.{fmt} · {original.width} × {original.height}')
+                else:
+                    activate('#open-crop');expect(page.locator('#photo-cropper')).to_be_visible()
+                    page.locator('#crop-file').set_input_files({'name':f'{kind}.{fmt}','mimeType':f'image/{fmt}','buffer':data})
+                assert page.url.endswith('#crop-photo');expect(page.locator('#crop-save')).to_be_enabled();expect(page.locator('#crop-start')).to_be_hidden();expect(page.locator('#crop-start')).to_have_text('Continue to Puzzle')
                 assert bytes(page.locator('#crop-file').evaluate('async e=>Array.from(new Uint8Array(await e.files[0].arrayBuffer()))'))==data
                 if kind=='landscape':
                     page.go_back();expect(page.locator('#gallery-screen')).to_be_visible();activate('#open-crop');expect(page.locator('#crop-save')).to_be_enabled()
@@ -124,7 +144,7 @@ try:
                 expect(fs).to_have_attribute('aria-pressed','true');fs.click();page.wait_for_function('!(document.fullscreenElement||document.webkitFullscreenElement)')
             else:expect(page.locator('#fullscreen-status')).to_be_visible()
             assert not errors,errors
-            print(f'PASS {engine} {width}px: portrait/landscape/square/EXIF/alpha, preview/JPG pixels, no blank edges, original bytes, saved-game protection, memory handoff, all counts, fullscreen/fallback.',flush=True)
+            print(f'PASS {engine} {width}px: portrait/landscape/square/EXIF/alpha, preview/JPG pixels, no blank edges, original bytes, square/automatic routing, cancel protection, memory handoff, all counts, fullscreen/fallback.',flush=True)
             context.close()
         # Explicit iPhone/iPad capability/rejection branches, independent of host API.
         for engine,browser in browsers.items():
