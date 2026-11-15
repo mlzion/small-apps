@@ -21,6 +21,7 @@ def assert_precision_layout(page):
     }''')
     assert len(geometry['labels'])==2 and len(geometry['zoom'])==4,geometry
     assert geometry['actions']==['fit','zoom-out','zoom-in','return'],geometry
+    assert geometry['zoom'][3]['x']-geometry['zoom'][2]['right']>=18-.5,geometry
     assert geometry['counter']['y']>=geometry['viewToggle']['bottom'],geometry
     assert geometry['counter']['bottom']<=geometry['canvas']['y'],geometry
     assert abs(geometry['counter']['x']+geometry['counter']['width']/2-geometry['viewToggle']['x']-geometry['viewToggle']['width']/2)<.5,geometry

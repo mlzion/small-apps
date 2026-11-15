@@ -194,6 +194,7 @@
 
 /* Four shared actions fit even at 320px; Return retains a full touch target. */
 [data-cutting-lab] .precision-panel .precision-zoom #return {
+  margin-left: 12px;
   flex-basis: 76px;
   width: 76px;
   min-width: 76px;

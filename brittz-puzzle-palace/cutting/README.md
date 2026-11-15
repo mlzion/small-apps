@@ -108,7 +108,7 @@ Physical Samsung Galaxy A17 touch ergonomics remain a device-testing item; autom
 
 ### Precision layout fix and cache regression
 
-The panel now loads `precision-controls.css?v=compact-1` after a versioned shared stylesheet. Its scoped ID selectors explicitly fix MOVE/ROTATE to 120 × 120 border-box pixels, including min/max dimensions, padding and native button appearance. A two-column MOVE grid prevents intrinsic button sizing or flex shrinking from stacking the controls. Labels stay in the row above each control; zoom is a separate row. The original shared rules remain as a fallback for older cached HTML. Increment the CSS URL versions when changing these assets.
+The panel now loads `precision-controls.css?v=compact-2` after a versioned shared stylesheet. Its scoped ID selectors explicitly fix MOVE/ROTATE to 120 × 120 border-box pixels, including min/max dimensions, padding and native button appearance. A two-column MOVE grid prevents intrinsic button sizing or flex shrinking from stacking the controls. Labels stay in the row above each control; zoom is a separate row. The original shared rules remain as a fallback for older cached HTML. Increment the CSS URL versions when changing these assets.
 
 Investigation found no overriding size rule in the fresh checked-in CSS: fresh mobile Chromium already rendered the old rules at 120 × 120. Serving current markup with a cached stylesheet from before Phase 1B reproduced the reported narrow, vertically stacked controls (approximately 42 × 54). This is a confirmed reproduction of a cache mismatch, not confirmation of the physical Samsung's network/cache state. The fix protects against both stale shared CSS and later generic button/disabled-button theme rules.
 
