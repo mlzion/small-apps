@@ -62,10 +62,10 @@ def exercise_controls(page,context,mobile,complete=True):
     page.locator('#source-file').set_input_files({'name':'Precision-fixture.png','mimeType':'image/png','buffer':buffer.getvalue()})
     expect(page.locator('#gallery-message')).to_contain_text('Ready to shuffle')
     page.locator('#master-count').select_option('200')
-    page.locator('#master-rotation').select_option('270')
     page.locator('#image-outlines').uncheck()
     page.locator('#start-lab').click()
     expect(page.locator('.piece-slot')).to_have_count(200)
+    expect(page.locator('#master-rotation')).to_have_count(0)
     assert page.locator('#tray').evaluate('e=>getComputedStyle(e).gridTemplateRows.split(" ").length')==2
     expect(page.locator('#move-pad')).to_be_disabled();expect(page.locator('#rotation-wheel')).to_be_disabled();assert_precision_layout(page)
     expect(page.locator('#board .move-handle,#board .rotation-hit,.viewport .zoom')).to_have_count(0)
@@ -250,10 +250,10 @@ def exercise_controls(page,context,mobile,complete=True):
     if not complete:return
 
     # Complete a 50-piece image with the new panel, without injected game state.
-    page.locator('#back-gallery').click();page.locator('#master-count').select_option('50');page.locator('#master-rotation').select_option('90');page.locator('#start-lab').click()
+    page.locator('#back-gallery').click();page.locator('#master-count').select_option('50');page.locator('#start-lab').click()
     expect(page.locator('.piece-slot')).to_have_count(50)
     assert page.locator('#workspace-select').get_attribute('aria-pressed')=='true'
-    targets=page.evaluate('''async()=>{const {loadMaster,imagePuzzle}=await import('./image-puzzle.js');return imagePuzzle(await loadMaster(50),{url:'unused',name:'Test'},90).pieces.map(p=>({id:p.id,x:p.cx,y:p.cy}));}''')
+    targets=page.evaluate('''async()=>{const {mosaicPuzzle}=await import('./image-puzzle.js');const {readSession}=await import('./session.js');const {record}=await readSession();return mosaicPuzzle(record.pattern,{url:'unused',name:'Test'}).pieces.map(p=>({id:p.id,x:p.cx,y:p.cy}));}''')
     for done,piece in enumerate(targets,1):
         mode('select');page.locator(f'.piece-slot[data-piece="{piece["id"]}"]').click();assert page.locator('#workspace-select').get_attribute('aria-pressed')=='true'
         mode('move');current=pose();v=camera();angle=(current[2]+180)%360-180

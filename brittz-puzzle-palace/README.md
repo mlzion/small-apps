@@ -103,6 +103,6 @@ These serve local files through Playwright routing without an HTTP server or ext
 
 Automated geometry/content/engine and all three browser suites passed during implementation; screenshots and an actual exported certificate were visually inspected. Chromium needed execution outside the command sandbox because sandbox socket restrictions prevented startup. Physical Android touchscreen ergonomics and Android's actual download/share UI remain untested. Before merging, check long tray swipes, pinch/rotation near board edges, several loose pieces, and certificate download/save on a real Android browser.
 
-## v0.3 Phase 1 development lab
+## v0.4 development lab
 
-The separate [image cutting lab](cutting/) accepts a local square JPG/PNG and uses permanent 50/100/150/200-piece angular masters with the manual Phase 1C SELECT / MOVE workspace, precision controls and bounded panning. The published catalog and vector puzzles remain unchanged. See [cutting/README.md](cutting/README.md) for architecture, deterministic geometry/similarity tolerances, image-pixel tests, regeneration tools and Phase 1 limitations.
+The separate [image cutting lab](cutting/) accepts a local square JPG/PNG and generates fresh 50/100/150/200-piece geometric mosaics with balanced areas and complementary angular notches. The latest image, exact cuts and progress resume locally after reload. The manual SELECT / MOVE workspace, precision controls and bounded panning remain unchanged, as do the published catalog and vector puzzles. See [cutting/README.md](cutting/README.md) for generation/validation constraints, persistence, tests and limitations.
