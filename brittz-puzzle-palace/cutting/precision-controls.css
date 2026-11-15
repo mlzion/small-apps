@@ -227,3 +227,15 @@
   [data-cutting-lab] .precision-panel .workspace-toggle { margin-bottom: 4px; }
   [data-cutting-lab] .footnote { margin-block: 10px; }
 }
+
+/* v1.0: preserve all hit targets/geometry; only the paint treatment changes. */
+[data-cutting-lab] #select-panel #tray,
+[data-cutting-lab] #select-panel .piece-slot { background: #E8E8E8; }
+[data-cutting-lab] .image-outline.with-outline { stroke: #000; }
+[data-cutting-lab] #art > .selected .image-outline.glass {
+  stroke: #FF2020;
+  stroke-width: 4px;
+  vector-effect: non-scaling-stroke;
+}
+[data-cutting-lab] .instructions a,
+[data-cutting-lab] .footnote a { color: #b7d8c9; }

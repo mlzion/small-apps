@@ -1,4 +1,4 @@
-"""Standalone Phase 1B mouse and emulated-touch browser acceptance."""
+"""Main app or lab precision-control acceptance (MOSAIC_ENTRY chooses the URL)."""
 import mimetypes
 import os
 from pathlib import Path
@@ -24,7 +24,7 @@ with sync_playwright() as p:
         context.route(ORIGIN+'/**',serve)
         page=context.new_page();errors=[]
         page.on('pageerror',lambda e:errors.append(str(e)))
-        page.goto(ORIGIN+'/small-apps/brittz-puzzle-palace/cutting/')
+        page.goto(ORIGIN+os.environ.get('MOSAIC_ENTRY','/small-apps/brittz-puzzle-palace/cutting/'))
         exercise_controls(page,context,mobile,complete=width in (1100,360))
         assert not errors,errors
         context.close()

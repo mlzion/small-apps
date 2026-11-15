@@ -1,4 +1,4 @@
-import {mountPuzzle} from '../game.js?v=mosaic-4';
+import {mountPuzzle} from '../game.js?v=main-1';
 import {openSquareImage,mosaicPuzzle} from './image-puzzle.js?v=mosaic-4';
 import {readSession,createSession,writeProgress} from './session.js';
 const $=id=>document.getElementById(id);
@@ -37,3 +37,7 @@ $('lab-form').addEventListener('submit',async e=>{
 $('resume-lab').onclick=resume;
 $('start-lab').disabled=true;resume().finally(()=>{if(!saved&&!source)$('gallery-message').textContent=$('gallery-message').textContent==='Restoring your saved mosaic…'?'Choose an image or use the test picture. Your latest mosaic will be saved locally.':$('gallery-message').textContent;$('start-lab').disabled=false;});
 window.addEventListener('pagehide',e=>{if(!e.persisted)source?.revoke();});
+
+// Legacy vector saves stay in their existing namespace and remain playable.
+const legacyNotice=$('legacy-notice');
+if(legacyNotice)try{legacyNotice.hidden=!Object.keys(localStorage).some(key=>key==='brittz-sea-turtle-v1'||key.startsWith('brittz-puzzle:'));}catch{/* Archive link remains available when storage is restricted. */}
