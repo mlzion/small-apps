@@ -16,6 +16,14 @@
       "pieceCount": 4,
       "data": "puzzles/tropical-gem/puzzle.json",
       "thumbnail": "puzzles/tropical-gem/thumbnail.svg"
+    },
+    {
+      "id": "clownfish",
+      "version": 1,
+      "title": "Clownfish",
+      "pieceCount": 45,
+      "data": "puzzles/clownfish/puzzle.json",
+      "thumbnail": "puzzles/clownfish/thumbnail.svg"
     }
   ]
 }
