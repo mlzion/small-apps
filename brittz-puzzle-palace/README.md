@@ -105,4 +105,4 @@ Automated geometry/content/engine and all three browser suites passed during imp
 
 ## v0.3 Phase 1 development lab
 
-The separate [image cutting lab](cutting/) accepts a local square JPG/PNG and uses permanent 50/100/150/200-piece angular masters with the Phase 1B external trackpad, rotation wheel and zoom controls. The published catalog and vector puzzles remain unchanged. See [cutting/README.md](cutting/README.md) for architecture, deterministic geometry/similarity tolerances, image-pixel tests, regeneration tools and Phase 1 limitations.
+The separate [image cutting lab](cutting/) accepts a local square JPG/PNG and uses permanent 50/100/150/200-piece angular masters with the manual Phase 1C SELECT / MOVE workspace, precision controls and bounded panning. The published catalog and vector puzzles remain unchanged. See [cutting/README.md](cutting/README.md) for architecture, deterministic geometry/similarity tolerances, image-pixel tests, regeneration tools and Phase 1 limitations.
