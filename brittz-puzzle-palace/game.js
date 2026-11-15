@@ -1,3 +1,4 @@
+import {imagePiece,completedImage,sourceImage} from './cutting/render.js';
 import {preparePuzzle,validateCatalog,matchEntry,detailMarkup} from './content.js';
 import {loadProgress,saveProgress,progressSummary,isComplete,playerName,rememberName} from './progress.js';
 import {certificateJPG,cleanName} from './certificate.js';
@@ -8,11 +9,12 @@ let puzzle=null,pieces=[],lookup=new Map(),W=720,H=480;
 let game=null,selected=null,reference=false,sound=true,audio;
 let catalog=[],requestSerial=0,exportSerial=0,exporting=false,certificateURL=null;
 const cache=new Map();
+const isLab=document.documentElement.dataset.cuttingLab==='true';
 const views={puzzle:{zoom:1,x:0,y:0},reference:{zoom:1,x:0,y:0}};
 let pointers=new Map(),gesture=null,trayDown=null;
-function save(){if(puzzle&&game)saveProgress(puzzle,game,sound);}
+function save(){if(puzzle&&game&&!puzzle.ephemeral)saveProgress(puzzle,game,sound);}
 function svg(tag,attrs={}){const el=document.createElementNS(ns,tag);for(const [k,v]of Object.entries(attrs))el.setAttribute(k,v);return el;}
-function shape(piece){const g=svg('g');g.append(svg('path',{d:piece.path,fill:piece.color,class:'glass'}));if(piece.details.length){const detail=svg('g',{'pointer-events':'none'});detail.innerHTML=detailMarkup(piece);g.append(detail);}return g;}
+function shape(piece){if(puzzle.kind==='image')return imagePiece(puzzle,piece);const g=svg('g');g.append(svg('path',{d:piece.path,fill:piece.color,class:'glass'}));if(piece.details.length){const detail=svg('g',{'pointer-events':'none'});detail.innerHTML=detailMarkup(piece);g.append(detail);}return g;}
 const view=()=>views[reference?'reference':'puzzle'];
 function scale(){return board.getBoundingClientRect().width/puzzle.width*view().zoom;}
 function local(e){const r=board.getBoundingClientRect();return {x:(e.clientX-r.left)*W/r.width,y:(e.clientY-r.top)*H/r.height};}
@@ -49,7 +51,9 @@ function constrainToView(p,s){
 function renderBoard(){
  art.replaceChildren();
  const order=reference?pieces.map(p=>p.id):[...game.order.filter(id=>game.states[id].location==='locked'),...game.order.filter(id=>game.states[id].location==='board'&&id!==selected),...(selected?[selected]:[])];
- order.forEach(id=>{const p=lookup.get(id),s=game.states[id],g=shape(p);g.dataset.piece=id;
+ const flattened=puzzle.kind==='image'&&(reference||pieces.every(p=>game.states[p.id].location==='locked'));
+ if(flattened)art.append(reference?sourceImage(puzzle):completedImage(puzzle));
+ (flattened?[]:order).forEach(id=>{const p=lookup.get(id),s=game.states[id],g=shape(p);g.dataset.piece=id;
  if(!reference){g.setAttribute('transform',`translate(${s.x} ${s.y}) rotate(${s.angle}) translate(${-p.cx} ${-p.cy})`);g.setAttribute('class',`${s.location==='board'?'loose':''} ${selected===id?'selected':''}`);}
  art.append(g);
  });
@@ -58,7 +62,7 @@ function renderBoard(){
  const count=pieces.filter(p=>game.states[p.id].location==='locked').length;
  $('counter').textContent=`${count} / ${pieces.length} pieces placed`;
  $('complete').hidden=count!==pieces.length||reference;
- $('export-certificate').disabled=count!==pieces.length||reference||exporting;
+ $('export-certificate').disabled=puzzle.kind==='image'||count!==pieces.length||reference||exporting;
  $('certificate-download').hidden=reference||count!==pieces.length||!certificateURL;
  camera();
 }
@@ -160,8 +164,14 @@ async function openPuzzle(entry,replay=false){
  try{
  let next=cache.get(entry.id);if(!next){next=matchEntry(entry,preparePuzzle(await getJSON(entry.data)));cache.set(entry.id,next);}
  if(request!==requestSerial)return;
+ mountPuzzle(next,replay);
+ }catch(error){if(request===requestSerial)message(`Unable to open this puzzle: ${error.message}`);}
+}
+// Both the published catalog and the development lab use the same controller.
+// Raster input is prepared separately; the gameplay model/input handlers are shared.
+export function mountPuzzle(next,replay=false){
  save();cancelGestures();clearCertificate();puzzle=next;pieces=puzzle.pieces;lookup=new Map(pieces.map(p=>[p.id,p]));W=puzzle.width;H=puzzle.height;
- ({game,sound}=loadProgress(puzzle));selected=null;reference=false;
+ ({game,sound}=puzzle.ephemeral?{game:shuffledState(pieces),sound}:loadProgress(puzzle));selected=null;reference=false;
  Object.values(views).forEach(v=>Object.assign(v,{zoom:1,x:0,y:0}));
  board.setAttribute('viewBox',`0 0 ${W} ${H}`);for(const rect of board.querySelectorAll('rect')){rect.setAttribute('width',W);rect.setAttribute('height',H);}
  document.querySelector('.viewport').style.aspectRatio=`${W} / ${H}`;
@@ -173,11 +183,10 @@ async function openPuzzle(entry,replay=false){
  $('player-name').value=playerName();
  $('gallery-screen').hidden=true;$('game-screen').hidden=false;tray.scrollLeft=0;message('');
  soundLabel();renderTray();setView(false);save();if(replay)restart();$('back-gallery').focus({preventScroll:true});
- }catch(error){if(request===requestSerial)message(`Unable to open this puzzle: ${error.message}`);}
-}
+ }
 $('player-name').addEventListener('input',()=>rememberName($('player-name').value));
 $('certificate-form').addEventListener('submit',async e=>{
- e.preventDefault();if(!puzzle||reference||!isComplete(puzzle,game)||exporting)return;
+ e.preventDefault();if(!puzzle||puzzle.kind==='image'||reference||!isComplete(puzzle,game)||exporting)return;
  const name=cleanName($('player-name').value);if(!name){$('certificate-status').textContent='Enter your name for the certificate.';$('player-name').focus();return;}
  clearCertificate();const request=exportSerial,active=puzzle;exporting=true;$('export-certificate').disabled=true;$('certificate-status').textContent='Creating your certificate…';rememberName(name);
  try{
@@ -196,4 +205,4 @@ async function loadCatalog(){
  catch(error){if(request!==requestSerial)return;message(`Unable to load the collection: ${error.message}`);$('retry-catalog').hidden=false;}
 }
 $('retry-catalog').onclick=loadCatalog;
-loadCatalog();
+if(!isLab)loadCatalog();

@@ -1,0 +1,93 @@
+{
+  "schemaVersion": 1,
+  "reports": [
+    {
+      "id": "angular-50-v1",
+      "sha256": "cfc588b56f405471ebc3a32a47aad9343774d365796223c893efecd0ae8a95f2",
+      "count": 50,
+      "corners": 4,
+      "area2": "2000000000000",
+      "minArea": 0.5817164752750001,
+      "minAngle": 45.76093433272875,
+      "minEdge": 0.024869959790880244,
+      "minCore": 0.19454967768557418,
+      "maxAspect": 1.8672174960475796,
+      "similarity": {
+        "minimum": 0.06727636871832747,
+        "rms": 0.08560530518508311,
+        "pair": [
+          "piece-015",
+          "piece-045"
+        ],
+        "tolerance": 0.065,
+        "samples": 128
+      }
+    },
+    {
+      "id": "angular-100-v1",
+      "sha256": "0cb664af2eaea614976ffd41274f723742135c65226fa3c83b230e36fd7d1d50",
+      "count": 100,
+      "corners": 4,
+      "area2": "2000000000000",
+      "minArea": 0.53547106905,
+      "minAngle": 34.578038830358594,
+      "minEdge": 0.02145724120198121,
+      "minCore": 0.20485610445553043,
+      "maxAspect": 2.270783936905683,
+      "similarity": {
+        "minimum": 0.06703174152917014,
+        "rms": 0.08570722377279323,
+        "pair": [
+          "piece-071",
+          "piece-083"
+        ],
+        "tolerance": 0.065,
+        "samples": 128
+      }
+    },
+    {
+      "id": "angular-150-v1",
+      "sha256": "b8fa521ff56cfaece791af794295119dbe0389fc00fef7266c1a577ea37e79eb",
+      "count": 150,
+      "corners": 4,
+      "area2": "2000000000000",
+      "minArea": 0.52430989095,
+      "minAngle": 33.357095250347406,
+      "minEdge": 0.024335930226724437,
+      "minCore": 0.2204006268556407,
+      "maxAspect": 1.9199130383688818,
+      "similarity": {
+        "minimum": 0.06700074059529695,
+        "rms": 0.08760378833781247,
+        "pair": [
+          "piece-118",
+          "piece-124"
+        ],
+        "tolerance": 0.065,
+        "samples": 128
+      }
+    },
+    {
+      "id": "angular-200-v1",
+      "sha256": "fb9587f159a981b0f0f2bf2309ea287c83d594db8e4bf9472d4b20b8f8b266e5",
+      "count": 200,
+      "corners": 4,
+      "area2": "2000000000000",
+      "minArea": 0.4610341522000001,
+      "minAngle": 26.914889466858916,
+      "minEdge": 0.021494892416571897,
+      "minCore": 0.22467638933624848,
+      "maxAspect": 1.7584486643064048,
+      "similarity": {
+        "minimum": 0.06702917518046467,
+        "rms": 0.08745750994875531,
+        "pair": [
+          "piece-009",
+          "piece-047"
+        ],
+        "tolerance": 0.065,
+        "samples": 128
+      }
+    }
+  ]
+}
