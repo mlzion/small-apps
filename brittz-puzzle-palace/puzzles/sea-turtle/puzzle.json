@@ -1,0 +1,762 @@
+{
+  "schemaVersion": 1,
+  "id": "sea-turtle-v1",
+  "version": 1,
+  "title": "Sea Turtle",
+  "width": 720,
+  "height": 480,
+  "pieceCount": 23,
+  "trayRows": 1,
+  "subtitle": "TROPICAL WATERS",
+  "emptyMessage": "Your ocean starts here",
+  "completionTitle": "A beautiful ocean, piece by piece.",
+  "completionMessage": "You brought the sea turtle home!",
+  "pieces": [
+    {
+      "id": "water-1",
+      "name": "Ocean glass 1",
+      "color": "#47dbd5",
+      "points": [
+        [
+          340,
+          0
+        ],
+        [
+          600,
+          0
+        ],
+        [
+          500,
+          130
+        ],
+        [
+          470,
+          80
+        ],
+        [
+          400,
+          70
+        ]
+      ],
+      "correct": {
+        "x": 470,
+        "y": 65,
+        "angle": 0
+      },
+      "details": []
+    },
+    {
+      "id": "water-2",
+      "name": "Ocean glass 2",
+      "color": "#1db4cd",
+      "points": [
+        [
+          600,
+          0
+        ],
+        [
+          720,
+          0
+        ],
+        [
+          720,
+          120
+        ],
+        [
+          570,
+          180
+        ],
+        [
+          460,
+          170
+        ],
+        [
+          500,
+          130
+        ]
+      ],
+      "correct": {
+        "x": 590,
+        "y": 90,
+        "angle": 0
+      },
+      "details": []
+    },
+    {
+      "id": "water-3",
+      "name": "Ocean glass 3",
+      "color": "#138eae",
+      "points": [
+        [
+          720,
+          120
+        ],
+        [
+          720,
+          300
+        ],
+        [
+          600,
+          260
+        ],
+        [
+          570,
+          180
+        ]
+      ],
+      "correct": {
+        "x": 645,
+        "y": 210,
+        "angle": 0
+      },
+      "details": []
+    },
+    {
+      "id": "water-4",
+      "name": "Ocean glass 4",
+      "color": "#247fb9",
+      "points": [
+        [
+          720,
+          300
+        ],
+        [
+          720,
+          480
+        ],
+        [
+          650,
+          480
+        ],
+        [
+          510,
+          370
+        ],
+        [
+          470,
+          290
+        ],
+        [
+          530,
+          240
+        ],
+        [
+          600,
+          260
+        ]
+      ],
+      "correct": {
+        "x": 595,
+        "y": 360,
+        "angle": 0
+      },
+      "details": []
+    },
+    {
+      "id": "water-5",
+      "name": "Ocean glass 5",
+      "color": "#16558d",
+      "points": [
+        [
+          650,
+          480
+        ],
+        [
+          460,
+          480
+        ],
+        [
+          460,
+          400
+        ],
+        [
+          510,
+          370
+        ]
+      ],
+      "correct": {
+        "x": 555,
+        "y": 425,
+        "angle": 0
+      },
+      "details": []
+    },
+    {
+      "id": "water-6",
+      "name": "Ocean glass 6",
+      "color": "#3289be",
+      "points": [
+        [
+          460,
+          480
+        ],
+        [
+          240,
+          480
+        ],
+        [
+          290,
+          400
+        ],
+        [
+          350,
+          350
+        ],
+        [
+          460,
+          400
+        ]
+      ],
+      "correct": {
+        "x": 350,
+        "y": 415,
+        "angle": 0
+      },
+      "details": []
+    },
+    {
+      "id": "water-7",
+      "name": "Ocean glass 7",
+      "color": "#31bac6",
+      "points": [
+        [
+          240,
+          480
+        ],
+        [
+          0,
+          480
+        ],
+        [
+          0,
+          380
+        ],
+        [
+          140,
+          310
+        ],
+        [
+          240,
+          290
+        ],
+        [
+          290,
+          400
+        ]
+      ],
+      "correct": {
+        "x": 145,
+        "y": 385,
+        "angle": 0
+      },
+      "details": []
+    },
+    {
+      "id": "water-8",
+      "name": "Ocean glass 8",
+      "color": "#4bd6bf",
+      "points": [
+        [
+          0,
+          380
+        ],
+        [
+          0,
+          130
+        ],
+        [
+          150,
+          140
+        ],
+        [
+          240,
+          180
+        ],
+        [
+          170,
+          240
+        ],
+        [
+          140,
+          310
+        ]
+      ],
+      "correct": {
+        "x": 120,
+        "y": 255,
+        "angle": 0
+      },
+      "details": []
+    },
+    {
+      "id": "water-9",
+      "name": "Ocean glass 9",
+      "color": "#17a9b9",
+      "points": [
+        [
+          0,
+          130
+        ],
+        [
+          0,
+          0
+        ],
+        [
+          140,
+          0
+        ],
+        [
+          190,
+          90
+        ],
+        [
+          150,
+          140
+        ]
+      ],
+      "correct": {
+        "x": 95,
+        "y": 70,
+        "angle": 0
+      },
+      "details": []
+    },
+    {
+      "id": "water-10",
+      "name": "Ocean glass 10",
+      "color": "#8be5d0",
+      "points": [
+        [
+          140,
+          0
+        ],
+        [
+          340,
+          0
+        ],
+        [
+          400,
+          70
+        ],
+        [
+          340,
+          130
+        ],
+        [
+          190,
+          90
+        ]
+      ],
+      "correct": {
+        "x": 270,
+        "y": 65,
+        "angle": 0
+      },
+      "details": []
+    },
+    {
+      "id": "head",
+      "name": "Turtle head",
+      "color": "#b6d76b",
+      "points": [
+        [
+          340,
+          130
+        ],
+        [
+          400,
+          70
+        ],
+        [
+          470,
+          80
+        ],
+        [
+          500,
+          130
+        ],
+        [
+          460,
+          170
+        ]
+      ],
+      "correct": {
+        "x": 420,
+        "y": 120,
+        "angle": 0
+      },
+      "details": [
+        {
+          "type": "circle",
+          "cx": 466,
+          "cy": 106,
+          "r": 7,
+          "fill": "#143d48"
+        },
+        {
+          "type": "circle",
+          "cx": 468,
+          "cy": 104,
+          "r": 2,
+          "fill": "#fff"
+        }
+      ]
+    },
+    {
+      "id": "front-right",
+      "name": "Right front flipper",
+      "color": "#45af77",
+      "points": [
+        [
+          460,
+          170
+        ],
+        [
+          570,
+          180
+        ],
+        [
+          600,
+          260
+        ],
+        [
+          530,
+          240
+        ],
+        [
+          470,
+          290
+        ]
+      ],
+      "correct": {
+        "x": 530,
+        "y": 230,
+        "angle": 0
+      },
+      "details": []
+    },
+    {
+      "id": "rear-right",
+      "name": "Right rear flipper",
+      "color": "#78bf77",
+      "points": [
+        [
+          470,
+          290
+        ],
+        [
+          510,
+          370
+        ],
+        [
+          460,
+          400
+        ],
+        [
+          350,
+          350
+        ]
+      ],
+      "correct": {
+        "x": 430,
+        "y": 345,
+        "angle": 0
+      },
+      "details": []
+    },
+    {
+      "id": "tail",
+      "name": "Turtle tail",
+      "color": "#e0c97d",
+      "points": [
+        [
+          350,
+          350
+        ],
+        [
+          290,
+          400
+        ],
+        [
+          240,
+          290
+        ]
+      ],
+      "correct": {
+        "x": 295,
+        "y": 345,
+        "angle": 0
+      },
+      "details": []
+    },
+    {
+      "id": "rear-left",
+      "name": "Left rear flipper",
+      "color": "#74c989",
+      "points": [
+        [
+          240,
+          290
+        ],
+        [
+          140,
+          310
+        ],
+        [
+          170,
+          240
+        ],
+        [
+          240,
+          180
+        ]
+      ],
+      "correct": {
+        "x": 190,
+        "y": 245,
+        "angle": 0
+      },
+      "details": []
+    },
+    {
+      "id": "front-left",
+      "name": "Left front flipper",
+      "color": "#9bd77c",
+      "points": [
+        [
+          240,
+          180
+        ],
+        [
+          150,
+          140
+        ],
+        [
+          190,
+          90
+        ],
+        [
+          340,
+          130
+        ]
+      ],
+      "correct": {
+        "x": 245,
+        "y": 135,
+        "angle": 0
+      },
+      "details": []
+    },
+    {
+      "id": "shell-center",
+      "name": "Heart of the shell",
+      "color": "#f3c66a",
+      "points": [
+        [
+          300,
+          205
+        ],
+        [
+          365,
+          185
+        ],
+        [
+          415,
+          215
+        ],
+        [
+          410,
+          275
+        ],
+        [
+          350,
+          300
+        ],
+        [
+          295,
+          270
+        ]
+      ],
+      "correct": {
+        "x": 355,
+        "y": 242.5,
+        "angle": 0
+      },
+      "details": []
+    },
+    {
+      "id": "shell-1",
+      "name": "Shell glass 1",
+      "color": "#36896f",
+      "points": [
+        [
+          240,
+          180
+        ],
+        [
+          340,
+          130
+        ],
+        [
+          365,
+          185
+        ],
+        [
+          300,
+          205
+        ]
+      ],
+      "correct": {
+        "x": 302.5,
+        "y": 167.5,
+        "angle": 0
+      },
+      "details": []
+    },
+    {
+      "id": "shell-2",
+      "name": "Shell glass 2",
+      "color": "#78ae55",
+      "points": [
+        [
+          340,
+          130
+        ],
+        [
+          460,
+          170
+        ],
+        [
+          415,
+          215
+        ],
+        [
+          365,
+          185
+        ]
+      ],
+      "correct": {
+        "x": 400,
+        "y": 172.5,
+        "angle": 0
+      },
+      "details": []
+    },
+    {
+      "id": "shell-3",
+      "name": "Shell glass 3",
+      "color": "#2b9a7a",
+      "points": [
+        [
+          460,
+          170
+        ],
+        [
+          470,
+          290
+        ],
+        [
+          410,
+          275
+        ],
+        [
+          415,
+          215
+        ]
+      ],
+      "correct": {
+        "x": 440,
+        "y": 230,
+        "angle": 0
+      },
+      "details": []
+    },
+    {
+      "id": "shell-4",
+      "name": "Shell glass 4",
+      "color": "#39806c",
+      "points": [
+        [
+          470,
+          290
+        ],
+        [
+          350,
+          350
+        ],
+        [
+          350,
+          300
+        ],
+        [
+          410,
+          275
+        ]
+      ],
+      "correct": {
+        "x": 410,
+        "y": 312.5,
+        "angle": 0
+      },
+      "details": []
+    },
+    {
+      "id": "shell-5",
+      "name": "Shell glass 5",
+      "color": "#afbd57",
+      "points": [
+        [
+          350,
+          350
+        ],
+        [
+          240,
+          290
+        ],
+        [
+          295,
+          270
+        ],
+        [
+          350,
+          300
+        ]
+      ],
+      "correct": {
+        "x": 295,
+        "y": 310,
+        "angle": 0
+      },
+      "details": []
+    },
+    {
+      "id": "shell-6",
+      "name": "Shell glass 6",
+      "color": "#68b17b",
+      "points": [
+        [
+          240,
+          290
+        ],
+        [
+          240,
+          180
+        ],
+        [
+          300,
+          205
+        ],
+        [
+          295,
+          270
+        ]
+      ],
+      "correct": {
+        "x": 270,
+        "y": 235,
+        "angle": 0
+      },
+      "details": []
+    }
+  ]
+}

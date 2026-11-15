@@ -1,0 +1,125 @@
+{
+  "schemaVersion": 1,
+  "id": "tropical-gem",
+  "version": 1,
+  "title": "Tropical Gem",
+  "width": 600,
+  "height": 400,
+  "pieceCount": 4,
+  "trayRows": 1,
+  "subtitle": "A SMALL GLASS STUDY",
+  "pieces": [
+    {
+      "id": "sunrise",
+      "name": "Sunrise glass",
+      "color": "#f3c66a",
+      "points": [
+        [
+          0,
+          0
+        ],
+        [
+          300,
+          0
+        ],
+        [
+          300,
+          200
+        ],
+        [
+          0,
+          200
+        ]
+      ],
+      "correct": {
+        "x": 150,
+        "y": 100,
+        "angle": 0
+      }
+    },
+    {
+      "id": "lagoon",
+      "name": "Lagoon glass",
+      "color": "#47dbd5",
+      "points": [
+        [
+          300,
+          0
+        ],
+        [
+          600,
+          0
+        ],
+        [
+          600,
+          200
+        ],
+        [
+          300,
+          200
+        ]
+      ],
+      "correct": {
+        "x": 450,
+        "y": 100,
+        "angle": 0
+      }
+    },
+    {
+      "id": "reef",
+      "name": "Reef glass",
+      "color": "#78bf77",
+      "points": [
+        [
+          0,
+          200
+        ],
+        [
+          300,
+          200
+        ],
+        [
+          300,
+          400
+        ],
+        [
+          0,
+          400
+        ]
+      ],
+      "correct": {
+        "x": 150,
+        "y": 300,
+        "angle": 0
+      }
+    },
+    {
+      "id": "deep",
+      "name": "Deep blue glass",
+      "color": "#247fb9",
+      "points": [
+        [
+          300,
+          200
+        ],
+        [
+          600,
+          200
+        ],
+        [
+          600,
+          400
+        ],
+        [
+          300,
+          400
+        ]
+      ],
+      "correct": {
+        "x": 450,
+        "y": 300,
+        "angle": 0
+      }
+    }
+  ]
+}

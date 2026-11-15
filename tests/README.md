@@ -23,3 +23,5 @@ PicturePaint makes ten gallery launch links. See [picturepaint/README.md](../pic
 Galactix makes eleven gallery launch links, with MIDI Lab the only planned card. See [space-shooter/README.md](../space-shooter/README.md) for simulation and input lifecycle checks plus the outstanding portrait-phone checks.
 
 Brittz Puzzle Palace adds a thirteenth card and twelfth launch link. See [its README](../brittz-puzzle-palace/README.md) for geometry and engine validation, browser acceptance checks, and outstanding physical Android checks.
+
+Brittz Puzzle Palace v0.2 adds catalog/content validation, independent puzzle saves with turtle migration, and JPG certificate checks. Run `node brittz-puzzle-palace/content.test.mjs` and `python brittz-puzzle-palace/check_collection.py`; see the app README for content publishing and the remaining physical Android checks.
